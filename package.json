@@ -1,0 +1,24 @@
+{
+  "name": "extract-your-soul-md",
+  "version": "0.1.0",
+  "description": "Prepare personal conversation chunks for voice/personality extraction by an LLM.",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "tsx src/index.ts",
+    "start:prod": "node dist/index.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^5.6.2",
+    "dotenv": "17.4.2",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "25.9.0",
+    "tsx": "4.22.1",
+    "typescript": "6.0.3"
+  }
+}
