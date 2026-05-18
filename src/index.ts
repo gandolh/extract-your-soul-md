@@ -39,12 +39,13 @@ async function main(): Promise<void> {
 
   if (!flags.ollama) {
     console.log('');
-    console.log(chalk.green.bold('Done.') + ' Hand the ' + chalk.cyan('chunks/') + ' directory to Claude Code:');
-    console.log(`  ${chalk.dim('1.')} Read ${chalk.cyan('chunks/manifest.json')}`);
-    console.log(`  ${chalk.dim('2.')} For each chunk file, spawn a parallel sub-agent that extracts`);
-    console.log(`     5–15 voice/personality bullets (see ${chalk.cyan('src/prompts.ts')} ${chalk.bold('MAP_PROMPT_HEADER')}).`);
-    console.log(`  ${chalk.dim('3.')} Synthesize all bullets into ${chalk.cyan('out/my-soul.md')}`);
-    console.log(`     (see ${chalk.cyan('src/prompts.ts')} ${chalk.bold('REDUCE_PROMPT_HEADER')}).`);
+    console.log(chalk.green.bold('Done.') + ' In a Claude Code session on this repo, run:');
+    console.log(`  ${chalk.bold.cyan('/extract-soul')}`);
+    console.log(
+      chalk.dim(
+        `(skill at ${chalk.cyan('.claude/skills/extract-soul/SKILL.md')} — fans out one sub-agent per chunk, synthesizes ${chalk.cyan('out/my-soul.md')})`,
+      ),
+    );
     console.log('');
     console.log(chalk.dim(`Or run with ${chalk.bold('--ollama')} to use the local fallback path.`));
     return;

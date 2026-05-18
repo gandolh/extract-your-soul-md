@@ -51,12 +51,18 @@ From there, you have two paths to turn the chunks into `my-soul.md`:
 
 ### Path A — Claude Code (primary)
 
-In a Claude Code session, after running the CLI:
+In a Claude Code session opened on this repo, after running `npm run start`:
 
-> Read `chunks/manifest.json`. For each chunk file, spawn a parallel
-> sub-agent (issue all Agent calls in a single message) using the MAP prompt
-> from `src/prompts.ts`. Collect each bullet list. Then synthesize all the
-> bullets into `out/my-soul.md` using the REDUCE prompt from the same file.
+```
+/extract-soul
+```
+
+That invokes the local `extract-soul` skill at
+[.claude/skills/extract-soul/SKILL.md](.claude/skills/extract-soul/SKILL.md),
+which reads `chunks/manifest.json`, fans out one
+[soul-chunk-extractor](.claude/agents/soul-chunk-extractor.md) sub-agent per
+chunk in a single parallel message, then synthesizes all returned bullets
+into `out/my-soul.md`.
 
 ### Path B — Local Ollama (fallback)
 
@@ -155,6 +161,10 @@ src/
     process.ts        # WhatsApp parse → filter → dedup
     chunk.ts          # file-bounded first-fit packing
     extract.ts        # Ollama map/reduce (fallback path)
+
+.claude/
+  skills/extract-soul/SKILL.md   # /extract-soul orchestration skill
+  agents/soul-chunk-extractor.md # per-chunk extractor sub-agent
 ```
 
 ## Honest limitations
