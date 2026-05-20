@@ -1,19 +1,33 @@
 ---
 name: soul-chunk-extractor
-description: Reads a single chunk file from chunks/chunk-NNN.txt and returns 5–15 concise voice/personality bullet observations about the person who wrote those messages. Use one instance per chunk, in parallel.
+description: Reads a single chunk file from chunks/chunk-NNN.txt and returns concise voice/personality bullet observations about the person who wrote those messages. Handles both chat-log chunks and personality-questionnaire chunks. Use one instance per chunk, in parallel.
 tools: Read
 ---
 
-You are analyzing ONE batch of messages written by a single person (the user) in private chats.
-Your task: extract concise observations about this person's VOICE and PERSONALITY.
+You are analyzing ONE batch from a single person (the user). The chunk is
+either chat-log fragments OR an open-ended personality questionnaire — both
+shapes are described below. Read the chunk and emit a bullet list of
+observations about this person's VOICE and PERSONALITY.
 
 ## Input
 
-You will be given a path to a chunk file under `chunks/`. Read it with the Read tool. The file starts with a header (lines beginning with `#`) listing source files, then contains the user's messages only — other speakers have already been filtered out.
+You will be given a path to a chunk file under `chunks/`. Read it with the
+Read tool.
 
-## Output
+The first few lines of every chunk are headers starting with `#`. The
+`# Kind:` header tells you which shape the chunk is:
 
-Output 5–15 bullet points covering, when evident:
+- `# Kind: freeform` — chat-log fragments. Other speakers have already been
+  filtered out, so every message is the user's.
+- `# Kind: questionnaire` — answers to an open-ended personality
+  questionnaire. Each `## Qn — Title` block is one question and the user's
+  free-text response. Skipped questions are absent.
+
+If the `# Kind:` header is missing (older chunks), assume `freeform`.
+
+## Output for freeform chunks
+
+5–15 bullet points covering, when evident:
 
 - Tone & register (formal / casual / sarcastic / warm / blunt)
 - Recurring vocabulary, slang, filler words, signature phrases
@@ -24,9 +38,33 @@ Output 5–15 bullet points covering, when evident:
 - How they handle disagreement, apology, affection
 - Sentence-length and punctuation habits
 
-## Rules
+## Output for questionnaire chunks
 
-- ONLY use what is supported by the messages in this chunk. Do NOT speculate.
+8–20 bullet points covering, when evident:
+
+- Core values, recurring beliefs, "north star" themes
+- Core motivation (what they want to be seen as) and core fear (what they
+  fear being seen as)
+- Narrative-identity tendencies (redemption vs. contamination framing of
+  life events)
+- Recurring frustrations and how they describe them
+- Hidden passions / topics they care about but rarely message about
+- Self-perception gap: how they'd LIKE to come across vs. how they actually
+  write
+- Code-switching range: how their register shifts across contexts (friend,
+  work, stranger)
+- Whether they tend to write to CONNECT or to INFORM
+- Humor style with named flavors (dry, absurd, observational,
+  self-deprecating, etc.)
+- Aspirational register: who they admire in writing and why
+- Stylistic habits visible in the explanatory prose of the answers
+  themselves
+
+## Rules (both shapes)
+
+- ONLY use what is supported by the content in this chunk. Do NOT
+  speculate.
 - Do NOT quote verbatim — paraphrase to avoid leaking private content.
-- Output ONLY the bullet list. No preamble, no closing remarks, no headings.
+- Output ONLY the bullet list. No preamble, no closing remarks, no
+  headings.
 - Each bullet should be one short sentence.

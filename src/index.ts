@@ -1,29 +1,61 @@
+import { existsSync, readdirSync } from 'node:fs';
+import path from 'node:path';
 import chalk from 'chalk';
 import { loadConfig, loadMyNames } from './config.js';
 import { processAll } from './stages/process.js';
 import { chunkAll } from './stages/chunk.js';
 import { runOllamaPipeline } from './stages/extract.js';
+import { runInterview } from './stages/interview.js';
 
-function parseFlags(argv: string[]): { ollama: boolean } {
-  return { ollama: argv.includes('--ollama') };
+function hasFreeformFiles(dir: string): boolean {
+  const abs = path.resolve(dir);
+  if (!existsSync(abs)) return false;
+  try {
+    return readdirSync(abs).some((n) => /\.(txt|md)$/i.test(n));
+  } catch {
+    return false;
+  }
+}
+
+function parseFlags(argv: string[]): { ollama: boolean; interview: boolean; englishPrimary: boolean } {
+  return {
+    ollama: argv.includes('--ollama'),
+    interview: argv.includes('--interview'),
+    englishPrimary: argv.includes('--en'),
+  };
 }
 
 async function main(): Promise<void> {
   const flags = parseFlags(process.argv.slice(2));
   const cfg = loadConfig();
-  const myNames = new Set(loadMyNames(cfg.myNamesFile));
 
-  console.log(
-    chalk.cyan.bold('[1/2]') +
-      ` Processing freeform inputs (filtering to ${chalk.yellow(myNames.size)} name(s) of mine)...`,
-  );
+  if (flags.interview) {
+    await runInterview(cfg, { englishPrimary: flags.englishPrimary });
+    return;
+  }
+
+  // Only require my-names.txt if there are actual freeform inputs to filter.
+  // Questionnaire-only runs don't need it.
+  const myNames = hasFreeformFiles(cfg.inputsFreeformDir)
+    ? new Set(loadMyNames(cfg.myNamesFile))
+    : new Set<string>();
+
+  const filterDesc = myNames.size > 0
+    ? `filtering to ${chalk.yellow(myNames.size)} name(s) of mine`
+    : chalk.dim('no freeform inputs — questionnaire-only mode');
+  console.log(chalk.cyan.bold('[1/2]') + ` Processing inputs (${filterDesc})...`);
   const stats = processAll(cfg, myNames);
+  const qPart =
+    stats.questionnaireAnswers > 0
+      ? `  questionnaire=${chalk.green(stats.questionnaireAnswers)}`
+      : '';
   console.log(
     `      files=${chalk.yellow(stats.filesProcessed)}  ` +
       `raw-lines=${chalk.yellow(stats.totalLinesIn)}  ` +
       `mine=${chalk.yellow(stats.myLinesIn)}  ` +
       `kept=${chalk.green(stats.linesOut)}  ` +
-      `dup-dropped=${chalk.dim(stats.duplicatesDropped)}`,
+      `dup-dropped=${chalk.dim(stats.duplicatesDropped)}` +
+      qPart,
   );
 
   console.log(

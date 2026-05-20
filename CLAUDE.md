@@ -5,8 +5,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 - `npm install` — install dependencies.
-- `npm run start` — run the CLI via `tsx` (data-prep only: process → chunk). Produces `chunks/` and `chunks/manifest.json`.
-- `npm run start -- --ollama` — same pipeline, then runs the local map/reduce extraction against Ollama and writes `out/my-soul.md`.
+- `npm run start` — run the CLI via `tsx` (data-prep only: process → chunk). Produces `chunks/` and `chunks/manifest.json`. Picks up `inputs/freeform/` (WhatsApp) and `inputs/questionnaire/answers.md` (interview) when present.
+- `npm run start -- --interview` — launch the 10-question interactive REPL. Saves to `inputs/questionnaire/answers.md` (crash-safe, resumable via re-run). Append `--en` for English-primary prompts (default is Romanian-primary).
+- `npm run start -- --ollama` — same pipeline as `start`, then runs the local map/reduce extraction against Ollama and writes `out/my-soul.md`.
 - `npm run build` — TypeScript compile to `dist/`.
 - `npm run start:prod` — run the compiled `dist/index.js`.
 
@@ -14,19 +15,29 @@ No test runner or linter is configured.
 
 ## Big-picture architecture
 
-The CLI is **pure data prep** by default — it does not call an LLM. There are two stages, then two alternative extraction paths.
+The CLI is **pure data prep** by default — it does not call an LLM. There are two input sources, two pipeline stages, then two alternative extraction paths.
+
+### Input sources
+
+- `inputs/freeform/` — raw WhatsApp exports (.txt / .md).
+- `inputs/questionnaire/answers.md` — optional 10-question interview filled in via `npm run start -- --interview`.
+
+Either source alone is sufficient; both can be combined. See `docs/` for the research and design behind the questionnaire path.
 
 ### Stage 1 — `src/stages/process.ts`
-Parses WhatsApp exports from `inputs/freeform/`, filters to messages authored by the user (matched against names in `inputs/my-names.txt`, loaded by `src/config.ts`), drops noise (short messages, URLs, `<Media omitted>`, exact-match duplicates), and writes per-source files into `inputs/processed/`. The "your messages only" filter is load-bearing — other speakers' words must not pollute the voice profile.
+Parses WhatsApp exports from `inputs/freeform/`, filters to messages authored by the user (matched against names in `inputs/my-names.txt`, loaded by `src/config.ts`), drops noise (short messages, URLs, `<Media omitted>`, exact-match duplicates), and writes per-source files into `inputs/processed/`. The "your messages only" filter is load-bearing — other speakers' words must not pollute the voice profile. Then `processQuestionnaire` reads `inputs/questionnaire/answers.md` if present, parses `## Qn — Title` sections, drops skipped answers, and writes `inputs/processed/__questionnaire__.txt` with a `# QUESTIONNAIRE` marker header.
 
 ### Stage 2 — `src/stages/chunk.ts`
-File-bounded first-fit packing of processed messages into token-budgeted chunks (`CHUNK_TARGET_TOKENS`, default 30k) under `chunks/chunk-NNN.txt`, plus `chunks/manifest.json` recording ordering, sources, and token estimates. Token estimation uses the cheap ~4 chars/token heuristic in `src/tokens.ts` (tuned for Romanian/English).
+File-bounded first-fit packing of processed messages into token-budgeted chunks (`CHUNK_TARGET_TOKENS`, default 30k) under `chunks/chunk-NNN.txt`, plus `chunks/manifest.json` recording ordering, sources, token estimates, and a `kind` field per chunk (`freeform` or `questionnaire`). The questionnaire file is always isolated into its own chunk (never packed with chat fragments) so the extractor can apply the Q&A-flavored prompt without cross-contamination. Token estimation uses the cheap ~4 chars/token heuristic in `src/tokens.ts` (tuned for Romanian/English).
+
+### Stage 0 — `src/stages/interview.ts` (only for `--interview`)
+A Node `readline` REPL that walks through the 10+1 questions defined in `src/questions.ts`. Multi-line answers (end on a blank line or `:done`), with `:skip` / `:back` / `:quit` / `:help` commands. Appends each answer to `inputs/questionnaire/answers.md` immediately (crash-safe). On re-run, detects a partial file and offers resume from the next unanswered question. No LLM calls during the REPL — the interview is intentionally dumb, all interpretation happens at extract time.
 
 ### Extraction — two paths, same map/reduce shape
-The chunks are designed for a **map/reduce** flow with prompts defined in `src/prompts.ts` (`MAP_PROMPT_HEADER` and `REDUCE_PROMPT_HEADER`). Map produces ~200 tokens of voice bullets per chunk (~100:1 compression); reduce synthesizes all bullets into the final profile.
+The chunks are designed for a **map/reduce** flow with prompts defined in `src/prompts.ts` (`MAP_PROMPT_HEADER`, `MAP_PROMPT_HEADER_QA`, and `REDUCE_PROMPT_HEADER`). The chat-log map prompt extracts vocabulary, tone, and stylistic patterns; the Q&A map prompt extracts propositional content (beliefs, motivations, narrative arcs) AND voice features from the explanatory prose of the answers. Map produces ~200 tokens of voice bullets per chunk; reduce synthesizes all bullets into the final profile with conditional sections (`Core Motivation & Fears`, `Communication Style`, `Self-Perception vs. Observed Voice`) that only appear if the questionnaire batches supplied material for them.
 
-- **Path A (primary): Claude Code orchestration.** After the CLI emits `chunks/`, a Claude Code session reads `chunks/manifest.json`, fans out one parallel sub-agent per chunk using `MAP_PROMPT_HEADER`, then synthesizes all returned bullets with `REDUCE_PROMPT_HEADER` into `out/my-soul.md`. `src/index.ts` prints these instructions on exit when `--ollama` is not passed.
-- **Path B (fallback): local Ollama.** `src/stages/extract.ts` + `src/ollama.ts` implement the same map/reduce against a local Ollama server. Per-chunk results are cached by content hash under `.cache/bullets/`, so re-runs after adding new exports only process new chunks.
+- **Path A (primary): Claude Code orchestration.** After the CLI emits `chunks/`, a Claude Code session reads `chunks/manifest.json`, fans out one parallel `soul-chunk-extractor` sub-agent per chunk (the agent reads the chunk's `# Kind:` header and picks the right output shape), then synthesizes all returned bullets into `out/my-soul.md`. If `out/my-soul.md` already exists, the skill backs it up to `out/my-soul.prev.md` before overwriting. `src/index.ts` prints these instructions on exit when neither `--ollama` nor `--interview` is passed.
+- **Path B (fallback): local Ollama.** `src/stages/extract.ts` + `src/ollama.ts` implement the same map/reduce against a local Ollama server. The extractor picks `MAP_PROMPT_HEADER_QA` or `MAP_PROMPT_HEADER` per chunk based on the manifest's `kind` field. Per-chunk results are cached by content hash (including the kind) under `.cache/bullets/`, so re-runs after adding new exports only process new chunks. Backs up an existing `out/my-soul.md` to `out/my-soul.prev.md` before overwriting.
 
 ### Config
 `src/config.ts` loads `.env` and validates with zod. All paths, chunk size, noise thresholds, and Ollama settings are env-driven (see `.env.example`). `loadMyNames` reads `inputs/my-names.txt` (one display name per line) — the user appears under different names across chats and all aliases must be listed.
@@ -34,8 +45,8 @@ The chunks are designed for a **map/reduce** flow with prompts defined in `src/p
 ### Privacy boundary
 Everything under `inputs/`, `inputs/processed/`, `chunks/`, `.cache/`, and `out/` is gitignored. `out/my-soul.md` is intentionally not auto-copied to downstream consumers — manual eyeball review is the safety net against verbatim regurgitation by the LLM.
 
-### Downstream consumers (out of repo)
-`out/my-soul.md` is the only artifact other projects depend on. Known consumers: a `newspapper` project and an `add-soul` Claude Code skill. Keep the artifact stable; swap extraction strategies freely.
+### Downstream consumers
+`out/my-soul.md` is the only artifact other tools depend on. Keep the artifact stable; swap extraction strategies freely.
 
 ## Honest limitations (from README)
 

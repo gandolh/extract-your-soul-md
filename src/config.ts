@@ -27,6 +27,8 @@ const EnvSchema = z.object({
   CHUNKS_DIR: z.string().min(1).default('chunks'),
   OUT_DIR: z.string().min(1).default('out'),
   MY_NAMES_FILE: z.string().min(1).default('inputs/my-names.txt'),
+  QUESTIONNAIRE_DIR: z.string().min(1).default('inputs/questionnaire'),
+  QUESTIONNAIRE_FILE: z.string().min(1).default('answers.md'),
 
   CHUNK_TARGET_TOKENS: intFromEnv.pipe(z.number().int().positive().default(30_000)),
   MIN_MESSAGE_LENGTH: intFromEnv.pipe(z.number().int().nonnegative().default(3)),
@@ -45,6 +47,8 @@ export type Config = {
   chunksDir: string;
   outDir: string;
   myNamesFile: string;
+  questionnaireDir: string;
+  questionnaireFile: string;
   chunkTargetTokens: number;
   minMessageLength: number;
   dropUrls: boolean;
@@ -70,6 +74,8 @@ export function loadConfig(): Config {
     chunksDir: e.CHUNKS_DIR,
     outDir: e.OUT_DIR,
     myNamesFile: e.MY_NAMES_FILE,
+    questionnaireDir: e.QUESTIONNAIRE_DIR,
+    questionnaireFile: e.QUESTIONNAIRE_FILE,
     chunkTargetTokens: e.CHUNK_TARGET_TOKENS,
     minMessageLength: e.MIN_MESSAGE_LENGTH,
     dropUrls: e.DROP_URLS,

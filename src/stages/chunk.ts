@@ -2,11 +2,15 @@ import { readdirSync, readFileSync, writeFileSync, mkdirSync, rmSync, statSync }
 import path from 'node:path';
 import type { Config } from '../config.js';
 import { estimateTokens } from '../tokens.js';
+import { QUESTIONNAIRE_PROCESSED_FILENAME } from './process.js';
+
+export type ChunkKind = 'freeform' | 'questionnaire';
 
 export interface ChunkEntry {
   file: string;
   sourceFiles: string[];
   estimatedTokens: number;
+  kind: ChunkKind;
 }
 
 export interface Manifest {
@@ -68,11 +72,17 @@ export function chunkAll(cfg: Config): Manifest {
   rmSync(outDir, { recursive: true, force: true });
   mkdirSync(outDir, { recursive: true });
 
-  const blocks = readAllFiles(inDir);
+  const allBlocks = readAllFiles(inDir);
+
+  // Isolate the questionnaire file — it always gets its own chunk so the
+  // extractor can apply Q&A-flavored prompting without cross-contamination
+  // from chat fragments.
+  const qBlocks = allBlocks.filter((b) => b.name === QUESTIONNAIRE_PROCESSED_FILENAME);
+  const freeformBlocks = allBlocks.filter((b) => b.name !== QUESTIONNAIRE_PROCESSED_FILENAME);
 
   // Expand oversized files into parts that fit the budget.
   const expanded: FileBlock[] = [];
-  for (const b of blocks) {
+  for (const b of freeformBlocks) {
     if (b.tokens <= cfg.chunkTargetTokens) {
       expanded.push(b);
     } else {
@@ -80,8 +90,8 @@ export function chunkAll(cfg: Config): Manifest {
     }
   }
 
-  // First-fit packing into chunks.
-  type ChunkBuf = { sources: string[]; bodies: string[]; tokens: number };
+  // First-fit packing into chunks (freeform files only).
+  type ChunkBuf = { sources: string[]; bodies: string[]; tokens: number; kind: ChunkKind };
   const buckets: ChunkBuf[] = [];
   for (const b of expanded) {
     let placed = false;
@@ -99,28 +109,54 @@ export function chunkAll(cfg: Config): Manifest {
         sources: [b.name],
         bodies: [b.content.endsWith('\n') ? b.content : b.content + '\n'],
         tokens: b.tokens,
+        kind: 'freeform',
+      });
+    }
+  }
+
+  // Append questionnaire as its own bucket(s). If it ever exceeds the budget
+  // we still split, but the split parts remain questionnaire-flavored.
+  for (const q of qBlocks) {
+    const parts =
+      q.tokens <= cfg.chunkTargetTokens ? [q] : splitOversizedFile(q, cfg.chunkTargetTokens);
+    for (const p of parts) {
+      buckets.push({
+        sources: [p.name],
+        bodies: [p.content.endsWith('\n') ? p.content : p.content + '\n'],
+        tokens: p.tokens,
+        kind: 'questionnaire',
       });
     }
   }
 
   const manifest: Manifest = {
     generatedAt: new Date().toISOString(),
-    totalEstimatedTokens: expanded.reduce((s, b) => s + b.tokens, 0),
+    totalEstimatedTokens: buckets.reduce((s, b) => s + b.tokens, 0),
     chunkTargetTokens: cfg.chunkTargetTokens,
     chunks: [],
   };
 
   buckets.forEach((bucket, i) => {
     const file = `chunk-${String(i + 1).padStart(3, '0')}.txt`;
+    const note =
+      bucket.kind === 'questionnaire'
+        ? `# This chunk is the personality questionnaire (Q&A format).`
+        : `# These are my own messages only, filtered from WhatsApp exports.`;
     const header =
       `# Source files: ${bucket.sources.join(', ')}\n` +
       `# Estimated tokens: ${bucket.tokens}\n` +
-      `# These are my own messages only, filtered from WhatsApp exports.\n\n`;
+      `# Kind: ${bucket.kind}\n` +
+      `${note}\n\n`;
     const body = bucket.bodies
       .map((b, idx) => `--- ${bucket.sources[idx]} ---\n${b}`)
       .join('\n');
     writeFileSync(path.join(outDir, file), header + body, 'utf8');
-    manifest.chunks.push({ file, sourceFiles: bucket.sources, estimatedTokens: bucket.tokens });
+    manifest.chunks.push({
+      file,
+      sourceFiles: bucket.sources,
+      estimatedTokens: bucket.tokens,
+      kind: bucket.kind,
+    });
   });
 
   writeFileSync(path.join(outDir, 'manifest.json'), JSON.stringify(manifest, null, 2), 'utf8');

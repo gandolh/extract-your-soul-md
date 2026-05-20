@@ -258,13 +258,12 @@ defaults below:
   Alternative: pre-chunked, if the questionnaire warrants a different
   prompt entirely and we want to bypass the chunker. Decide based on
   what feels less surgical when implementing.
-- **Downstream consumers**: `out/my-soul.md` is consumed by `newspapper`
-  and the `add-soul` skill (per the README). Adding new sections may or
-  may not break them. Before changing the output contract, verify how
-  those consumers read the file. If they read the whole file
-  permissively (just feed it to an LLM as context), new sections are
-  fine. If they parse specific section headers, the contract is more
-  brittle and we need to be careful.
+- **Downstream consumers of `out/my-soul.md`**: adding new sections may
+  or may not break them. Before changing the output contract, verify how
+  any downstream tools read the file. If they consume it permissively
+  (just feed it to an LLM as context), new sections are fine. If they
+  parse specific section headers, the contract is more brittle and we
+  need to be careful.
 - **Backup naming**: `out/my-soul.prev.md` or timestamped
   `out/my-soul.2026-05-20.md`? Default: `.prev.md` (simpler, only one
   backup deep).
