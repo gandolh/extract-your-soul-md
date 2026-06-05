@@ -100,7 +100,22 @@ and rerun to resume. Each free-text answer is dual-use: it surfaces a
 trait the chat logs can't see, and it doubles as a voice sample in your
 actual writing.
 
-After the interview, re-run `npm run start` to fold the answers into the
+Prefer a browser? Launch the same questionnaire as a Google-Forms-style
+web page instead:
+
+```
+npm run web            # or: npm run start -- --web
+```
+
+This starts a tiny local server (default http://127.0.0.1:4317), opens
+the form, and writes the **same** `inputs/questionnaire/answers.md` the
+REPL produces — so the two are interchangeable. The form leads in English
+(append `--ro` for Romanian-primary, or toggle language in-page), pre-fills
+any answers already on disk, and backs up an existing file to
+`answers.prev.md` on save. Flags: `--port=N`, `--no-open`. Everything stays
+local; nothing is uploaded. Press Ctrl+C to stop the server.
+
+After either path, re-run `npm run start` to fold the answers into the
 next extraction. The questionnaire always gets its own chunk so it
 doesn't get cross-contaminated with chat fragments, and a different map
 prompt is used to extract propositional content (beliefs, motivations,
@@ -109,7 +124,9 @@ narrative arcs) from it.
 The research foundation for the question set lives under
 [docs/](docs/) — see [docs/02-questionnaire-design.md](docs/02-questionnaire-design.md)
 for per-question rationale and [docs/01-research-synthesis.md](docs/01-research-synthesis.md)
-for the framework evaluation that led to the minimum set.
+for the framework evaluation that led to the minimum set. That research is
+also compiled into an interlinked **LLM Wiki** at
+[docs/wiki/](docs/wiki/) — start at [docs/wiki/overview.md](docs/wiki/overview.md).
 
 ## Token-optimization strategy
 
@@ -180,7 +197,8 @@ manual review step is the safety net.
 inputs/
   my-names.txt             # your aliases across chats (gitignored)
   freeform/                # raw WhatsApp exports (gitignored)
-  questionnaire/answers.md # Q&A answers from --interview (gitignored)
+  questionnaire/answers.md # Q&A answers from --interview / --web (gitignored)
+  questionnaire/answers.prev.md # backup of the previous answers.md (gitignored)
   processed/               # your messages + Q&A answers (gitignored)
 chunks/
   chunk-NNN.txt            # token-budgeted batches (gitignored)
@@ -198,11 +216,15 @@ src/
   ollama.ts                # raw-fetch Ollama client
   prompts.ts               # MAP, MAP_QA, and REDUCE prompt headers
   questions.ts             # the 10+1 questionnaire questions (RO + EN)
+  answers-file.ts          # shared answers.md reader/writer (REPL + web)
+  color.ts                 # tiny ANSI helper (util.styleText, no deps)
+  web/public/              # static Google-Forms-style questionnaire (HTML/CSS/JS)
   stages/
     process.ts             # WhatsApp parse → filter → dedup + Q&A parser
     chunk.ts               # file-bounded first-fit packing; isolates Q&A chunk
     extract.ts             # Ollama map/reduce (fallback path)
     interview.ts           # readline REPL for --interview
+    web.ts                 # Fastify server for the --web questionnaire form
 
 .claude/
   skills/extract-soul/SKILL.md   # /extract-soul orchestration skill

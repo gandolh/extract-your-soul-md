@@ -94,3 +94,72 @@ Sources cited across the design docs. Grouped by topic. All URLs verified
   — Rapport-talk vs. report-talk distinction.
 - [Nielsen Norman Group — Four tone-of-voice dimensions](https://www.nngroup.com/articles/tone-of-voice-dimensions/)
   — Practical 4-axis tone framework from UX research.
+
+## LLM persona / voice imitation (2024-2026 sweep)
+
+Added 2026-06-05. Summarized in [wiki/frameworks/llm-persona-techniques.md](wiki/frameworks/llm-persona-techniques.md)
+and the `wiki/sources/` pages. ⚠️ A few 2026 arXiv IDs should be link-verified
+before external citation.
+
+### Persona / style imitation
+
+- [How Well Do LLMs Imitate Human Writing Style? (2025)](https://arxiv.org/abs/2509.24930)
+  — few-shot 23.5× zero-shot; matched output lower perplexity (a tell).
+- [Beyond Profile / CharacterBot (2025)](https://arxiv.org/abs/2502.12988)
+  — facts give surface imitation; deeper voice needs more.
+- [Individual Turing Test (2026)](https://arxiv.org/abs/2603.01289)
+  — acquaintances detect imitation; strangers don't.
+- [Individualized Cognitive Simulation in LLMs (2025)](https://arxiv.org/abs/2510.20252)
+  — style mimicked better than narrative structure.
+- [Stable Personas (CHI 2026)](https://arxiv.org/abs/2601.22812)
+  — observer-rated persona drifts over long sessions.
+- [SPASM (ACL 2026)](https://arxiv.org/abs/2604.09212)
+  — drift/role-confusion/echoing failure modes + ECP mitigation.
+- [InterviewSim (2026)](https://arxiv.org/abs/2602.20294)
+  — RAG captures style; chronological preserves facts.
+- [Decoding AI Authorship (2026)](https://arxiv.org/abs/2603.23219)
+  — perplexity is the primary discriminator.
+
+### Structured style artifacts
+
+- [PROSE — preferences from writing samples (ICML 2025)](https://arxiv.org/abs/2505.23815)
+  — machine-generated NL style spec; +33% over prior SOTA.
+- [POPI — NL preference inference (WWW 2026)](https://arxiv.org/abs/2510.17881)
+  — generator-transferable summary; beats context-stuffing.
+- [PsPLUG — Styles + Persona-plug (2026)](https://arxiv.org/abs/2601.06362)
+  — personalization as a distributional residual via soft prompt.
+- [Eval4Sim (2026)](https://arxiv.org/abs/2603.02876)
+  — adherence / consistency / naturalness evaluation dimensions.
+- [Customizing LLM Generation Style via PEFT (2024)](https://arxiv.org/abs/2409.04574)
+  — LoRA style alignment without content memorization.
+
+### Open-ended elicitation
+
+- [Zero-Shot GenAI Scoring of Open-Ended Text — Nature Human Behaviour (2025)](https://pmc.ncbi.nlm.nih.gov/articles/PMC12974486/)
+  — open-ended beats Likert *and* LIWC; rs = .30-.53.
+- [Life Narratives & the Ten Aspects of the Big Five (2025)](https://onlinelibrary.wiley.com/doi/full/10.1111/jopy.70080)
+  — targeted event prompts isolate facets better than broad ones.
+- [Narrative Identity Self-Evaluation Scale (NISE) (2024)](https://www.tandfonline.com/doi/full/10.1080/00223891.2024.2425663)
+  — self-report bridge to McAdams dimensions.
+
+### AI tells / anti-patterns
+
+- [Wikipedia: Signs of AI Writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing)
+  — comprehensive maintained catalogue.
+- [The Last Fingerprint — markdown training shapes prose (2026)](https://arxiv.org/abs/2603.27006)
+  — em dash as markdown leakage; survives suppression.
+- [Too Many Em Dashes? — The Conversation (2025)](https://theconversation.com/too-many-em-dashes-weird-words-like-delves-spotting-text-written-by-chatgpt-is-still-more-art-than-science-259629)
+  — "delve" spike; detection is a moving target.
+- [avoid-ai-writing — Claude Code skill (2025)](https://github.com/conorbronsdon/avoid-ai-writing)
+  — 50 detectors + 109-entry replacement table.
+
+### Privacy / pitfalls
+
+- [From Weak Cues to Real Identities — de-anonymization (ICML 2026)](https://arxiv.org/abs/2603.18382)
+  — style cues re-identify 79.2%.
+- [Rethinking Verbatim Memorization in LLM Privacy (NeurIPS 2025)](https://openreview.net/forum?id=Xuvdo6oMkE)
+  — understanding, not memorization, drives leakage.
+- [Position: Privacy Is Not Just Memorization! (2025)](https://arxiv.org/abs/2510.01645)
+  — inference-time leakage is under-studied.
+- [Unintended Memorization of Sensitive Info in Fine-Tuned LMs (2026)](https://arxiv.org/abs/2601.17480)
+  — warns against fine-tuning on chat exports with third-party PII.

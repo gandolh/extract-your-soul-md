@@ -22,6 +22,8 @@ fed into the same extract step that already handles chat logs.
 
 ## Files
 
+These four are the **raw design docs** — the immutable source documents:
+
 - [01-research-synthesis.md](01-research-synthesis.md) — personality
   frameworks evaluated (Big Five, MBTI/16personalities, HEXACO, Enneagram,
   4 temperaments, communication-style models), the voice-specific research
@@ -34,6 +36,16 @@ fed into the same extract step that already handles chat logs.
   file-by-file change list, and the implementation order for resuming
   later.
 - [references.md](references.md) — sources cited across the design docs.
+
+## The wiki
+
+[wiki/](wiki/) is an **LLM Wiki** — a persistent, interlinked knowledge base
+that compiles the research above into navigable pages and keeps it current as
+new sources arrive. Start at [wiki/overview.md](wiki/overview.md) for the
+synthesis, [wiki/index.md](wiki/index.md) for the catalog, and
+[wiki/CLAUDE.md](wiki/CLAUDE.md) for how it is maintained (ingest / query /
+lint workflows). The raw docs above are the wiki's source layer; the wiki is
+the LLM-owned synthesis layer on top.
 
 ## TL;DR for someone coming back cold
 

@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync, copyFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
-import chalk from 'chalk';
+import { color } from '../color.js';
 import type { Config } from '../config.js';
 import type { Manifest, ChunkKind } from './chunk.js';
 import { generate } from '../ollama.js';
@@ -46,13 +46,13 @@ export async function runOllamaPipeline(cfg: Config, manifest: Manifest): Promis
   const bullets: string[] = [];
   for (let i = 0; i < manifest.chunks.length; i++) {
     const entry = manifest.chunks[i];
-    const kindTag = entry.kind === 'questionnaire' ? chalk.magenta('Q&A') : chalk.blue('chat');
+    const kindTag = entry.kind === 'questionnaire' ? color.magenta('Q&A') : color.blue('chat');
     process.stdout.write(
-      `  ${kindTag} ${chalk.yellow(`${i + 1}/${manifest.chunks.length}`)} (${chalk.cyan(entry.file)})... `,
+      `  ${kindTag} ${color.yellow(`${i + 1}/${manifest.chunks.length}`)} (${color.cyan(entry.file)})... `,
     );
     const t0 = Date.now();
     const out = await extractChunk(cfg, path.join(chunksDir, entry.file), cacheDir, entry.kind);
-    process.stdout.write(chalk.dim(`${((Date.now() - t0) / 1000).toFixed(1)}s\n`));
+    process.stdout.write(color.dim(`${((Date.now() - t0) / 1000).toFixed(1)}s\n`));
     const sourceLabel =
       entry.kind === 'questionnaire'
         ? `questionnaire`
@@ -60,7 +60,7 @@ export async function runOllamaPipeline(cfg: Config, manifest: Manifest): Promis
     bullets.push(`### Batch ${i + 1} (from ${sourceLabel})\n${out.trim()}`);
   }
 
-  process.stdout.write(`  ${chalk.magenta('reduce')}... `);
+  process.stdout.write(`  ${color.magenta('reduce')}... `);
   const t0 = Date.now();
   const reducePrompt = REDUCE_PROMPT_HEADER + bullets.join('\n\n');
   const soul = await generate(
@@ -72,7 +72,7 @@ export async function runOllamaPipeline(cfg: Config, manifest: Manifest): Promis
     },
     reducePrompt,
   );
-  process.stdout.write(chalk.dim(`${((Date.now() - t0) / 1000).toFixed(1)}s\n`));
+  process.stdout.write(color.dim(`${((Date.now() - t0) / 1000).toFixed(1)}s\n`));
 
   const outDir = path.resolve(cfg.outDir);
   mkdirSync(outDir, { recursive: true });

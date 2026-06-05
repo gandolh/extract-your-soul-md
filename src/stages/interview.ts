@@ -1,79 +1,38 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync } from 'node:fs';
-import path from 'node:path';
+import { appendFileSync, mkdirSync } from 'node:fs';
 import readline from 'node:readline';
-import chalk from 'chalk';
+import path from 'node:path';
+import { color } from '../color.js';
 import { QUESTIONS, type Question } from '../questions.js';
 import type { Config } from '../config.js';
+import {
+  renderSection,
+  parseAnswersFile,
+  writeAnswersFile,
+  type RecordedAnswer,
+} from '../answers-file.js';
 
-const SKIPPED_MARKER = '[skipped]';
+const SAVED_BY = '`npm run start -- --interview`';
 
 export interface InterviewOptions {
   englishPrimary: boolean;
 }
 
-interface RecordedAnswer {
-  id: string;
-  title: string;
-  body: string;
-}
-
-function formatHeader(q: Question): string {
-  return `## ${q.id} — ${q.title}`;
-}
-
 function parseExistingAnswers(filePath: string): Map<string, RecordedAnswer> {
-  const out = new Map<string, RecordedAnswer>();
-  if (!existsSync(filePath)) return out;
-  const raw = readFileSync(filePath, 'utf8');
-  const lines = raw.split(/\r?\n/);
-  let current: { id: string; title: string; lines: string[] } | null = null;
-  const headerRe = /^##\s+(Q\d+)\s+—\s+(.+)$/;
-  for (const line of lines) {
-    const m = line.match(headerRe);
-    if (m) {
-      if (current) {
-        out.set(current.id, {
-          id: current.id,
-          title: current.title,
-          body: current.lines.join('\n').trim(),
-        });
-      }
-      current = { id: m[1], title: m[2].trim(), lines: [] };
-      continue;
-    }
-    if (current) current.lines.push(line);
-  }
-  if (current) {
-    out.set(current.id, {
-      id: current.id,
-      title: current.title,
-      body: current.lines.join('\n').trim(),
-    });
-  }
-  return out;
+  return parseAnswersFile(filePath);
 }
 
+// Truncate to a header-only file. The REPL then appends one section per
+// answered question (crash-safe) via appendAnswerToFile.
 function writeFreshFile(filePath: string): void {
-  const header =
-    `# Soul Questionnaire — ${new Date().toISOString()}\n\n` +
-    `<!-- Saved by \`npm run start -- --interview\`. Skipped answers are marked ${SKIPPED_MARKER}. -->\n\n`;
-  writeFileSync(filePath, header, 'utf8');
+  writeAnswersFile(filePath, [], SAVED_BY);
 }
 
 function appendAnswerToFile(filePath: string, q: Question, body: string): void {
-  const section = `${formatHeader(q)}\n\n${body.trim() || SKIPPED_MARKER}\n\n`;
-  appendFileSync(filePath, section, 'utf8');
+  appendFileSync(filePath, renderSection(q, body), 'utf8');
 }
 
 function rewriteFile(filePath: string, answers: RecordedAnswer[]): void {
-  writeFreshFile(filePath);
-  for (const a of answers) {
-    appendFileSync(
-      filePath,
-      `## ${a.id} — ${a.title}\n\n${a.body || SKIPPED_MARKER}\n\n`,
-      'utf8',
-    );
-  }
+  writeAnswersFile(filePath, answers, SAVED_BY);
 }
 
 function ask(rl: readline.Interface, prompt: string): Promise<string> {
@@ -114,7 +73,7 @@ function readMultiline(rl: readline.Interface): Promise<MultilineResult> {
       }
       if (trimmed === ':help') {
         process.stdout.write(
-          chalk.dim(
+          color.dim(
             '  commands: :done submit · :skip · :back · :quit · (or press Enter twice to submit)\n',
           ),
         );
@@ -146,17 +105,17 @@ function renderPrompt(q: Question, idx: number, total: number, opts: InterviewOp
   const primary = opts.englishPrimary ? q.promptEn : q.promptRo;
   const secondary = opts.englishPrimary ? q.promptRo : q.promptEn;
   const primaryHint = opts.englishPrimary ? q.hintEn : q.hintRo;
-  const optionalTag = q.optional ? chalk.dim(' (optional)') : '';
+  const optionalTag = q.optional ? color.dim(' (optional)') : '';
 
   const lines = [
     '',
-    chalk.cyan.bold(`[${idx + 1}/${total}] ${q.id} — ${q.title}`) + optionalTag,
-    chalk.white(primary),
-    chalk.dim(secondary),
+    color.cyan.bold(`[${idx + 1}/${total}] ${q.id} — ${q.title}`) + optionalTag,
+    color.white(primary),
+    color.dim(secondary),
   ];
-  if (primaryHint) lines.push(chalk.dim(`(${primaryHint})`));
+  if (primaryHint) lines.push(color.dim(`(${primaryHint})`));
   lines.push(
-    chalk.dim('Press Enter twice on an empty line to submit · :skip · :back · :quit · :help'),
+    color.dim('Press Enter twice on an empty line to submit · :skip · :back · :quit · :help'),
   );
   return lines.join('\n');
 }
@@ -174,12 +133,12 @@ export async function runInterview(cfg: Config, opts: InterviewOptions): Promise
   if (existing.size > 0) {
     const answeredIds = QUESTIONS.filter((q) => existing.has(q.id)).map((q) => q.id);
     process.stdout.write(
-      chalk.yellow(
+      color.yellow(
         `Found existing answers (${answeredIds.length} answered: ${answeredIds.join(', ')}).\n`,
       ),
     );
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    const choice = (await ask(rl, chalk.bold('Resume from where you left off? [Y/n/restart]: ')))
+    const choice = (await ask(rl, color.bold('Resume from where you left off? [Y/n/restart]: ')))
       .trim()
       .toLowerCase();
     rl.close();
@@ -194,7 +153,7 @@ export async function runInterview(cfg: Config, opts: InterviewOptions): Promise
       }
       startIdx = QUESTIONS.findIndex((q) => !existing.has(q.id));
       if (startIdx === -1) {
-        process.stdout.write(chalk.green('All questions already answered. Nothing to do.\n'));
+        process.stdout.write(color.green('All questions already answered. Nothing to do.\n'));
         return filePath;
       }
       rewriteFile(filePath, answers);
@@ -205,12 +164,12 @@ export async function runInterview(cfg: Config, opts: InterviewOptions): Promise
 
   process.stdout.write(
     '\n' +
-      chalk.bold('Soul Questionnaire') +
+      color.bold('Soul Questionnaire') +
       '\n' +
-      chalk.dim(
+      color.dim(
         `${QUESTIONS.length} questions (~20 minutes). Answers save as you go to ${filePath}.\n`,
       ) +
-      chalk.dim('You can stop any time with :quit and resume later.\n'),
+      color.dim('You can stop any time with :quit and resume later.\n'),
   );
 
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
@@ -224,7 +183,7 @@ export async function runInterview(cfg: Config, opts: InterviewOptions): Promise
 
       if (res.command === 'back') {
         if (i === 0) {
-          process.stdout.write(chalk.yellow('Already at the first question.\n'));
+          process.stdout.write(color.yellow('Already at the first question.\n'));
           continue;
         }
         // Drop the previously-saved answer for the prior question, then re-ask.
@@ -241,7 +200,7 @@ export async function runInterview(cfg: Config, opts: InterviewOptions): Promise
           appendAnswerToFile(filePath, q, res.body);
         }
         process.stdout.write(
-          chalk.yellow(`Saved ${answers.length}/${QUESTIONS.length} answers. Re-run to resume.\n`),
+          color.yellow(`Saved ${answers.length}/${QUESTIONS.length} answers. Re-run to resume.\n`),
         );
         return filePath;
       }
@@ -251,7 +210,7 @@ export async function runInterview(cfg: Config, opts: InterviewOptions): Promise
       appendAnswerToFile(filePath, q, body);
 
       if (res.command === 'skip') {
-        process.stdout.write(chalk.dim('  (skipped)\n'));
+        process.stdout.write(color.dim('  (skipped)\n'));
       }
 
       i += 1;
@@ -262,13 +221,13 @@ export async function runInterview(cfg: Config, opts: InterviewOptions): Promise
 
   process.stdout.write(
     '\n' +
-      chalk.green.bold('Done.') +
-      ` Saved to ${chalk.cyan(filePath)}\n` +
-      chalk.dim('Next: run ') +
-      chalk.bold('npm run start') +
-      chalk.dim(' (without --interview) to process + chunk, then ') +
-      chalk.bold('/extract-soul') +
-      chalk.dim(' in Claude Code.\n'),
+      color.green.bold('Done.') +
+      ` Saved to ${color.cyan(filePath)}\n` +
+      color.dim('Next: run ') +
+      color.bold('npm run start') +
+      color.dim(' (without --interview) to process + chunk, then ') +
+      color.bold('/extract-soul') +
+      color.dim(' in Claude Code.\n'),
   );
   return filePath;
 }

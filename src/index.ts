@@ -1,11 +1,12 @@
 import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
-import chalk from 'chalk';
+import { color } from './color.js';
 import { loadConfig, loadMyNames } from './config.js';
 import { processAll } from './stages/process.js';
 import { chunkAll } from './stages/chunk.js';
 import { runOllamaPipeline } from './stages/extract.js';
 import { runInterview } from './stages/interview.js';
+import { runWeb } from './stages/web.js';
 
 function hasFreeformFiles(dir: string): boolean {
   const abs = path.resolve(dir);
@@ -17,11 +18,27 @@ function hasFreeformFiles(dir: string): boolean {
   }
 }
 
-function parseFlags(argv: string[]): { ollama: boolean; interview: boolean; englishPrimary: boolean } {
+interface Flags {
+  ollama: boolean;
+  interview: boolean;
+  web: boolean;
+  englishPrimary: boolean;
+  port: number;
+  noOpen: boolean;
+}
+
+function parseFlags(argv: string[]): Flags {
+  const portFlag = argv.find((a) => a.startsWith('--port='));
+  const parsedPort = portFlag ? Number(portFlag.slice('--port='.length)) : NaN;
   return {
     ollama: argv.includes('--ollama'),
     interview: argv.includes('--interview'),
-    englishPrimary: argv.includes('--en'),
+    web: argv.includes('--web'),
+    // The web form leads in English unless --ro is passed; the REPL keeps its
+    // existing Romanian-primary default (flip with --en).
+    englishPrimary: argv.includes('--en') || (argv.includes('--web') && !argv.includes('--ro')),
+    port: Number.isInteger(parsedPort) && parsedPort > 0 ? parsedPort : 4317,
+    noOpen: argv.includes('--no-open'),
   };
 }
 
@@ -34,6 +51,16 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (flags.web) {
+    await runWeb(cfg, {
+      englishPrimary: flags.englishPrimary,
+      port: flags.port,
+      host: '127.0.0.1',
+      open: !flags.noOpen,
+    });
+    return;
+  }
+
   // Only require my-names.txt if there are actual freeform inputs to filter.
   // Questionnaire-only runs don't need it.
   const myNames = hasFreeformFiles(cfg.inputsFreeformDir)
@@ -41,54 +68,54 @@ async function main(): Promise<void> {
     : new Set<string>();
 
   const filterDesc = myNames.size > 0
-    ? `filtering to ${chalk.yellow(myNames.size)} name(s) of mine`
-    : chalk.dim('no freeform inputs — questionnaire-only mode');
-  console.log(chalk.cyan.bold('[1/2]') + ` Processing inputs (${filterDesc})...`);
+    ? `filtering to ${color.yellow(myNames.size)} name(s) of mine`
+    : color.dim('no freeform inputs — questionnaire-only mode');
+  console.log(color.cyan.bold('[1/2]') + ` Processing inputs (${filterDesc})...`);
   const stats = processAll(cfg, myNames);
   const qPart =
     stats.questionnaireAnswers > 0
-      ? `  questionnaire=${chalk.green(stats.questionnaireAnswers)}`
+      ? `  questionnaire=${color.green(stats.questionnaireAnswers)}`
       : '';
   console.log(
-    `      files=${chalk.yellow(stats.filesProcessed)}  ` +
-      `raw-lines=${chalk.yellow(stats.totalLinesIn)}  ` +
-      `mine=${chalk.yellow(stats.myLinesIn)}  ` +
-      `kept=${chalk.green(stats.linesOut)}  ` +
-      `dup-dropped=${chalk.dim(stats.duplicatesDropped)}` +
+    `      files=${color.yellow(stats.filesProcessed)}  ` +
+      `raw-lines=${color.yellow(stats.totalLinesIn)}  ` +
+      `mine=${color.yellow(stats.myLinesIn)}  ` +
+      `kept=${color.green(stats.linesOut)}  ` +
+      `dup-dropped=${color.dim(stats.duplicatesDropped)}` +
       qPart,
   );
 
   console.log(
-    chalk.cyan.bold('[2/2]') +
-      ` Chunking (target ${chalk.yellow(cfg.chunkTargetTokens)} tokens/chunk)...`,
+    color.cyan.bold('[2/2]') +
+      ` Chunking (target ${color.yellow(cfg.chunkTargetTokens)} tokens/chunk)...`,
   );
   const manifest = chunkAll(cfg);
   console.log(
-    `      chunks=${chalk.green(manifest.chunks.length)}  ` +
-      `total-tokens=${chalk.yellow(manifest.totalEstimatedTokens)}  ` +
-      `→ ${chalk.cyan(cfg.chunksDir + '/')}`,
+    `      chunks=${color.green(manifest.chunks.length)}  ` +
+      `total-tokens=${color.yellow(manifest.totalEstimatedTokens)}  ` +
+      `→ ${color.cyan(cfg.chunksDir + '/')}`,
   );
 
   if (!flags.ollama) {
     console.log('');
-    console.log(chalk.green.bold('Done.') + ' In a Claude Code session on this repo, run:');
-    console.log(`  ${chalk.bold.cyan('/extract-soul')}`);
+    console.log(color.green.bold('Done.') + ' In a Claude Code session on this repo, run:');
+    console.log(`  ${color.bold.cyan('/extract-soul')}`);
     console.log(
-      chalk.dim(
-        `(skill at ${chalk.cyan('.claude/skills/extract-soul/SKILL.md')} — fans out one sub-agent per chunk, synthesizes ${chalk.cyan('out/my-soul.md')})`,
+      color.dim(
+        `(skill at ${color.cyan('.claude/skills/extract-soul/SKILL.md')} — fans out one sub-agent per chunk, synthesizes ${color.cyan('out/my-soul.md')})`,
       ),
     );
     console.log('');
-    console.log(chalk.dim(`Or run with ${chalk.bold('--ollama')} to use the local fallback path.`));
+    console.log(color.dim(`Or run with ${color.bold('--ollama')} to use the local fallback path.`));
     return;
   }
 
-  console.log(chalk.magenta.bold('[ollama]') + ' Running map + reduce against local Ollama...');
+  console.log(color.magenta.bold('[ollama]') + ' Running map + reduce against local Ollama...');
   const outPath = await runOllamaPipeline(cfg, manifest);
-  console.log(chalk.green.bold('Done.') + ' Soul written to ' + chalk.cyan(outPath));
+  console.log(color.green.bold('Done.') + ' Soul written to ' + color.cyan(outPath));
 }
 
 main().catch((err) => {
-  console.error(chalk.red.bold('error: ') + (err instanceof Error ? err.message : String(err)));
+  console.error(color.red.bold('error: ') + (err instanceof Error ? err.message : String(err)));
   process.exit(1);
 });
