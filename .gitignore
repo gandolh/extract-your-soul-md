@@ -146,3 +146,7 @@ vite.config.ts.timestamp-*
 inputs/
 chunks/
 out/
+
+# Web platform: SQLite database (source of truth) and per-user pipeline scratch
+data/
+.work/

@@ -22,6 +22,38 @@ section.
 That file can then be consumed by any downstream tool that needs a stable
 voice reference — typically by inlining the markdown into an LLM prompt.
 
+## Two ways to use it
+
+This repo has **two front doors over one shared core**:
+
+### The web platform (recommended)
+
+A small psychological-study platform: register an account, answer a few themed
+**studies** (open-ended self-report prompts), import your past conversations,
+and generate your `soul.md` — all in the browser. Multi-user, with a local
+SQLite database as the source of truth.
+
+```bash
+npm install                 # needs Node >= 24
+npm run dev                 # Fastify API (4317) + Vite SPA (5173)
+# open http://localhost:5173, register, and go
+```
+
+Stack: React + Vite + [Base UI](https://base-ui.com), a Fastify API, and the
+built-in `node:sqlite`. Extraction runs locally against [Ollama](https://ollama.com).
+For a single-port production build:
+
+```bash
+npm run build && npm run serve:prod   # http://localhost:4317
+```
+
+Set a real `SESSION_SECRET` (see `.env.example`) for any non-local deployment.
+
+### The CLI (original, file-based)
+
+The original single-user pipeline is unchanged and documented below. It's the
+path that supports the higher-quality Claude Code `/extract-soul` extraction.
+
 ## Why a separate tool?
 
 Voice profiles change rarely. Generating one is a slow, expensive,

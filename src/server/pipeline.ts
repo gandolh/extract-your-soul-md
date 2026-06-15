@@ -1,0 +1,93 @@
+// Per-user extraction: materialize a throwaway work dir from the user's DB
+// rows, run the UNCHANGED file-based pipeline (process → chunk → ollama)
+// against it, then read the result back into SQLite. The Claude /extract-soul
+// agent path stays CLI-only; the programmatic extractor here is always Ollama.
+
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import type { Config } from '../config.js';
+import { writeAnswersFile } from '../answers-file.js';
+import { processAll } from '../stages/process.js';
+import { chunkAll } from '../stages/chunk.js';
+import { runOllamaPipeline } from '../stages/extract.js';
+import {
+  getAnswersForUser,
+  getConversationContents,
+  getLatestResult,
+  getNames,
+  hasConversations,
+  saveResult,
+} from '../db/repos.js';
+import { readFileSync } from 'node:fs';
+
+// One extraction per user at a time — Ollama runs are heavy and serial.
+const running = new Set<number>();
+
+export class ExtractionBusyError extends Error {}
+export class NothingToExtractError extends Error {}
+
+export function isExtracting(userId: number): boolean {
+  return running.has(userId);
+}
+
+/** True if the user has any material (answers or conversations) to extract. */
+export function hasExtractableInput(userId: number): boolean {
+  if (hasConversations(userId)) return true;
+  return getAnswersForUser(userId).some((a) => a.body.trim().length > 0);
+}
+
+export async function runUserExtraction(baseCfg: Config, userId: number): Promise<string> {
+  if (running.has(userId)) throw new ExtractionBusyError('Extraction already running.');
+  if (!hasExtractableInput(userId)) {
+    throw new NothingToExtractError('Fill in at least one study answer or import a conversation first.');
+  }
+  running.add(userId);
+
+  const workRoot = path.resolve(baseCfg.workDir);
+  mkdirSync(workRoot, { recursive: true });
+  const work = mkdtempSync(path.join(workRoot, `u${userId}-`));
+
+  // A per-run Config clone with every path made absolute and pointed into the
+  // work dir. The base config is frozen — this spread is a fresh object.
+  const cfg: Config = {
+    ...baseCfg,
+    inputsFreeformDir: path.join(work, 'freeform'),
+    inputsProcessedDir: path.join(work, 'processed'),
+    chunksDir: path.join(work, 'chunks'),
+    outDir: path.join(work, 'out'),
+    questionnaireDir: path.join(work, 'questionnaire'),
+    questionnaireFile: 'answers.md',
+  };
+
+  try {
+    // 1. Conversations → work/freeform/<filename>
+    mkdirSync(cfg.inputsFreeformDir, { recursive: true });
+    for (const conv of getConversationContents(userId)) {
+      const safe = path.basename(conv.filename).replace(/[^\w.\- ]/g, '_');
+      writeFileSync(path.join(cfg.inputsFreeformDir, safe), conv.content, 'utf8');
+    }
+
+    // 2. Study answers → work/questionnaire/answers.md (UNCHANGED writer).
+    mkdirSync(cfg.questionnaireDir, { recursive: true });
+    writeAnswersFile(
+      path.join(cfg.questionnaireDir, cfg.questionnaireFile),
+      getAnswersForUser(userId),
+      'web extraction',
+    );
+
+    // 3. Existing pipeline, unchanged.
+    const myNames = new Set(getNames(userId));
+    processAll(cfg, myNames);
+    const manifest = chunkAll(cfg);
+    const outPath = await runOllamaPipeline(cfg, manifest);
+    const soulMd = readFileSync(outPath, 'utf8');
+
+    // 4. Persist; carry the prior soul.md into prev_md (backup-on-overwrite).
+    const prev = getLatestResult(userId);
+    saveResult(userId, soulMd, prev?.soul_md ?? null, 'ollama');
+    return soulMd;
+  } finally {
+    rmSync(work, { recursive: true, force: true });
+    running.delete(userId);
+  }
+}

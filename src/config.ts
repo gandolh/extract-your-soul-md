@@ -30,6 +30,16 @@ const EnvSchema = z.object({
   QUESTIONNAIRE_DIR: z.string().min(1).default('inputs/questionnaire'),
   QUESTIONNAIRE_FILE: z.string().min(1).default('answers.md'),
 
+  // Web-platform additions. The SQLite file is the source of truth for the
+  // server; WORK_DIR holds the throwaway per-user pipeline scratch dirs.
+  DB_PATH: z.string().min(1).default('data/soul.sqlite'),
+  WORK_DIR: z.string().min(1).default('.work'),
+  SERVER_PORT: intFromEnv.pipe(z.number().int().positive().default(4317)),
+  SESSION_SECRET: z
+    .string()
+    .min(16, 'SESSION_SECRET must be at least 16 chars')
+    .default('dev-insecure-session-secret-change-me'),
+
   CHUNK_TARGET_TOKENS: intFromEnv.pipe(z.number().int().positive().default(30_000)),
   MIN_MESSAGE_LENGTH: intFromEnv.pipe(z.number().int().nonnegative().default(3)),
   DROP_URLS: boolFromEnv.pipe(z.boolean().default(true)),
@@ -49,6 +59,10 @@ export type Config = {
   myNamesFile: string;
   questionnaireDir: string;
   questionnaireFile: string;
+  dbPath: string;
+  workDir: string;
+  serverPort: number;
+  sessionSecret: string;
   chunkTargetTokens: number;
   minMessageLength: number;
   dropUrls: boolean;
@@ -76,6 +90,10 @@ export function loadConfig(): Config {
     myNamesFile: e.MY_NAMES_FILE,
     questionnaireDir: e.QUESTIONNAIRE_DIR,
     questionnaireFile: e.QUESTIONNAIRE_FILE,
+    dbPath: e.DB_PATH,
+    workDir: e.WORK_DIR,
+    serverPort: e.SERVER_PORT,
+    sessionSecret: e.SESSION_SECRET,
     chunkTargetTokens: e.CHUNK_TARGET_TOKENS,
     minMessageLength: e.MIN_MESSAGE_LENGTH,
     dropUrls: e.DROP_URLS,

@@ -6,7 +6,7 @@ import { processAll } from './stages/process.js';
 import { chunkAll } from './stages/chunk.js';
 import { runOllamaPipeline } from './stages/extract.js';
 import { runInterview } from './stages/interview.js';
-import { runWeb } from './stages/web.js';
+import { runServe } from './server/serve.js';
 
 function hasFreeformFiles(dir: string): boolean {
   const abs = path.resolve(dir);
@@ -21,10 +21,9 @@ function hasFreeformFiles(dir: string): boolean {
 interface Flags {
   ollama: boolean;
   interview: boolean;
-  web: boolean;
+  serve: boolean;
   englishPrimary: boolean;
   port: number;
-  noOpen: boolean;
 }
 
 function parseFlags(argv: string[]): Flags {
@@ -33,12 +32,11 @@ function parseFlags(argv: string[]): Flags {
   return {
     ollama: argv.includes('--ollama'),
     interview: argv.includes('--interview'),
-    web: argv.includes('--web'),
-    // The web form leads in English unless --ro is passed; the REPL keeps its
-    // existing Romanian-primary default (flip with --en).
-    englishPrimary: argv.includes('--en') || (argv.includes('--web') && !argv.includes('--ro')),
+    // --serve runs the web platform (Fastify API + SPA). --web is kept as an
+    // alias so old muscle memory still works.
+    serve: argv.includes('--serve') || argv.includes('--web'),
+    englishPrimary: argv.includes('--en'),
     port: Number.isInteger(parsedPort) && parsedPort > 0 ? parsedPort : 4317,
-    noOpen: argv.includes('--no-open'),
   };
 }
 
@@ -51,13 +49,8 @@ async function main(): Promise<void> {
     return;
   }
 
-  if (flags.web) {
-    await runWeb(cfg, {
-      englishPrimary: flags.englishPrimary,
-      port: flags.port,
-      host: '127.0.0.1',
-      open: !flags.noOpen,
-    });
+  if (flags.serve) {
+    await runServe(cfg, { port: flags.port || cfg.serverPort, host: 'localhost' });
     return;
   }
 

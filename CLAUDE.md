@@ -4,15 +4,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-- `npm install` — install dependencies.
-- `npm run start` — run the CLI via `tsx` (data-prep only: process → chunk). Produces `chunks/` and `chunks/manifest.json`. Picks up `inputs/freeform/` (WhatsApp) and `inputs/questionnaire/answers.md` (interview) when present.
-- `npm run start -- --interview` — launch the 10-question interactive REPL. Saves to `inputs/questionnaire/answers.md` (crash-safe, resumable via re-run). Append `--en` for English-primary prompts (default is Romanian-primary).
-- `npm run web` (or `npm run start -- --web`) — launch a Google-Forms-style web form (tiny Fastify server, default http://127.0.0.1:4317) that writes the **same** `inputs/questionnaire/answers.md` as the REPL. English-primary by default (`--ro` to flip; in-page toggle). Flags: `--port=N`, `--no-open`. Backs up an existing file to `answers.prev.md` on save.
-- `npm run start -- --ollama` — same pipeline as `start`, then runs the local map/reduce extraction against Ollama and writes `out/my-soul.md`.
-- `npm run build` — TypeScript compile to `dist/`, then copy `src/web/public/` → `dist/web/public/` (the web form's static assets).
-- `npm run start:prod` — run the compiled `dist/index.js`.
+- `npm install` — install dependencies. Requires **Node ≥ 24** (uses the built-in `node:sqlite`).
+- `npm run dev` — run the **web platform** in development: Fastify API (`tsx watch`, http://127.0.0.1:4317) + Vite dev server (http://localhost:5173, proxies `/api` → Fastify). Open the Vite URL. This is the primary way to work on the app.
+- `npm run dev:api` / `npm run dev:web` — run just one side.
+- `npm run build` — `tsc` → `dist/` (backend) then `vite build` → `dist/public/` (SPA). No collision.
+- `npm run serve:prod` — run the compiled server (`dist/index.js --serve`). Serves both the SPA (static, from `dist/public`) and the API on one port (4317). Sets `--no-warnings=ExperimentalWarning` for `node:sqlite`.
+- `npm run start` — the **CLI data-prep pipeline** (no LLM, no server): process → chunk. Produces `chunks/` + `chunks/manifest.json` from `inputs/freeform/` and `inputs/questionnaire/answers.md`. Still used by the Claude `/extract-soul` path.
+- `npm run start -- --interview` — the interactive REPL questionnaire (writes `inputs/questionnaire/answers.md`). `--en` for English-primary.
+- `npm run start -- --ollama` — CLI pipeline + local Ollama map/reduce → `out/my-soul.md`.
 
 No test runner or linter is configured.
+
+## Two faces of this repo
+
+This project now has **two front doors over a shared core**:
+
+1. **The web platform** (`npm run dev` / `serve:prod`) — a multi-user React SPA + Fastify API + SQLite, where users register, answer themed *studies*, import conversations, and generate a per-user `soul.md`. **SQLite (`data/soul.sqlite`) is the source of truth.** This is the main product surface.
+2. **The CLI pipeline** (`npm run start [-- --interview|--ollama]`) — the original single-user, file-based data-prep + extraction, unchanged. The Claude `/extract-soul` skill still operates on repo-root `chunks/`.
+
+The web platform *reuses the CLI's pipeline code unchanged* — it just generates the file-based inputs on demand from DB rows at extraction time (see "Per-user extraction" below).
 
 ## Big-picture architecture
 
@@ -31,13 +41,10 @@ Parses WhatsApp exports from `inputs/freeform/`, filters to messages authored by
 ### Stage 2 — `src/stages/chunk.ts`
 File-bounded first-fit packing of processed messages into token-budgeted chunks (`CHUNK_TARGET_TOKENS`, default 30k) under `chunks/chunk-NNN.txt`, plus `chunks/manifest.json` recording ordering, sources, token estimates, and a `kind` field per chunk (`freeform` or `questionnaire`). The questionnaire file is always isolated into its own chunk (never packed with chat fragments) so the extractor can apply the Q&A-flavored prompt without cross-contamination. Token estimation uses the cheap ~4 chars/token heuristic in `src/tokens.ts` (tuned for Romanian/English).
 
-### Stage 0 — questionnaire capture (only for `--interview` / `--web`)
-Two interchangeable front-ends, both writing the same `inputs/questionnaire/answers.md` via the shared `src/answers-file.ts` module (the single source of truth for the file format — header, `## Qn — Title` sections, `[skipped]` marker; the downstream parser in `process.ts` keys off the same regex):
+### Stage 0 — questionnaire capture (CLI: `--interview`)
+`src/stages/interview.ts` (`--interview`) — a Node `readline` REPL that walks through the 10+1 questions defined in `src/questions.ts`, writing `inputs/questionnaire/answers.md` via the shared `src/answers-file.ts` module (the single source of truth for the file format — header, `## Qn — Title` sections, `[skipped]` marker; the downstream parser in `process.ts` keys off the same regex). Multi-line answers, `:skip` / `:back` / `:quit` / `:help`, crash-safe append, resume on re-run. (The old vanilla `--web` form has been replaced by the web platform below; `--web` is now an alias for `--serve`.)
 
-- `src/stages/interview.ts` (`--interview`) — a Node `readline` REPL that walks through the 10+1 questions defined in `src/questions.ts`. Multi-line answers (end on a blank line or `:done`), with `:skip` / `:back` / `:quit` / `:help` commands. Appends each answer immediately (crash-safe). On re-run, detects a partial file and offers resume from the next unanswered question.
-- `src/stages/web.ts` (`--web`) — a tiny Fastify server serving a Google-Forms-style static form from `src/web/public/`. The form is data-driven from `src/questions.ts` via `GET /api/questions` (so adding/changing a question never touches the HTML), pre-fills any answers already on disk, and `POST /api/answers` writes the whole file at once (backing up an existing one to `answers.prev.md`). English-primary by default with an in-page RO/EN toggle.
-
-No LLM calls in either front-end — questionnaire capture is intentionally dumb; all interpretation happens at extract time.
+No LLM calls in the REPL — questionnaire capture is intentionally dumb; all interpretation happens at extract time.
 
 ### Extraction — two paths, same map/reduce shape
 The chunks are designed for a **map/reduce** flow with prompts defined in `src/prompts.ts` (`MAP_PROMPT_HEADER`, `MAP_PROMPT_HEADER_QA`, and `REDUCE_PROMPT_HEADER`). The chat-log map prompt extracts vocabulary, tone, and stylistic patterns; the Q&A map prompt extracts propositional content (beliefs, motivations, narrative arcs) AND voice features from the explanatory prose of the answers. Map produces ~200 tokens of voice bullets per chunk; reduce synthesizes all bullets into the final profile with conditional sections (`Core Motivation & Fears`, `Communication Style`, `Self-Perception vs. Observed Voice`) that only appear if the questionnaire batches supplied material for them.
@@ -46,17 +53,31 @@ The chunks are designed for a **map/reduce** flow with prompts defined in `src/p
 - **Path B (fallback): local Ollama.** `src/stages/extract.ts` + `src/ollama.ts` implement the same map/reduce against a local Ollama server. The extractor picks `MAP_PROMPT_HEADER_QA` or `MAP_PROMPT_HEADER` per chunk based on the manifest's `kind` field. Per-chunk results are cached by content hash (including the kind) under `.cache/bullets/`, so re-runs after adding new exports only process new chunks. Backs up an existing `out/my-soul.md` to `out/my-soul.prev.md` before overwriting.
 
 ### Config
-`src/config.ts` loads `.env` and validates with zod. All paths, chunk size, noise thresholds, and Ollama settings are env-driven (see `.env.example`). `loadMyNames` reads `inputs/my-names.txt` (one display name per line) — the user appears under different names across chats and all aliases must be listed.
+`src/config.ts` loads `.env` and validates with zod. All paths, chunk size, noise thresholds, Ollama settings, plus the web-platform additions (`dbPath`, `workDir`, `serverPort`, `sessionSecret`) are env-driven (see `.env.example`). `loadMyNames` reads `inputs/my-names.txt` (CLI only); the web platform stores per-user names in SQLite instead.
+
+## Web platform architecture (`src/server/`, `src/db/`, `frontend/`)
+
+A React+Vite SPA + Fastify API + SQLite, layered **over the unchanged CLI core**. Multi-user; SQLite is the source of truth.
+
+- **`src/db/`** — `schema.sql` (applied idempotently on boot, WAL), `db.ts` (`node:sqlite` singleton; resolves `schema.sql` next to the module or falls back to `src/db/`), `repos.ts` (synchronous prepared-statement DAL). Tables: `users`, `sessions`, `study_answers` (PK `(user_id, question_id)`), `conversations`, `user_names`, `results`. `repos.ts` reuses `RecordedAnswer` from `answers-file.ts` so answers round-trip with no translation.
+- **`src/studies.ts`** — a *presentation layer* over `QUESTIONS`. `STUDIES` groups the canonical Q1..Q11 into themed forms (`inner-world`, `how-you-tell-it`, `how-you-see-yourself`). **Adding a new study is data-only**: append `Q12+` to `src/questions.ts` and a `Study` entry here. Adds no new file-format surface — the `Q\d+` regex already accepts higher ids.
+- **`src/server/`** — `app.ts` builds Fastify (cookie plugin, 4 route groups, prod static SPA + history fallback), `serve.ts` listens, `auth.ts` (scrypt hashing + opaque session tokens in a signed `sid` cookie + `requireAuth` preHandler), `pipeline.ts` (per-user extraction), `routes/{auth,studies,conversations,results}.ts`.
+- **`frontend/`** — own Vite root + own `tsconfig.json` (DOM lib + `react-jsx` + Bundler resolution — kept separate from the backend's NodeNext tsconfig). Base UI (`@base-ui-components/react`), `react-router-dom`. Pages: Login/Register, Intro (`/`), Studies index + StudyPage, Import (conversations + names), Results (renders `soul.md`, runs extraction). `vite.config.ts` proxies `/api`→4317 in dev; `vite build`→`dist/public` for prod.
+
+### Per-user extraction (`src/server/pipeline.ts`)
+`POST /api/extract` → `runUserExtraction(cfg, userId)`: makes a throwaway work dir under `WORK_DIR`, clones `Config` with all paths pointed into it (absolute), writes the user's conversations to `work/freeform/` and their answers to `work/questionnaire/answers.md` **via the unchanged `writeAnswersFile`**, then runs the unchanged `processAll → chunkAll → runOllamaPipeline`, reads the result back into the `results` table (carrying the prior `soul_md` into `prev_md`), and deletes the work dir. **The programmatic extractor is always Ollama** — the Claude `/extract-soul` agent path can't run from inside an HTTP request, so it stays CLI-only. Guards: 400 if the user has no answers and no conversations; 409 if an extraction is already running for that user (in-memory lock).
 
 ### Privacy boundary
-Everything under `inputs/`, `inputs/processed/`, `chunks/`, `.cache/`, and `out/` is gitignored. `out/my-soul.md` is intentionally not auto-copied to downstream consumers — manual eyeball review is the safety net against verbatim regurgitation by the LLM.
+Everything under `inputs/`, `inputs/processed/`, `chunks/`, `.cache/`, `out/`, plus the web platform's `data/` (SQLite) and `.work/` (per-user scratch) is gitignored. `soul.md` is meant for manual review before downstream use — the safety net against verbatim regurgitation by the LLM.
 
 ### Downstream consumers
 `out/my-soul.md` is the only artifact other tools depend on. Keep the artifact stable; swap extraction strategies freely.
 
-## Honest limitations (from README)
+## Honest limitations
 
-- Primary path requires being inside a Claude Code session; only `--ollama` is cron-friendly.
-- LLM stochasticity → runs are not reproducible.
-- WhatsApp-only parsers today; new formats require new parsers in `src/stages/process.ts`.
-- Token estimator is tuned for Romanian/English; other languages may need adjustment.
+- The web platform's extraction is **Ollama-only** (a local Ollama server must be running). The higher-quality Claude `/extract-soul` path requires a Claude Code session and stays CLI-only.
+- `node:sqlite` is experimental (Node ≥ 24); the server suppresses the warning. Migrating to `better-sqlite3` later is mechanical (same API surface).
+- `@base-ui-components/react` is pre-1.0 (pinned to an exact RC); its API may shift.
+- Auth is pragmatic (username/password, scrypt, cookie sessions). Set a real `SESSION_SECRET` and run behind TLS for any non-local deployment.
+- `/api/extract` is synchronous — an Ollama run can take minutes (Fastify `requestTimeout` is raised to accommodate it). A job queue + polling is the obvious next step.
+- LLM stochasticity → runs are not reproducible. WhatsApp-only parsers (`src/stages/process.ts`). Token estimator tuned for Romanian/English.
