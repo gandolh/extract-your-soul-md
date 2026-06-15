@@ -6,7 +6,9 @@ corpus is maintained; [log.md](log.md) for its history.
 
 ## Work lifecycle
 
-- [todos/](todos/) — captured ideas/tasks as prose, pre-spec.
+- [todos/](todos/) — captured ideas/tasks as prose, pre-spec. **34-item soul.md
+  improvement backlog captured 2026-06-16** (P1×8 / P2×17 / P3×9 — start with the
+  P1 foundation cluster: truncation, cache fingerprint, determinism, eval).
 - [briefs/todo/](briefs/todo/) — numbered work specs ready to build.
 - [briefs/done/](briefs/done/) — completed specs (immutable, with outcome notes).
 - [briefs/superseded/](briefs/superseded/) — specs later undone/replaced.
