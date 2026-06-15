@@ -1,5 +1,5 @@
 // Shared UI primitives for the Clinical Voice Instrument design system
-// (docs/design.md). Thin wrappers over Tailwind utilities so pages read
+// (corpus/wiki/sources-raw/design.md). Thin wrappers over Tailwind utilities so pages read
 // cleanly and the clinical vocabulary stays consistent: monospace eyebrows,
 // hairline cards, oxblood accent, soft 6px corners, flat-plane interactions.
 

@@ -153,12 +153,15 @@ doesn't get cross-contaminated with chat fragments, and a different map
 prompt is used to extract propositional content (beliefs, motivations,
 narrative arcs) from it.
 
-The research foundation for the question set lives under
-[docs/](docs/) — see [docs/02-questionnaire-design.md](docs/02-questionnaire-design.md)
-for per-question rationale and [docs/01-research-synthesis.md](docs/01-research-synthesis.md)
+The research foundation for the question set lives in the project **corpus**
+([corpus/](corpus/)) — see
+[corpus/wiki/sources-raw/02-questionnaire-design.md](corpus/wiki/sources-raw/02-questionnaire-design.md)
+for per-question rationale and
+[corpus/wiki/sources-raw/01-research-synthesis.md](corpus/wiki/sources-raw/01-research-synthesis.md)
 for the framework evaluation that led to the minimum set. That research is
 also compiled into an interlinked **LLM Wiki** at
-[docs/wiki/](docs/wiki/) — start at [docs/wiki/overview.md](docs/wiki/overview.md).
+[corpus/wiki/](corpus/wiki/) — start at
+[corpus/wiki/overview.md](corpus/wiki/overview.md).
 
 ## Token-optimization strategy
 
@@ -239,7 +242,7 @@ chunks/
 out/
   my-soul.md               # final profile (gitignored, manually copied out)
   my-soul.prev.md          # backup of the previous my-soul.md (gitignored)
-docs/                      # design docs — see docs/README.md
+corpus/                    # LLM-maintained wiki + work tracker — see corpus/index.md
 
 src/
   index.ts                 # CLI entry point — orchestrates stages and flags

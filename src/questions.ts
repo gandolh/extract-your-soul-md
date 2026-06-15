@@ -1,6 +1,7 @@
-// The questionnaire — see docs/02-questionnaire-design.md for the rationale
-// behind each question, and docs/01-research-synthesis.md for the research
-// that led to the minimum-set shape.
+// The questionnaire — see corpus/wiki/sources-raw/02-questionnaire-design.md for
+// the rationale behind each question, and
+// corpus/wiki/sources-raw/01-research-synthesis.md for the research that led to
+// the minimum-set shape.
 
 export interface Question {
   id: string;

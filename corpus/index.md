@@ -1,33 +1,39 @@
-# Corpus — work tracking
+# Corpus index
 
-LLM-maintained work lifecycle for *extract-your-soul-md*. The durable
-counterpart to the in-session `TodoWrite` list. Managed via the `corpus-flow`
-skill (todos → briefs → done + log).
+The front door to the `extract-your-soul-md` corpus — the project's
+LLM-maintained wiki + work tracker. Read [CLAUDE.md](CLAUDE.md) for how this
+corpus is maintained; [log.md](log.md) for its history.
 
-This tracks **engineering work** (what we're building). For the **research &
-design knowledge** (what we know), see the separate LLM Wiki at
-[docs/wiki/](../docs/wiki/index.md).
+## Work lifecycle
 
-## Layout
+- [todos/](todos/) — captured ideas/tasks as prose, pre-spec.
+- [briefs/todo/](briefs/todo/) — numbered work specs ready to build.
+- [briefs/done/](briefs/done/) — completed specs (immutable, with outcome notes).
+- [briefs/superseded/](briefs/superseded/) — specs later undone/replaced.
+- [log.md](log.md) — chronological record of every meaningful corpus change.
 
-```
-corpus/
-  index.md              ← this file (navigation)
-  log.md                ← chronological, append-only: shipped work & decisions
-  todos/                ← captured ideas/tasks as prose (<date>-<slug>.md)
-  briefs/
-    todo/               ← numbered work specs ready to build (<NN>-<slug>.md)
-    done/               ← completed briefs (number kept, immutable + outcome note)
-    superseded/         ← briefs later undone (one-line top note explaining why)
-```
+## Wiki — project state (the corpus-flow spine)
 
-## Lifecycle
+- [wiki/status.md](wiki/status.md) — dated snapshot of where the project stands.
+- [wiki/architecture.md](wiki/architecture.md) — structural map of the codebase
+  (CLI core + web platform over a shared pipeline).
+- [wiki/decisions.md](wiki/decisions.md) — locked tech/design choices.
+- [wiki/open-questions.md](wiki/open-questions.md) — genuinely unresolved threads.
 
-```
-todos/<date>-<slug>.md  →  briefs/todo/<NN>-<slug>.md  →  briefs/done/<NN>-<slug>.md  +  log.md
-   (capture)                  (promote → grill → build)      (move, keep number, log it)
-```
+## Wiki — research & design (the migrated LLM Wiki)
 
-## Current state
+The research behind the questionnaire path and voice imitation. Start here:
 
-Nothing tracked yet. Say "add a todo …" to capture the first piece of work.
+- [wiki/overview.md](wiki/overview.md) — the thesis: build input for *voice
+  imitation*, not a personality report.
+- [wiki/index.md](wiki/index.md) — the full research-wiki catalog (frameworks,
+  concepts, source summaries).
+- [wiki/sources-raw/](wiki/sources-raw/) — the immutable raw design docs:
+  research synthesis, questionnaire design, integration plan, references, plus
+  the web-UI design brief and design tokens.
+
+## Where else knowledge lives
+
+- The root [CLAUDE.md](../CLAUDE.md) owns pipeline mechanics and run commands.
+- The code under [src/](../src/) and [frontend/](../frontend/) is the ultimate
+  source of truth (it wins over any wiki claim — verify before quoting).
