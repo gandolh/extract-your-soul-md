@@ -4,6 +4,7 @@ import { api, ApiError, type StudyDetail } from '../api/client';
 import { useToast } from '../components/Toaster';
 import { Meter } from '../components/Layout';
 import { STUDY_ORDER } from '../studyOrder';
+import { Button, Eyebrow, Headline, buttonClass, cx, FIELD_CLASS } from '../components/ui';
 
 export function StudyPage() {
   const { studyId = '' } = useParams();
@@ -14,6 +15,7 @@ export function StudyPage() {
   const [lang, setLang] = useState<'en' | 'ro'>('en');
   const [busy, setBusy] = useState(false);
   const [notFound, setNotFound] = useState(false);
+  const [active, setActive] = useState<string | null>(null);
 
   useEffect(() => {
     setDetail(null);
@@ -63,71 +65,125 @@ export function StudyPage() {
 
   if (notFound) {
     return (
-      <div className="stack stack-4">
-        <h1>Unknown study</h1>
-        <p className="muted">That study doesn’t exist. <Link to="/studies">Back to the studies</Link>.</p>
+      <div className="flex flex-col gap-4">
+        <Headline>Unknown study</Headline>
+        <p className="text-[14px] text-text-secondary">
+          That study doesn’t exist.{' '}
+          <Link to="/studies" className="text-primary hover:text-primary-strong">
+            Back to the studies
+          </Link>
+          .
+        </p>
       </div>
     );
   }
-  if (!detail) return <p className="muted mono">Loading…</p>;
+  if (!detail) return <p className="font-mono text-[12px] text-text-faint">Loading…</p>;
 
   return (
-    <div className="stack stack-6">
-      <header className="stack stack-3" style={{ maxWidth: 'var(--measure)' }}>
-        <div className="row-between">
-          <p className="eyebrow" style={{ margin: 0 }}>
+    <div className="flex flex-col gap-section">
+      <header className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <Eyebrow>
             Study {idx >= 0 ? `${String(idx + 1).padStart(2, '0')} / ${STUDY_ORDER.length}` : ''}
-          </p>
-          <div className="toggle" role="group" aria-label="Prompt language">
-            <button data-on={lang === 'en'} onClick={() => setLang('en')}>EN</button>
-            <button data-on={lang === 'ro'} onClick={() => setLang('ro')}>RO</button>
+          </Eyebrow>
+          <div className="inline-flex overflow-hidden rounded-md border border-hairline" role="group" aria-label="Prompt language">
+            {(['en', 'ro'] as const).map((l) => (
+              <button
+                key={l}
+                onClick={() => setLang(l)}
+                className={cx(
+                  'px-3 py-1 font-mono text-[11px] font-medium uppercase tracking-[0.05em] transition-colors',
+                  lang === l ? 'bg-primary-strong text-on-primary' : 'bg-transparent text-text-faint hover:text-text-primary',
+                )}
+              >
+                {l.toUpperCase()}
+              </button>
+            ))}
           </div>
         </div>
-        <h1>{detail.study.title}</h1>
-        <p className="lede">{detail.study.description}</p>
-        <Meter completed={completed} total={detail.questions.length} />
+        <Headline>{detail.study.title}</Headline>
+        <p className="max-w-[64ch] text-[14px] leading-[22px] text-text-secondary">{detail.study.description}</p>
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-faint">
+            {completed} / {detail.questions.length} answered
+          </span>
+          <div className="max-w-[420px] flex-1">
+            <Meter completed={completed} total={detail.questions.length} />
+          </div>
+        </div>
       </header>
 
-      <div className="stack stack-6">
+      <div className="flex flex-col gap-4">
         {detail.questions.map((q, i) => {
           const prompt = lang === 'en' ? q.promptEn : q.promptRo;
           const hint = lang === 'en' ? q.hintEn : q.hintRo;
+          const answered = (answers[q.id] ?? '').trim().length > 0;
+          const isActive = active === q.id;
           return (
-            <div key={q.id} className="field" style={{ maxWidth: 'var(--measure)' }}>
-              <span className="field-q-index">Question {i + 1}{q.optional ? ' · optional' : ''}</span>
-              <label className="field-label" htmlFor={q.id}>
+            <div
+              key={q.id}
+              className={cx(
+                'rounded-md border bg-surface-card p-6 shadow-card transition-colors',
+                isActive ? 'border-primary-strong' : 'border-hairline',
+              )}
+            >
+              <div className="mb-3 flex items-center justify-between">
+                <span className={cx(
+                  'flex items-center gap-2 font-mono text-[11px] font-semibold uppercase tracking-[0.08em]',
+                  isActive ? 'text-primary' : 'text-text-faint',
+                )}>
+                  {isActive && <span className="inline-block h-1.5 w-1.5 rounded-sm bg-primary-strong" />}
+                  Question {i + 1}{q.optional ? ' · optional' : ''}
+                </span>
+                {answered && (
+                  <span
+                    aria-label="answered"
+                    className="grid h-5 w-5 place-items-center rounded-full bg-tertiary text-[11px] text-on-tertiary"
+                  >
+                    ✓
+                  </span>
+                )}
+              </div>
+              <label htmlFor={q.id} className="block text-[14px] font-medium leading-[20px] text-text-primary">
                 {prompt}
               </label>
-              {hint && <p className="field-hint">{hint}</p>}
+              {hint && <p className="mt-1 text-[13px] italic text-text-faint">{hint}</p>}
               <textarea
                 id={q.id}
+                className={cx(FIELD_CLASS, 'mt-3 min-h-[110px] resize-y leading-[1.5]')}
                 value={answers[q.id] ?? ''}
+                onFocus={() => setActive(q.id)}
+                onBlur={() => setActive((a) => (a === q.id ? null : a))}
                 onChange={(e) => setAnswers((a) => ({ ...a, [q.id]: e.target.value }))}
-                placeholder={q.optional ? 'Optional — leave blank to skip.' : 'Write as much as you like…'}
+                placeholder={q.optional ? 'Optional — leave blank to skip.' : 'Enter your response here…'}
               />
             </div>
           );
         })}
       </div>
 
-      <div className="btn-row">
-        <button className="btn btn-accent" disabled={busy} onClick={() => void save()}>
-          {busy ? 'Saving…' : 'Save'}
-        </button>
-        {prev && (
-          <Link className="btn btn-ghost" to={`/studies/${prev}`}>
-            ← Previous study
+      <div className="flex flex-wrap items-center gap-3">
+        {prev ? (
+          <Link className={buttonClass('ghost')} to={`/studies/${prev}`}>
+            ← Previous
           </Link>
-        )}
-        {next ? (
-          <button className="btn btn-ghost" disabled={busy} onClick={() => void save(next)}>
-            Save & next →
-          </button>
         ) : (
-          <button className="btn btn-ghost" disabled={busy} onClick={() => void save(null)}>
-            Save & finish →
-          </button>
+          <span />
         )}
+        <div className="ml-auto flex flex-wrap items-center gap-3">
+          <Button variant="ghost" disabled={busy} onClick={() => void save()}>
+            {busy ? 'Saving…' : 'Save draft'}
+          </Button>
+          {next ? (
+            <Button variant="primary" disabled={busy} onClick={() => void save(next)}>
+              Save & next →
+            </Button>
+          ) : (
+            <Button variant="primary" disabled={busy} onClick={() => void save(null)}>
+              Save & finish →
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { ApiError } from '../api/client';
+import { Button, Card, FieldLabel, FIELD_CLASS, Notice } from '../components/ui';
 
 export function RegisterPage() {
   const { register } = useAuth();
@@ -28,35 +29,57 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="auth-wrap">
-      <div className="auth-card stack stack-4">
-        <div>
-          <div className="auth-mark">
-            soul<span className="dot">.</span>study
+    <div className="grid min-h-screen place-items-center px-gutter py-12">
+      <div className="w-full max-w-[420px]">
+        <div className="mb-8 text-center">
+          <div className="font-sans text-[28px] font-bold tracking-[-0.02em] text-text-primary">
+            soul<span className="text-primary">.</span>study
           </div>
-          <p className="muted mono" style={{ fontSize: '0.74rem', letterSpacing: '0.1em', textTransform: 'uppercase', margin: '6px 0 0' }}>
-            Create a participant account
+          <p className="mt-2 font-mono text-[12px] uppercase tracking-[0.08em] text-text-faint">
+            New participant
           </p>
         </div>
-        <div className="panel">
-          <form className="stack stack-4" onSubmit={onSubmit}>
-            <label className="field">
-              <span className="field-q-index">Username</span>
-              <input type="text" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} autoFocus />
-            </label>
-            <label className="field">
-              <span className="field-q-index">Password</span>
-              <input type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
-              <span className="field-hint">At least 6 characters. Stored hashed (scrypt).</span>
-            </label>
-            {error && <div className="notice notice-err">{error}</div>}
-            <button className="btn btn-accent" type="submit" disabled={busy}>
+
+        <Card className="p-7">
+          <form className="flex flex-col gap-5" onSubmit={onSubmit}>
+            <div className="flex flex-col gap-1.5">
+              <FieldLabel htmlFor="username">Username</FieldLabel>
+              <input
+                id="username"
+                className={FIELD_CLASS}
+                type="text"
+                autoComplete="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <FieldLabel htmlFor="password">Password</FieldLabel>
+              <input
+                id="password"
+                className={FIELD_CLASS}
+                type="password"
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <span className="font-mono text-[10px] text-text-faint">
+                At least 6 characters · stored hashed (scrypt)
+              </span>
+            </div>
+            {error && <Notice tone="err">{error}</Notice>}
+            <Button type="submit" disabled={busy}>
               {busy ? 'Creating…' : 'Create account'}
-            </button>
+            </Button>
           </form>
-        </div>
-        <p className="muted" style={{ fontSize: '0.9rem' }}>
-          Already registered? <Link to="/login">Sign in</Link>
+        </Card>
+
+        <p className="mt-6 text-center text-[13px] text-text-secondary">
+          Already registered?{' '}
+          <Link to="/login" className="font-semibold text-primary hover:text-primary-strong">
+            Sign in
+          </Link>
         </p>
       </div>
     </div>

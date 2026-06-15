@@ -12,14 +12,14 @@ import { type ReactNode } from 'react';
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
-  if (loading) return <div className="auth-wrap"><span className="spin" /></div>;
+  if (loading) return <div className="grid min-h-screen place-items-center"><span className="spin" /></div>;
   if (!user) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
 
 function PublicOnly({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
-  if (loading) return <div className="auth-wrap"><span className="spin" /></div>;
+  if (loading) return <div className="grid min-h-screen place-items-center"><span className="spin" /></div>;
   if (user) return <Navigate to="/" replace />;
   return <>{children}</>;
 }

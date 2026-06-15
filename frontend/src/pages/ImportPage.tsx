@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, ApiError, type Conversation } from '../api/client';
 import { useToast } from '../components/Toaster';
+import { Button, Eyebrow, Headline, Tag, cx, FIELD_CLASS } from '../components/ui';
 
 export function ImportPage() {
   const toast = useToast();
@@ -64,42 +65,54 @@ export function ImportPage() {
   }
 
   return (
-    <div className="stack stack-7">
-      <header style={{ maxWidth: '48ch' }}>
-        <p className="eyebrow">Conversations</p>
-        <h1>Import your own words</h1>
-        <p className="lede" style={{ marginTop: 'var(--s-3)' }}>
+    <div className="flex flex-col gap-section">
+      <header className="max-w-[60ch]">
+        <Eyebrow>Conversations</Eyebrow>
+        <Headline className="mt-3">Import your own words</Headline>
+        <p className="mt-3 max-w-[64ch] text-[14px] leading-[22px] text-text-secondary">
           Export a WhatsApp chat (Settings → Export chat → Without media) and drop the{' '}
-          <code>.txt</code> here. Only the messages <em>you</em> wrote are kept — set the names you
-          appear under below, or nothing will be matched.
+          <code className="rounded-sm bg-primary-wash px-1.5 py-0.5 font-mono text-[12px] text-primary">.txt</code> here.
+          Only the messages <em>you</em> wrote are kept — set the names you appear under below, or
+          nothing will be matched.
         </p>
       </header>
 
-      <section className="stack stack-4">
-        <p className="eyebrow" style={{ margin: 0 }}>Step 1 — Your names</p>
-        <p className="muted" style={{ maxWidth: 'var(--measure)' }}>
+      <section className="flex flex-col gap-4">
+        <Eyebrow>Step 1 — Your names</Eyebrow>
+        <p className="max-w-[64ch] text-[14px] text-text-secondary">
           One display name per line — every name you show up as across these chats.
         </p>
         <textarea
-          style={{ maxWidth: '40ch', minHeight: 90 }}
+          className={cx(FIELD_CLASS, 'max-w-[40ch] min-h-[90px] resize-y font-mono text-[13px]')}
           value={namesText}
           onChange={(e) => setNamesText(e.target.value)}
           placeholder={'Cristian\nCristian G\n+40…'}
         />
-        <div className="btn-row">
-          <button className="btn btn-ghost" onClick={() => void saveNames()}>Save names</button>
-          {names.length > 0 && <span className="tag">{names.length} name{names.length > 1 ? 's' : ''} set</span>}
+        <div className="flex flex-wrap items-center gap-3">
+          <Button variant="secondary" onClick={() => void saveNames()}>
+            Save names
+          </Button>
+          {names.length > 0 && (
+            <Tag tone="accent">
+              {names.length} name{names.length > 1 ? 's' : ''} set
+            </Tag>
+          )}
         </div>
       </section>
 
-      <hr className="divider" />
+      <hr className="border-0 border-t border-hairline" />
 
-      <section className="stack stack-4">
-        <p className="eyebrow" style={{ margin: 0 }}>Step 2 — Drop exports</p>
+      <section className="flex flex-col gap-4">
+        <Eyebrow>Step 2 — Drop exports</Eyebrow>
         <div
-          className="dropzone"
-          data-over={over}
+          role="button"
+          tabIndex={0}
+          className={cx(
+            'cursor-pointer rounded-md border border-dashed p-12 text-center font-mono text-[12px] transition-colors',
+            over ? 'border-primary bg-primary-wash text-primary' : 'border-outline/50 text-text-faint hover:border-outline',
+          )}
           onClick={() => fileInput.current?.click()}
+          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && fileInput.current?.click()}
           onDragOver={(e) => {
             e.preventDefault();
             setOver(true);
@@ -123,13 +136,16 @@ export function ImportPage() {
         </div>
 
         {convos.length > 0 && (
-          <div className="panel">
+          <div className="rounded-md border border-hairline bg-surface-card px-5 shadow-card">
             {convos.map((c) => (
-              <div key={c.id} className="list-row">
-                <span className="mono" style={{ fontSize: '0.85rem' }}>{c.filename}</span>
-                <button className="btn btn-ghost" style={{ padding: '4px 12px' }} onClick={() => void remove(c.id)}>
+              <div
+                key={c.id}
+                className="flex items-center justify-between gap-4 border-b border-hairline py-3 last:border-b-0"
+              >
+                <span className="font-mono text-[13px] text-text-primary">{c.filename}</span>
+                <Button variant="ghost" className="px-3 py-1.5" onClick={() => void remove(c.id)}>
                   Remove
-                </button>
+                </Button>
               </div>
             ))}
           </div>

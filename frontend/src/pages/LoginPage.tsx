@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { ApiError } from '../api/client';
+import { Button, Card, FieldLabel, FIELD_CLASS, Notice } from '../components/ui';
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -26,45 +27,54 @@ export function LoginPage() {
   }
 
   return (
-    <div className="auth-wrap">
-      <div className="auth-card stack stack-4">
-        <div>
-          <div className="auth-mark">
-            soul<span className="dot">.</span>study
+    <div className="grid min-h-screen place-items-center px-gutter py-12">
+      <div className="w-full max-w-[420px]">
+        <div className="mb-8 text-center">
+          <div className="font-sans text-[28px] font-bold tracking-[-0.02em] text-text-primary">
+            soul<span className="text-primary">.</span>study
           </div>
-          <p className="muted mono" style={{ fontSize: '0.74rem', letterSpacing: '0.1em', textTransform: 'uppercase', margin: '6px 0 0' }}>
-            Sign in to continue
-          </p>
+          <p className="mt-2 font-mono text-[12px] uppercase tracking-[0.08em] text-text-faint">Sign in</p>
         </div>
-        <div className="panel">
-          <form className="stack stack-4" onSubmit={onSubmit}>
-            <label className="field">
-              <span className="field-q-index">Username</span>
+
+        <Card className="p-7">
+          <form className="flex flex-col gap-5" onSubmit={onSubmit}>
+            <div className="flex flex-col gap-1.5">
+              <FieldLabel htmlFor="username">Username</FieldLabel>
               <input
+                id="username"
+                className={FIELD_CLASS}
                 type="text"
                 autoComplete="username"
+                placeholder="user@domain.com"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoFocus
               />
-            </label>
-            <label className="field">
-              <span className="field-q-index">Password</span>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <FieldLabel htmlFor="password">Password</FieldLabel>
               <input
+                id="password"
+                className={FIELD_CLASS}
                 type="password"
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
-            </label>
-            {error && <div className="notice notice-err">{error}</div>}
-            <button className="btn btn-accent" type="submit" disabled={busy}>
+              <span className="font-mono text-[10px] text-text-faint">6+ chars · stored hashed</span>
+            </div>
+            {error && <Notice tone="err">{error}</Notice>}
+            <Button type="submit" disabled={busy}>
               {busy ? 'Signing in…' : 'Sign in'}
-            </button>
+            </Button>
           </form>
-        </div>
-        <p className="muted" style={{ fontSize: '0.9rem' }}>
-          No account yet? <Link to="/register">Register</Link>
+        </Card>
+
+        <p className="mt-6 text-center text-[13px] text-text-secondary">
+          No account yet?{' '}
+          <Link to="/register" className="font-semibold text-primary hover:text-primary-strong">
+            Request an account
+          </Link>
         </p>
       </div>
     </div>

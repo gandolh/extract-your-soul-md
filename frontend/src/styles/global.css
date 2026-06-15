@@ -1,218 +1,199 @@
-@import './tokens.css';
+@import 'tailwindcss';
 
-* { box-sizing: border-box; }
+/* ===================================================================
+   Clinical Voice Instrument — design tokens (docs/design.md)
+   Registered with Tailwind v4 @theme so every token is a utility:
+   bg-surface, text-primary, font-mono, rounded-md, etc.
+   =================================================================== */
 
-html, body { height: 100%; }
+@theme {
+  /* --- fonts ------------------------------------------------------ */
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
-body {
-  margin: 0;
-  background: var(--paper);
-  /* faint horizontal ruling, like a lab notebook */
-  background-image: linear-gradient(var(--line) 1px, transparent 1px);
-  background-size: 100% 2.2rem;
-  background-position: 0 -1px;
-  color: var(--ink);
-  font-family: var(--serif-read);
-  font-size: 17px;
-  line-height: 1.55;
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
+  /* --- color: surfaces / canvas ---------------------------------- */
+  --color-surface: #f9f9f9;
+  --color-surface-dim: #dadada;
+  --color-surface-bright: #f9f9f9;
+  --color-surface-lowest: #ffffff;
+  --color-surface-low: #f3f3f3;
+  --color-surface-container: #eeeeee;
+  --color-surface-high: #e8e8e8;
+  --color-surface-highest: #e2e2e2;
+  --color-surface-card: #ffffff;
+  --color-background: #f9f9f9;
+
+  /* --- color: text tiers ----------------------------------------- */
+  --color-text-primary: #1a1714;
+  --color-text-secondary: #5a554e;
+  --color-text-faint: #8f8a82;
+  --color-on-surface: #1a1c1c;
+  --color-on-surface-variant: #564241;
+
+  /* --- color: oxblood accent ------------------------------------- */
+  --color-primary: #7d2325;
+  --color-primary-strong: #9c3a3a; /* primary-container — the bright oxblood */
+  --color-on-primary: #ffffff;
+  --color-primary-wash: #f3e6e4; /* oxblood wash */
+  --color-primary-fixed: #ffdad8;
+  --color-on-primary-fixed-variant: #812628;
+
+  /* --- color: tertiary (success/clinical green) ------------------ */
+  --color-tertiary: #00684f;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #a0f3d3;
+  --color-on-tertiary-fixed: #002117;
+
+  /* --- color: error ---------------------------------------------- */
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+
+  /* --- color: structure ------------------------------------------ */
+  --color-hairline: #e6e3dd;
+  --color-outline: #897170;
+  --color-inverse-surface: #2f3131;
+  --color-inverse-on-surface: #f0f1f1;
+
+  /* --- radius (design.md "soft" 4–6px) --------------------------- */
+  --radius-sm: 0.125rem; /* 2px — chips, meters */
+  --radius: 0.25rem; /* 4px — default */
+  --radius-md: 0.375rem; /* 6px — cards/inputs */
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+
+  /* --- elevation: a single razor-thin card shadow ---------------- */
+  --shadow-card: 0 1px 3px rgba(26, 23, 20, 0.05);
+
+  /* --- layout ---------------------------------------------------- */
+  --spacing-gutter: 16px;
+  --spacing-section: 32px;
 }
 
-a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
-a:hover { color: var(--accent-soft); }
-
-h1, h2, h3 { font-family: var(--serif); font-weight: 500; letter-spacing: -0.01em; line-height: 1.1; margin: 0; }
-h1 { font-size: clamp(2.1rem, 4vw, 3rem); }
-h2 { font-size: 1.5rem; }
-h3 { font-size: 1.15rem; }
-
-p { margin: 0 0 var(--s-4); max-width: var(--measure); }
-
-/* ---- shell ---------------------------------------------------------- */
-
-.shell { min-height: 100%; display: flex; flex-direction: column; }
-
-.masthead {
-  border-bottom: 1px solid var(--line-strong);
-  background: var(--paper-raised);
-  position: sticky; top: 0; z-index: 10;
-}
-.masthead-inner {
-  max-width: 1040px; margin: 0 auto; padding: var(--s-3) var(--s-5);
-  display: flex; align-items: baseline; gap: var(--s-5);
-}
-.wordmark {
-  font-family: var(--serif); font-size: 1.35rem; font-weight: 600;
-  letter-spacing: -0.02em; color: var(--ink); text-decoration: none;
-}
-.wordmark .dot { color: var(--accent); }
-.masthead-sub {
-  font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.14em;
-  text-transform: uppercase; color: var(--ink-faint);
-}
-.nav { margin-left: auto; display: flex; align-items: center; gap: var(--s-5); }
-.nav a {
-  font-family: var(--mono); font-size: 0.74rem; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--ink-soft); text-decoration: none;
-  padding-bottom: 2px; border-bottom: 1.5px solid transparent;
-}
-.nav a:hover { color: var(--ink); }
-.nav a.active { color: var(--accent); border-bottom-color: var(--accent); }
-.nav .who { font-family: var(--mono); font-size: 0.72rem; color: var(--ink-faint); text-transform: none; letter-spacing: 0; }
-
-.main { flex: 1; max-width: 1040px; width: 100%; margin: 0 auto; padding: var(--s-7) var(--s-5) var(--s-8); }
-
-.foot {
-  border-top: 1px solid var(--line); padding: var(--s-5);
-  font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.06em;
-  color: var(--ink-faint); text-align: center;
+/* The 960px clinical column — a named utility used by the shell. */
+@utility max-w-column {
+  max-width: 960px;
 }
 
-/* ---- eyebrow / section numbering ------------------------------------ */
+/* ===================================================================
+   Base layer — reset, canvas, typography defaults
+   =================================================================== */
 
-.eyebrow {
-  font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.18em;
-  text-transform: uppercase; color: var(--accent); margin: 0 0 var(--s-3);
-  display: flex; align-items: center; gap: var(--s-3);
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  html,
+  body {
+    height: 100%;
+  }
+  body {
+    margin: 0;
+    background: var(--color-background);
+    color: var(--color-text-primary);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  /* The library docs ask for isolation on the app root so popups stack cleanly. */
+  .root {
+    isolation: isolate;
+  }
 }
-.eyebrow::before { content: ''; width: 22px; height: 1.5px; background: var(--accent); display: inline-block; }
 
-.lede { font-family: var(--serif); font-size: 1.25rem; line-height: 1.4; color: var(--ink-soft); max-width: var(--measure); }
+/* ===================================================================
+   soul.md / markdown render — the rendered markdown carries no
+   classNames, so it's styled structurally inside the .soul scope.
+   =================================================================== */
 
-/* ---- panels & cards ------------------------------------------------- */
-
-.panel {
-  background: var(--panel); border: 1px solid var(--line-strong);
-  border-radius: var(--radius-lg); padding: var(--s-6);
+@layer components {
+  .soul {
+    font-family: var(--font-sans);
+    color: var(--color-text-primary);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .soul h1,
+  .soul h2,
+  .soul h3 {
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-primary);
+    margin: 28px 0 12px;
+  }
+  .soul h1:first-child,
+  .soul h2:first-child,
+  .soul h3:first-child {
+    margin-top: 0;
+  }
+  .soul p {
+    margin: 0 0 14px;
+  }
+  .soul ul {
+    margin: 0 0 14px;
+    padding-left: 20px;
+    list-style: none;
+  }
+  .soul li {
+    position: relative;
+    margin: 0 0 8px;
+    padding-left: 4px;
+  }
+  .soul li::before {
+    content: '';
+    position: absolute;
+    left: -14px;
+    top: 9px;
+    width: 5px;
+    height: 5px;
+    background: var(--color-primary-strong);
+    border-radius: 1px;
+  }
+  .soul strong {
+    font-weight: 600;
+    color: var(--color-text-primary);
+  }
+  .soul em {
+    font-style: italic;
+    color: var(--color-text-secondary);
+  }
+  .soul code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    background: var(--color-primary-wash);
+    color: var(--color-primary);
+    padding: 1px 5px;
+    border-radius: 2px;
+  }
+  .soul pre {
+    background: var(--color-surface-low);
+    border: 1px solid var(--color-hairline);
+    padding: 12px;
+    border-radius: 4px;
+    overflow-x: auto;
+  }
 }
 
-.card {
-  background: var(--panel); border: 1px solid var(--line);
-  border-left: 3px solid var(--line-strong);
-  border-radius: var(--radius); padding: var(--s-5);
-  transition: border-color 0.15s ease, transform 0.15s ease;
-  text-decoration: none; color: inherit; display: block;
-}
-.card:hover { border-left-color: var(--accent); transform: translateY(-1px); }
-
-.card-index { font-family: var(--mono); font-size: 0.72rem; color: var(--ink-faint); letter-spacing: 0.1em; }
-.card-title { font-family: var(--serif); font-size: 1.3rem; font-weight: 500; margin: var(--s-2) 0 var(--s-2); }
-.card-desc { color: var(--ink-soft); font-size: 0.96rem; margin: 0; }
-
-.stack { display: flex; flex-direction: column; }
-.stack-3 > * + * { margin-top: var(--s-3); }
-.stack-4 > * + * { margin-top: var(--s-4); }
-.stack-5 > * + * { margin-top: var(--s-5); }
-.stack-6 > * + * { margin-top: var(--s-6); }
-
-.grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--s-4); }
-
-/* ---- progress meter (thin, ruled) ----------------------------------- */
-
-.meter { display: flex; align-items: center; gap: var(--s-3); font-family: var(--mono); font-size: 0.72rem; color: var(--ink-faint); }
-.meter-track { flex: 1; height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
-.meter-fill { height: 100%; background: var(--accent); transition: width 0.4s ease; }
-
-/* ---- fields --------------------------------------------------------- */
-
-.field { display: block; }
-.field-label { display: block; font-family: var(--serif); font-size: 1.12rem; font-weight: 500; margin-bottom: var(--s-1); }
-.field-q-index { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-faint); }
-.field-hint { color: var(--ink-faint); font-size: 0.88rem; margin: var(--s-1) 0 var(--s-3); font-style: italic; }
-.field-optional { color: var(--ink-faint); font-weight: 400; font-style: italic; font-size: 0.85rem; }
-
-textarea, input[type='text'], input[type='password'] {
-  width: 100%; font-family: var(--serif-read); font-size: 1rem; color: var(--ink);
-  background: var(--paper-raised); border: 1px solid var(--line-strong);
-  border-radius: var(--radius); padding: var(--s-3) var(--s-3); line-height: 1.5;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-textarea { min-height: 120px; resize: vertical; }
-textarea:focus, input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-wash); }
-
-/* ---- buttons -------------------------------------------------------- */
-
-.btn {
-  font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.06em;
-  text-transform: uppercase; cursor: pointer; border-radius: var(--radius);
-  padding: var(--s-3) var(--s-5); border: 1px solid var(--ink);
-  background: var(--ink); color: var(--paper-raised);
-  transition: filter 0.12s ease, transform 0.04s ease;
-}
-.btn:hover { filter: brightness(1.25); }
-.btn:active { transform: translateY(1px); }
-.btn:disabled { opacity: 0.45; cursor: default; }
-.btn-accent { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-.btn-ghost { background: transparent; color: var(--ink); border-color: var(--line-strong); }
-.btn-ghost:hover { border-color: var(--ink); filter: none; }
-
-.btn-row { display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap; }
-
-/* ---- toggle (EN/RO etc.) -------------------------------------------- */
-
-.toggle { display: inline-flex; border: 1px solid var(--line-strong); border-radius: var(--radius); overflow: hidden; }
-.toggle button {
-  font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase;
-  border: 0; background: transparent; color: var(--ink-faint); padding: var(--s-1) var(--s-3); cursor: pointer;
-}
-.toggle button[data-on='true'] { background: var(--ink); color: var(--paper-raised); }
-
-/* ---- auth screens --------------------------------------------------- */
-
-.auth-wrap { min-height: 100vh; display: grid; place-items: center; padding: var(--s-5); }
-.auth-card { width: 100%; max-width: 380px; }
-.auth-card .panel { padding: var(--s-6); }
-.auth-mark { font-family: var(--serif); font-size: 1.6rem; font-weight: 600; letter-spacing: -0.02em; }
-.auth-mark .dot { color: var(--accent); }
-
-/* ---- status / toast ------------------------------------------------- */
-
-.notice { font-family: var(--mono); font-size: 0.78rem; padding: var(--s-2) var(--s-3); border-radius: var(--radius); }
-.notice-ok { color: var(--ok); background: rgba(60, 110, 71, 0.08); }
-.notice-err { color: var(--err); background: rgba(156, 58, 46, 0.08); }
-
-.toast-viewport { position: fixed; bottom: var(--s-5); right: var(--s-5); z-index: 50; display: flex; flex-direction: column; gap: var(--s-2); }
-.toast {
-  background: var(--ink); color: var(--paper-raised); font-family: var(--mono); font-size: 0.78rem;
-  padding: var(--s-3) var(--s-4); border-radius: var(--radius); box-shadow: var(--shadow);
-  min-width: 220px;
-}
-.toast[data-tone='err'] { background: var(--err); }
-.toast[data-tone='ok'] { background: var(--ok); }
-
-/* ---- soul / markdown render ----------------------------------------- */
-
-.soul { background: var(--panel); border: 1px solid var(--line-strong); border-radius: var(--radius-lg); padding: var(--s-6) var(--s-7); max-width: var(--measure); font-family: var(--serif-read); }
-.soul h1, .soul h2, .soul h3 { margin-top: var(--s-5); }
-.soul h1:first-child, .soul h2:first-child { margin-top: 0; }
-.soul ul { padding-left: var(--s-5); }
-.soul code { font-family: var(--mono); font-size: 0.85em; background: var(--accent-wash); padding: 1px 5px; border-radius: 3px; }
-.soul pre { background: var(--paper); border: 1px solid var(--line); padding: var(--s-3); border-radius: var(--radius); overflow-x: auto; }
-
-/* ---- misc ----------------------------------------------------------- */
-
-.muted { color: var(--ink-faint); }
-.mono { font-family: var(--mono); }
-.row-between { display: flex; align-items: center; justify-content: space-between; gap: var(--s-4); }
-.tag { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; }
-.divider { height: 1px; background: var(--line); border: 0; margin: var(--s-6) 0; }
-
-.dropzone {
-  border: 1.5px dashed var(--line-strong); border-radius: var(--radius-lg);
-  padding: var(--s-7); text-align: center; color: var(--ink-faint);
-  font-family: var(--mono); font-size: 0.82rem; transition: border-color 0.15s ease, background 0.15s ease; cursor: pointer;
-}
-.dropzone[data-over='true'] { border-color: var(--accent); background: var(--accent-wash); color: var(--accent); }
-
-.list-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s-4); padding: var(--s-3) 0; border-bottom: 1px solid var(--line); }
-.list-row:last-child { border-bottom: 0; }
-
-.spin { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--line-strong); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-@media (max-width: 720px) {
-  .masthead-inner { flex-wrap: wrap; gap: var(--s-3); }
-  .nav { gap: var(--s-3); width: 100%; }
-  .main { padding: var(--s-6) var(--s-4) var(--s-7); }
+/* Spinner — used in a few async states. */
+@layer components {
+  .spin {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--color-surface-highest);
+    border-top-color: var(--color-primary-strong);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
 }

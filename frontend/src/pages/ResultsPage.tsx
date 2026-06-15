@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { api, ApiError, type ResultsState } from '../api/client';
 import { useToast } from '../components/Toaster';
 import { Markdown } from '../components/Markdown';
+import { Button, Eyebrow, Headline, Notice, Tag } from '../components/ui';
 
 export function ResultsPage() {
   const toast = useToast();
@@ -40,112 +41,99 @@ export function ResultsPage() {
   const result = state?.result ?? null;
 
   return (
-    <div className="stack stack-6">
-      <header className="row-between" style={{ alignItems: 'flex-end', flexWrap: 'wrap', gap: 'var(--s-4)' }}>
-        <div style={{ maxWidth: '46ch' }}>
-          <p className="eyebrow">The profile</p>
-          <h1>
-            soul<span style={{ color: 'var(--accent)' }}>.</span>md
-          </h1>
-          <p className="lede" style={{ marginTop: 'var(--s-3)' }}>
+    <div className="flex flex-col gap-section">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="max-w-[52ch]">
+          <Eyebrow>The profile</Eyebrow>
+          <Headline className="mt-3">
+            soul<span className="text-primary">.</span>md
+          </Headline>
+          <p className="mt-3 max-w-[64ch] text-[14px] leading-[22px] text-text-secondary">
             The synthesized voice profile, generated locally from your studies and conversations via
             Ollama. Re-run as you add material.
           </p>
         </div>
-        <div className="btn-row">
-          <button
-            className="btn btn-accent"
-            disabled={running || (state ? !state.canExtract : true)}
-            onClick={onRunClick}
-          >
+        <div className="flex flex-wrap items-center gap-3">
+          <Button disabled={running || (state ? !state.canExtract : true)} onClick={onRunClick}>
             {running ? (
               <>
-                <span className="spin" style={{ marginRight: 8, verticalAlign: 'middle' }} />
-                Generating…
+                <span className="spin" /> Generating…
               </>
             ) : result ? (
               'Re-run extraction'
             ) : (
               'Generate profile'
             )}
-          </button>
+          </Button>
           {result?.prevMd && (
-            <button className="btn btn-ghost" onClick={() => setShowPrev((v) => !v)}>
+            <Button variant="ghost" onClick={() => setShowPrev((v) => !v)}>
               {showPrev ? 'Hide previous' : 'View previous'}
-            </button>
+            </Button>
           )}
         </div>
       </header>
 
       {state && !state.canExtract && !result && (
-        <p className="notice notice-err" style={{ maxWidth: 'var(--measure)' }}>
-          Nothing to extract yet. Answer a <Link to="/studies">study</Link> or{' '}
-          <Link to="/import">import a conversation</Link> first.
-        </p>
+        <Notice tone="err" className="max-w-[64ch]">
+          Nothing to extract yet. Answer a{' '}
+          <Link to="/studies" className="underline">
+            study
+          </Link>{' '}
+          or{' '}
+          <Link to="/import" className="underline">
+            import a conversation
+          </Link>{' '}
+          first.
+        </Notice>
       )}
 
       {running && (
-        <p className="muted mono" style={{ fontSize: '0.82rem' }}>
-          Running map/reduce over your chunks. This can take a few minutes on a local model — keep this tab open.
+        <p className="font-mono text-[12px] text-text-faint">
+          Running map/reduce over your chunks. This can take a few minutes on a local model — keep
+          this tab open.
         </p>
       )}
 
       {result ? (
-        <>
-          {result.createdAt && (
-            <p className="muted mono" style={{ fontSize: '0.72rem', letterSpacing: '0.06em' }}>
-              Generated {new Date(result.createdAt + 'Z').toLocaleString()} · via {result.extractor}
-            </p>
-          )}
-          <div className="soul">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {result.createdAt && (
+              <span className="font-mono text-[10px] uppercase tracking-[0.06em] text-text-faint">
+                Generated {new Date(result.createdAt + 'Z').toLocaleString()} · via {result.extractor}
+              </span>
+            )}
+            {showPrev && result.prevMd && <Tag tone="accent">Showing previous version</Tag>}
+          </div>
+          <div className="soul rounded-md border border-hairline bg-surface-card px-8 py-7 shadow-card">
             <Markdown source={showPrev && result.prevMd ? result.prevMd : result.soulMd} />
           </div>
-          {showPrev && result.prevMd && (
-            <p className="tag">Showing the previous version</p>
-          )}
-        </>
+        </div>
       ) : (
         !running && (
-          <div className="panel muted" style={{ maxWidth: 'var(--measure)' }}>
-            <p style={{ margin: 0 }}>No profile generated yet.</p>
+          <div className="rounded-md border border-hairline bg-surface-card p-6 text-[14px] text-text-faint shadow-card">
+            No profile generated yet.
           </div>
         )
       )}
 
       <Dialog.Root open={confirmOpen} onOpenChange={setConfirmOpen}>
         <Dialog.Portal>
-          <Dialog.Backdrop
-            style={{
-              position: 'fixed',
-              inset: 0,
-              background: 'rgba(26,23,20,0.4)',
-              zIndex: 40,
-            }}
-          />
-          <Dialog.Popup
-            className="panel"
-            style={{
-              position: 'fixed',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              zIndex: 41,
-              maxWidth: 420,
-              width: 'calc(100% - 32px)',
-            }}
-          >
-            <Dialog.Title style={{ fontFamily: 'var(--serif)', fontSize: '1.3rem', marginBottom: 'var(--s-2)' }}>
+          <Dialog.Backdrop className="fixed inset-0 z-40 bg-[rgba(26,23,20,0.4)]" />
+          <Dialog.Popup className="fixed left-1/2 top-1/2 z-[41] w-[calc(100%-32px)] max-w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-md border border-hairline bg-surface-card p-6 shadow-card">
+            <Dialog.Title className="font-sans text-[20px] font-semibold tracking-[-0.01em] text-text-primary">
               Re-run extraction?
             </Dialog.Title>
-            <Dialog.Description className="muted" style={{ marginBottom: 'var(--s-5)' }}>
+            <Dialog.Description className="mt-2 text-[14px] leading-[20px] text-text-secondary">
               The current profile becomes the “previous version” and is replaced by a freshly
               generated one. This can take a few minutes.
             </Dialog.Description>
-            <div className="btn-row">
-              <button className="btn btn-accent" onClick={() => void runExtraction()}>
-                Re-run
-              </button>
-              <Dialog.Close className="btn btn-ghost">Cancel</Dialog.Close>
+            <div className="mt-5 flex items-center gap-3">
+              <Button onClick={() => void runExtraction()}>Re-run</Button>
+              <Dialog.Close
+                render={
+                  <Button variant="ghost">Cancel</Button>
+                }
+              />
             </div>
           </Dialog.Popup>
         </Dialog.Portal>
