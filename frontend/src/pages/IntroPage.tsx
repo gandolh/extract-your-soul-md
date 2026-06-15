@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, type StudySummary } from '../api/client';
 import { Meter } from '../components/Layout';
-import { Eyebrow, Headline, buttonClass } from '../components/ui';
+import { Eyebrow, Headline, buttonClass, cardClass } from '../components/ui';
 
 export function IntroPage() {
   const [studies, setStudies] = useState<StudySummary[]>([]);
@@ -42,7 +42,7 @@ export function IntroPage() {
     <div className="flex flex-col gap-section">
       <section className="max-w-[46ch]">
         <Eyebrow>A study of voice</Eyebrow>
-        <Headline className="mt-3 !text-[32px] !leading-[38px]">
+        <Headline size="xl" className="mt-3">
           Your words, read back to you as a <span className="text-primary">pattern</span>.
         </Headline>
       </section>
@@ -78,7 +78,9 @@ export function IntroPage() {
             <Link
               key={s.index}
               to={s.to}
-              className="group flex flex-col rounded-md border border-hairline bg-surface-card p-5 shadow-card transition-colors hover:border-outline"
+              className={cardClass(
+                'group flex flex-col p-5 transition-colors hover:border-outline',
+              )}
             >
               <div className="flex items-center justify-between">
                 <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-faint">

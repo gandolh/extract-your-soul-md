@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, ApiError, type Conversation } from '../api/client';
 import { useToast } from '../components/Toaster';
-import { Button, Eyebrow, Headline, Tag, cx, FIELD_CLASS } from '../components/ui';
+import { Button, cardClass, Eyebrow, Headline, Tag, cx, FIELD_CLASS } from '../components/ui';
 
 export function ImportPage() {
   const toast = useToast();
@@ -136,7 +136,7 @@ export function ImportPage() {
         </div>
 
         {convos.length > 0 && (
-          <div className="rounded-md border border-hairline bg-surface-card px-5 shadow-card">
+          <div className={cardClass('px-5')}>
             {convos.map((c) => (
               <div
                 key={c.id}

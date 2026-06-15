@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { api, ApiError, type ResultsState } from '../api/client';
 import { useToast } from '../components/Toaster';
 import { Markdown } from '../components/Markdown';
-import { Button, Eyebrow, Headline, Notice, Tag } from '../components/ui';
+import { Button, Card, cardClass, Eyebrow, Headline, Notice, Tag } from '../components/ui';
 
 export function ResultsPage() {
   const toast = useToast();
@@ -104,22 +104,24 @@ export function ResultsPage() {
             )}
             {showPrev && result.prevMd && <Tag tone="accent">Showing previous version</Tag>}
           </div>
-          <div className="soul rounded-md border border-hairline bg-surface-card px-8 py-7 shadow-card">
+          <div className={cardClass('soul px-8 py-7')}>
             <Markdown source={showPrev && result.prevMd ? result.prevMd : result.soulMd} />
           </div>
         </div>
       ) : (
         !running && (
-          <div className="rounded-md border border-hairline bg-surface-card p-6 text-[14px] text-text-faint shadow-card">
-            No profile generated yet.
-          </div>
+          <Card className="text-[14px] text-text-faint">No profile generated yet.</Card>
         )
       )}
 
       <Dialog.Root open={confirmOpen} onOpenChange={setConfirmOpen}>
         <Dialog.Portal>
-          <Dialog.Backdrop className="fixed inset-0 z-40 bg-[rgba(26,23,20,0.4)]" />
-          <Dialog.Popup className="fixed left-1/2 top-1/2 z-[41] w-[calc(100%-32px)] max-w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-md border border-hairline bg-surface-card p-6 shadow-card">
+          <Dialog.Backdrop className="fixed inset-0 z-40 bg-overlay" />
+          <Dialog.Popup
+            className={cardClass(
+              'fixed left-1/2 top-1/2 z-[41] w-[calc(100%-32px)] max-w-[420px] -translate-x-1/2 -translate-y-1/2 p-6',
+            )}
+          >
             <Dialog.Title className="font-sans text-[20px] font-semibold tracking-[-0.01em] text-text-primary">
               Re-run extraction?
             </Dialog.Title>

@@ -55,6 +55,7 @@
   --color-outline: #897170;
   --color-inverse-surface: #2f3131;
   --color-inverse-on-surface: #f0f1f1;
+  --color-overlay: rgba(26, 23, 20, 0.4); /* scrim behind modals */
 
   /* --- radius (design.md "soft" 4–6px) --------------------------- */
   --radius-sm: 0.125rem; /* 2px — chips, meters */

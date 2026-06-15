@@ -37,17 +37,26 @@ export function Eyebrow({
 }
 
 /* --- Headline ------------------------------------------------------ */
+// `lg` is the headline-lg scale (28px); `xl` is the home-hero step (32px).
+const HEADLINE_SIZE = {
+  lg: 'text-[28px] leading-[34px]',
+  xl: 'text-[32px] leading-[38px]',
+} as const;
+
 export function Headline({
   children,
   className,
+  size = 'lg',
 }: {
   children: ReactNode;
   className?: string;
+  size?: keyof typeof HEADLINE_SIZE;
 }) {
   return (
     <h1
       className={cx(
-        'font-sans text-[28px] font-semibold leading-[34px] tracking-[-0.02em] text-text-primary',
+        'font-sans font-semibold tracking-[-0.02em] text-text-primary',
+        HEADLINE_SIZE[size],
         className,
       )}
     >
@@ -85,19 +94,23 @@ export function buttonClass(variant: Variant = 'primary', className?: string): s
 }
 
 /* --- Card: pure-white, hairline, razor-thin shadow ----------------- */
+// The single source of truth for the card recipe. Use cardClass() directly
+// when the element must be something other than a <div> (e.g. a <Link>) or
+// needs a conditional border, so the recipe stays in one place.
+export function cardClass(className?: string): string {
+  return cx(
+    'rounded-md border border-hairline bg-surface-card shadow-card',
+    className,
+  );
+}
+
 export function Card({
   className,
   children,
   ...rest
 }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div
-      className={cx(
-        'rounded-md border border-hairline bg-surface-card p-6 shadow-card',
-        className,
-      )}
-      {...rest}
-    >
+    <div className={cardClass(cx('p-6', className))} {...rest}>
       {children}
     </div>
   );

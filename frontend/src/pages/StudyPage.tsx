@@ -4,7 +4,7 @@ import { api, ApiError, type StudyDetail } from '../api/client';
 import { useToast } from '../components/Toaster';
 import { Meter } from '../components/Layout';
 import { STUDY_ORDER } from '../studyOrder';
-import { Button, Eyebrow, Headline, buttonClass, cx, FIELD_CLASS } from '../components/ui';
+import { Button, cardClass, Eyebrow, Headline, buttonClass, cx, FIELD_CLASS } from '../components/ui';
 
 export function StudyPage() {
   const { studyId = '' } = useParams();
@@ -122,9 +122,8 @@ export function StudyPage() {
           return (
             <div
               key={q.id}
-              className={cx(
-                'rounded-md border bg-surface-card p-6 shadow-card transition-colors',
-                isActive ? 'border-primary-strong' : 'border-hairline',
+              className={cardClass(
+                cx('p-6 transition-colors', isActive && 'border-primary-strong'),
               )}
             >
               <div className="mb-3 flex items-center justify-between">

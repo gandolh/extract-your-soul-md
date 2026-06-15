@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, type StudySummary } from '../api/client';
 import { Meter } from '../components/Layout';
-import { Eyebrow, Headline, Tag } from '../components/ui';
+import { cardClass, Eyebrow, Headline, Tag } from '../components/ui';
 
 function status(s: StudySummary): { label: string; tone: 'neutral' | 'accent' | 'success' } {
   if (s.total > 0 && s.completed >= s.total) return { label: 'Completed', tone: 'success' };
@@ -40,7 +40,9 @@ export function StudiesPage() {
               <Link
                 key={s.id}
                 to={`/studies/${s.id}`}
-                className="group flex flex-col rounded-md border border-hairline bg-surface-card p-5 shadow-card transition-colors hover:border-outline"
+                className={cardClass(
+                  'group flex flex-col p-5 transition-colors hover:border-outline',
+                )}
               >
                 <div className="flex items-center justify-between">
                   <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-faint">
