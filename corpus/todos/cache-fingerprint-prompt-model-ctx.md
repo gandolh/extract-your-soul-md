@@ -1,6 +1,6 @@
 # Fingerprint the bullet cache by model / prompt / ctx / temperature
 
-**Priority:** P1 · **Goal:** engineering · **Impact:** high · **Effort:** S · **Status:** todo · **Captured:** 2026-06-16
+**Priority:** P1 · **Goal:** engineering · **Impact:** high · **Effort:** S · **Status:** done (→ [briefs/done/01](../briefs/done/01-cache-fingerprint-prompt-model-ctx.md), 2026-06-16) · **Captured:** 2026-06-16
 
 ## Problem
 The per-chunk cache key is `hash(`${kind}\n${content}`)` only

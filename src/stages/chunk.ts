@@ -6,6 +6,13 @@ import { QUESTIONNAIRE_PROCESSED_FILENAME } from './process.js';
 
 export type ChunkKind = 'freeform' | 'questionnaire';
 
+// Reserve room inside the model context window for the prompt header and the
+// generated output. HEADER_RESERVE covers the largest map header (MAP_QA≈377
+// tok) plus the per-chunk file header and `--- name ---` separators; the chunk
+// budget is whatever fits in `num_ctx` once those are subtracted.
+const HEADER_RESERVE = 600;
+const OUTPUT_RESERVE = 512;
+
 export interface ChunkEntry {
   file: string;
   sourceFiles: string[];
@@ -72,6 +79,18 @@ export function chunkAll(cfg: Config): Manifest {
   rmSync(outDir, { recursive: true, force: true });
   mkdirSync(outDir, { recursive: true });
 
+  // Derive the packing budget from the model context window so chunks actually
+  // fit the map call (Ollama silently truncates anything past `num_ctx`). With
+  // the default 8192 ctx this clamps the 30k target down to ~7080.
+  const budget = Math.min(cfg.chunkTargetTokens, cfg.ollamaNumCtx - HEADER_RESERVE - OUTPUT_RESERVE);
+  if (budget < cfg.chunkTargetTokens) {
+    process.stdout.write(
+      `  ⚠ chunk budget clamped ${cfg.chunkTargetTokens} → ${budget} tokens ` +
+        `(OLLAMA_NUM_CTX=${cfg.ollamaNumCtx} − ${HEADER_RESERVE} header − ${OUTPUT_RESERVE} output). ` +
+        `Raise OLLAMA_NUM_CTX to use larger chunks.\n`,
+    );
+  }
+
   const allBlocks = readAllFiles(inDir);
 
   // Isolate the questionnaire file — it always gets its own chunk so the
@@ -83,10 +102,10 @@ export function chunkAll(cfg: Config): Manifest {
   // Expand oversized files into parts that fit the budget.
   const expanded: FileBlock[] = [];
   for (const b of freeformBlocks) {
-    if (b.tokens <= cfg.chunkTargetTokens) {
+    if (b.tokens <= budget) {
       expanded.push(b);
     } else {
-      expanded.push(...splitOversizedFile(b, cfg.chunkTargetTokens));
+      expanded.push(...splitOversizedFile(b, budget));
     }
   }
 
@@ -96,7 +115,7 @@ export function chunkAll(cfg: Config): Manifest {
   for (const b of expanded) {
     let placed = false;
     for (const bucket of buckets) {
-      if (bucket.tokens + b.tokens <= cfg.chunkTargetTokens) {
+      if (bucket.tokens + b.tokens <= budget) {
         bucket.sources.push(b.name);
         bucket.bodies.push(b.content.endsWith('\n') ? b.content : b.content + '\n');
         bucket.tokens += b.tokens;
@@ -118,7 +137,7 @@ export function chunkAll(cfg: Config): Manifest {
   // we still split, but the split parts remain questionnaire-flavored.
   for (const q of qBlocks) {
     const parts =
-      q.tokens <= cfg.chunkTargetTokens ? [q] : splitOversizedFile(q, cfg.chunkTargetTokens);
+      q.tokens <= budget ? [q] : splitOversizedFile(q, budget);
     for (const p of parts) {
       buckets.push({
         sources: [p.name],
@@ -132,7 +151,7 @@ export function chunkAll(cfg: Config): Manifest {
   const manifest: Manifest = {
     generatedAt: new Date().toISOString(),
     totalEstimatedTokens: buckets.reduce((s, b) => s + b.tokens, 0),
-    chunkTargetTokens: cfg.chunkTargetTokens,
+    chunkTargetTokens: budget,
     chunks: [],
   };
 

@@ -5,10 +5,26 @@ import { color } from '../color.js';
 import type { Config } from '../config.js';
 import type { Manifest, ChunkKind } from './chunk.js';
 import { generate } from '../ollama.js';
+import { estimateTokens } from '../tokens.js';
 import { MAP_PROMPT_HEADER, MAP_PROMPT_HEADER_QA, REDUCE_PROMPT_HEADER } from '../prompts.js';
 
 function hash(s: string): string {
   return createHash('sha256').update(s).digest('hex').slice(0, 16);
+}
+
+// Backstop against silent truncation: Ollama discards anything past `num_ctx`
+// without error, so a prompt that overflows produces confident garbage. Fail
+// loudly instead. The chunk budget (chunk.ts) should keep map prompts in range;
+// this catches stale manifests, header growth, and the unbounded reduce prompt.
+function assertFitsContext(label: string, prompt: string, numCtx: number): void {
+  const tokens = estimateTokens(prompt);
+  if (tokens > numCtx) {
+    throw new Error(
+      `${label} prompt is ~${tokens} tokens but OLLAMA_NUM_CTX=${numCtx}. ` +
+        `Ollama would silently truncate it. ` +
+        `Re-run the chunk stage, raise OLLAMA_NUM_CTX, or (for reduce) split the bullet set.`,
+    );
+  }
 }
 
 async function extractChunk(
@@ -18,13 +34,21 @@ async function extractChunk(
   kind: ChunkKind,
 ): Promise<string> {
   const content = readFileSync(chunkPath, 'utf8');
-  const key = hash(`${kind}\n${content}`);
+  const header = kind === 'questionnaire' ? MAP_PROMPT_HEADER_QA : MAP_PROMPT_HEADER;
+  // Fingerprint the cache by everything that affects the extraction: kind,
+  // model, context window, temperature, the live prompt header (hashed so prompt
+  // edits auto-invalidate without a hand-bumped version constant), and content.
+  // Seed is intentionally excluded — it's a fixed constant.
+  const headerHash = hash(header);
+  const key = hash(
+    `${kind}\n${cfg.ollamaModel}\n${cfg.ollamaNumCtx}\n${cfg.ollamaTemperature}\n${headerHash}\n${content}`,
+  );
   const cachePath = path.join(cacheDir, `${key}.txt`);
   if (existsSync(cachePath)) {
     return readFileSync(cachePath, 'utf8');
   }
-  const header = kind === 'questionnaire' ? MAP_PROMPT_HEADER_QA : MAP_PROMPT_HEADER;
   const prompt = header + content;
+  assertFitsContext(`map (${kind})`, prompt, cfg.ollamaNumCtx);
   const out = await generate(
     {
       host: cfg.ollamaHost,
@@ -63,6 +87,7 @@ export async function runOllamaPipeline(cfg: Config, manifest: Manifest): Promis
   process.stdout.write(`  ${color.magenta('reduce')}... `);
   const t0 = Date.now();
   const reducePrompt = REDUCE_PROMPT_HEADER + bullets.join('\n\n');
+  assertFitsContext('reduce', reducePrompt, cfg.ollamaNumCtx);
   const soul = await generate(
     {
       host: cfg.ollamaHost,

@@ -74,3 +74,31 @@ recorded as such inside their todos (broad entity-redaction, the observer-
 advantage confidence weight, stripping the QA voice bullets, cross-linking a
 non-existent `ai-patterns.md`). Next step when work starts: promote a P1 todo to
 a numbered `briefs/todo/` spec. Nothing committed.
+
+## [2026-06-16] brief 01 — cache-fingerprint (done)
+
+Promoted `cache-fingerprint-prompt-model-ctx` (the P1 foundation prerequisite)
+to `briefs/todo/01`, implemented it, and moved it to `briefs/done/01` with an
+outcome note. Change in `src/stages/extract.ts`: header selection moved above the
+key computation; cache key now folds in `kind / ollamaModel / ollamaNumCtx /
+ollamaTemperature / hash(header) / content` (was `kind + content` only). Seed
+excluded by design; reduce caching untouched. `npm run build` clean. This
+unblocks all prompt-iteration work — prompt/model/ctx/temp edits now invalidate
+the bullet cache instead of silently reusing stale extractions. Next in the P1
+build-order: `extraction-context-budget-truncation`. Nothing committed.
+
+## [2026-06-16] brief 02 — context-budget truncation (done)
+
+Promoted `extraction-context-budget-truncation` to `briefs/todo/02`, implemented,
+moved to `briefs/done/02`. The single largest silent accuracy loss in the Ollama
+path: 30k chunks were fed to an 8192-ctx map call and silently truncated to ~8k
+(~30% of corpus). Fix: `src/stages/chunk.ts` now derives
+`budget = min(chunkTargetTokens, ollamaNumCtx − 600 header − 512 output)` and
+packs/splits against it (8192 ctx → 7080 budget, warns on clamp; manifest records
+the effective budget). `src/stages/extract.ts` gained `assertFitsContext()` as a
+backstop before both map and reduce `generate()` calls — fails loudly instead of
+truncating. `.env.example` documents the
+`chunkTargetTokens + header + output < num_ctx` invariant. `npm run build` clean.
+Reduce overflow backstop is interim; hierarchical tree-reduce stays the proper
+fix (still a todo). Next in P1 build-order: `deterministic-extraction-temp-seed`,
+then the eval harness (`style-card-eval-harness`). Nothing committed.

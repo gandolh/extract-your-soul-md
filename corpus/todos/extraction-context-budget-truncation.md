@@ -1,6 +1,6 @@
 # Reconcile chunk budget with Ollama context window (stop silent truncation)
 
-**Priority:** P1 · **Goal:** accuracy · **Impact:** high · **Effort:** M · **Status:** todo · **Captured:** 2026-06-16
+**Priority:** P1 · **Goal:** accuracy · **Impact:** high · **Effort:** M · **Status:** done (→ [briefs/done/02](../briefs/done/02-extraction-context-budget-truncation.md), 2026-06-16) · **Captured:** 2026-06-16
 
 ## Problem
 The single largest silent accuracy loss in the Ollama path. Freeform chunks pack
