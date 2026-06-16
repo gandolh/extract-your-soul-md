@@ -16,11 +16,22 @@ corpus is maintained; [log.md](log.md) for its history.
   polish cluster 21–25 (soul.md copy/download, per-file upload feedback, language
   persistence, onboarding copy, study depth guidance), and the accuracy cluster
   26–28 (orchestrator-gated questionnaire reduce sections, anti-bullet-padding,
-  drift-anchor re-injection). Remaining work is **P2/P3 only** — next candidates
-  incl. representative-samples few-shot (the bigger drift lever), the map-prompt
-  responsibility split, hierarchical tree-reduce (deferred until a heavy user
-  hits the chunk ceiling), the soul.md re-run **diff** (brief 21 Phase 2,
-  deferred), and the deferred auth rate-limiting (gated on a real public deploy).
+  drift-anchor re-injection), and 29 (Representative Samples section — short
+  verbatim tokens only; full sentence excerpts stay deferred over re-ID risk),
+  and 30 (map-prompt responsibility split + provenance-typed QA bullets), 31
+  (q12 narrative high-point study), 32 (name concrete self-vs-observed
+  divergences in the reduce prompt), 33 (honest token accounting — chunk
+  framing folded into the budget + UTF-8-byte estimate), and 34 (node:test
+  golden tests for the no-LLM data-prep core — flips the "no test runner"
+  decision), 35 (GitHub Actions CI — build + typecheck + test), and 36
+  (zero-recognized-lines import guard). **The buildable backlog is now clear** —
+  every P2/P3 candidate captured 2026-06-16 is shipped. Only **deferred** work
+  remains, each gated on a trigger that hasn't fired: hierarchical tree-reduce
+  (a heavy user hitting the chunk ceiling), the multi-platform import-adapter
+  registry (a real second-format request — only its zero-lines guard shipped, as
+  brief 36), full Representative-Samples sentence excerpts (needs an active
+  n-gram filter + eval data), the soul.md re-run **diff** (brief 21 Phase 2), and
+  auth rate-limiting (gated on a real public deploy).
 - [briefs/todo/](briefs/todo/) — numbered work specs ready to build.
 - [briefs/done/](briefs/done/) — completed specs (immutable, with outcome notes).
   01 cache-fingerprint · 02 truncation · 03 determinism · 04 collapse-to-API ·
@@ -33,7 +44,11 @@ corpus is maintained; [log.md](log.md) for its history.
   21 soulmd-copy-download · 22 upload-per-file-feedback ·
   23 persist-language-preference · 24 onboarding-expectations-copy ·
   25 study-depth-guidance · 26 gate-questionnaire-conditional-sections ·
-  27 forbid-bullet-count-padding · 28 drift-anchor-reinjection.
+  27 forbid-bullet-count-padding · 28 drift-anchor-reinjection ·
+  29 representative-samples-section · 30 map-prompt-responsibility-split ·
+  31 q12-narrative-high-point · 32 name-self-vs-observed-divergence ·
+  33 honest-token-accounting · 34 node-test-golden-tests ·
+  35 ci-typecheck-build · 36 zero-recognized-lines-guard.
 - [briefs/superseded/](briefs/superseded/) — specs later undone/replaced.
 - [log.md](log.md) — chronological record of every meaningful corpus change.
 

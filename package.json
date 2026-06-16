@@ -15,7 +15,9 @@
     "build:server": "tsc -p tsconfig.json",
     "build:web": "vite build",
     "serve:prod": "node --no-warnings=ExperimentalWarning dist/index.js --port=4317",
-    "typecheck:web": "tsc -p frontend/tsconfig.json --noEmit"
+    "typecheck:web": "tsc -p frontend/tsconfig.json --noEmit",
+    "typecheck:test": "tsc -p tsconfig.test.json",
+    "test": "node --test --no-warnings=ExperimentalWarning --import tsx \"src/**/*.test.ts\""
   },
   "author": "",
   "license": "MIT",

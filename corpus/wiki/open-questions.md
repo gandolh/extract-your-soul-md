@@ -19,8 +19,9 @@ Only the **genuinely unresolved**. The moment a question is answered or shipped,
   [concepts/style-card-artifact.md](concepts/style-card-artifact.md).
 - **How much does regurgitation / inference risk grow as the profile gets
   richer?** See [concepts/regurgitation-risk.md](concepts/regurgitation-risk.md).
-- **Should the question set add a second *targeted* (event-specific) narrative
-  prompt to sharpen facet signal?** See
-  [concepts/dual-use-signal.md](concepts/dual-use-signal.md).
+- ~~**Should the question set add a second *targeted* (event-specific) narrative
+  prompt to sharpen facet signal?**~~ **Resolved** (2026-06-16, brief 31): added
+  Q12 narrative high-point alongside Q4's low-point, so agentive framing is
+  sampled too. See [concepts/dual-use-signal.md](concepts/dual-use-signal.md).
 - **A few 2026 arxiv IDs/years in the sources should be link-verified before
   citing externally** (flagged in [log.md](log.md), 2026-06-05 ingest).

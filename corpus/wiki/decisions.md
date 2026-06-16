@@ -52,8 +52,25 @@ not formally revisited.
   is mechanical (same API surface).
 - **The frontend keeps its own Vite root + tsconfig**, separate from the
   backend's NodeNext tsconfig (DOM lib + react-jsx + Bundler resolution).
-- **WhatsApp-only parser; token estimator tuned for Romanian/English.**
-- **No test runner or linter is configured** — manual testing only, for now.
+- **WhatsApp-only parser; token estimator tuned for Romanian/English** (the
+  estimator counts UTF-8 bytes / 4 since brief 33 — diacritics/emoji cost their
+  real BPE budget; no tokenizer dep, `gpt-tokenizer` rejected as Llama-mismatched).
+- **`node:test` for the no-LLM data-prep core; no frontend test runner.** Decided
+  2026-06-16 ([log.md](../log.md), [briefs/done/34](../briefs/done/34-node-test-golden-tests.md)),
+  flipping the prior "no test runner — manual testing only". Uses the built-in
+  `node:test` + `tsx` loader (zero new dependency on Node 24): `npm test` runs
+  `src/**/*.test.ts`; `npm run typecheck:test` type-checks them via
+  `tsconfig.test.json` (the prod `build:server` excludes `*.test.ts`, so no test
+  code ships to `dist/`). Scope is the **deterministic, no-LLM** core — the
+  `answers.md` format contract, `estimateTokens`, and `processAll`/`chunkAll` fs
+  behavior. **No linter** and **no Vitest for the frontend** (deliberately
+  skipped — adds a dep for little value; revisit only if the SPA grows complex
+  logic). Ollama-touching code stays manual (LLM I/O isn't unit-testable here).
+- **CI runs on GitHub Actions** ([.github/workflows/ci.yml](../../.github/workflows/ci.yml),
+  brief 35, 2026-06-16) on push-to-main + every PR: Node 24, `npm ci`, then
+  `npm run build` (server tsc + web Vite build), `typecheck:web`,
+  `typecheck:test`, and `npm test`. No Ollama in CI — only the deterministic,
+  no-LLM gates run. Was previously "no CI".
 
 ## Corpus
 

@@ -136,4 +136,15 @@ export const QUESTIONS: ReadonlyArray<Question> = [
     hintEn: "Skip if none feel like a fit.",
     optional: true,
   },
+  {
+    id: 'Q12',
+    slug: 'narrative-high-point',
+    title: 'Narrative high point',
+    promptRo:
+      'Povestește o dată când ceva a mers chiar bine — ceva de care ești mândru. Scrie ca și cum i-ai povesti unui prieten apropiat.',
+    promptEn:
+      "Tell me about a time something went really right — something you're proud of. Write it the way you'd tell a close friend.",
+    hintRo: 'Lasă povestea să curgă — ce ai făcut tu, cum s-a simțit.',
+    hintEn: "Let the story run — what you did, how it felt.",
+  },
 ];

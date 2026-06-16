@@ -1,10 +1,10 @@
 // Studies are a presentation layer over QUESTIONS — they group the canonical
-// questions (Q1..Q11, defined in questions.ts) into themed forms. They add NO
+// questions (Q1..Q12, defined in questions.ts) into themed forms. They add NO
 // new question content and NO new file-format surface: answers still round-trip
 // through the unchanged answers-file.ts contract, keyed by the same question ids.
 //
 // To add a new psychological study later, this is the ONLY file (plus
-// questions.ts) you touch: append the new Question entries (Q12, Q13, ...) to
+// questions.ts) you touch: append the new Question entries (Q13, Q14, ...) to
 // QUESTIONS, then add a Study here referencing their ids. The downstream
 // parser's `Q\d+` regex already accepts higher ids — nothing else changes.
 
@@ -28,7 +28,7 @@ export const STUDIES: ReadonlyArray<Study> = [
     id: 'how-you-tell-it',
     title: 'How You Tell It',
     description: 'Narrative, register, and the texture of your humor.',
-    questionIds: ['Q4', 'Q5', 'Q6', 'Q7'],
+    questionIds: ['Q4', 'Q12', 'Q5', 'Q6', 'Q7'],
   },
   {
     id: 'how-you-see-yourself',

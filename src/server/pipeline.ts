@@ -27,6 +27,13 @@ export class NothingToExtractError extends Error {}
 // A conversation parsed fine but none of its senders matched the user's "you"
 // names — the voice filter would silently yield an empty profile. Fail loudly.
 export class NamesMismatchError extends Error {}
+// Conversations were imported but the parser recognized ZERO message lines in
+// any of them (no sender/body matched a known WhatsApp line format) — almost
+// certainly a non-WhatsApp export. Distinct from NamesMismatchError, where lines
+// DID parse but none were the user's. Fail loudly instead of producing an empty
+// profile. Only raised when there are also no questionnaire answers to fall back
+// on, so questionnaire-only flows are unaffected.
+export class NoRecognizedMessagesError extends Error {}
 
 /** True if the user has any material (answers or conversations) to extract. */
 export function hasExtractableInput(userId: number): boolean {
@@ -99,8 +106,25 @@ export async function runUserExtraction(
     const myNames = new Set(getNames(userId));
     const stats = processAll(cfg, myNames);
 
-    // Guard the load-bearing voice filter: if a conversation parsed lines but
-    // none matched the user's names, the profile would be silently empty.
+    // Guard the load-bearing voice filter against two silent-empty-profile cases.
+    // Both only fire when the questionnaire didn't supply material either
+    // (questionnaireAnswers === 0), so a questionnaire-only run never trips them.
+    const importedConversations = stats.perSource.length > 0;
+    const noQuestionnaire = stats.questionnaireAnswers === 0;
+
+    // (a) Wrong file format: conversations were imported but the parser
+    //     recognized NO message lines in any of them (no sender ever parsed).
+    if (importedConversations && noQuestionnaire && stats.perSource.every((s) => s.parsedSenders.length === 0)) {
+      throw new NoRecognizedMessagesError(
+        `None of your imported files looked like a WhatsApp chat export — no messages were recognized. ` +
+          `Export the chat from WhatsApp (Settings → Export chat, "Without media") and import the .txt, ` +
+          `or answer the studies instead.`,
+      );
+    }
+
+    // (b) Names mismatch: lines DID parse, but none matched the user's names.
+    //     Surfaced even with a questionnaire present — a names problem is worth
+    //     fixing regardless of fallback material (preserves prior behavior).
     const mismatched = stats.perSource.filter((s) => s.parsedSenders.length > 0 && s.myLinesIn === 0);
     if (mismatched.length > 0 && stats.myLinesIn === 0) {
       const senders = [...new Set(mismatched.flatMap((s) => s.parsedSenders))].slice(0, 20);

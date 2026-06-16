@@ -1,30 +1,28 @@
-# Multi-platform import adapter layer + zero-lines guard — MOSTLY DEFERRED
+# Multi-platform import adapter registry — DEFERRED
 
-**Priority:** P3 · **Goal:** engineering · **Impact:** medium · **Effort:** L (adapters) / S (guard) · **Status:** todo · **Captured:** 2026-06-16
+**Priority:** P3 · **Goal:** engineering · **Impact:** medium · **Effort:** L · **Status:** deferred · **Captured:** 2026-06-16 · **Updated:** 2026-06-16 (zero-lines guard split off + shipped as brief 36)
 
-## Problem
+## Status
+The **S half (zero-recognized-lines guard) shipped as
+[brief 36](../briefs/done/36-zero-recognized-lines-guard.md)** — a non-WhatsApp
+upload now fails loudly via `NoRecognizedMessagesError` instead of producing an
+empty soul.md. This todo now tracks **only the deferred L half**: the parser
+adapter registry.
+
+## Problem (remaining)
 Ingestion is WhatsApp-only: `parseLine` recognizes exactly two line formats
-([process.ts:20-21,121-125](../../src/stages/process.ts#L20-L21)); any other export
-(iMessage, Telegram/Discord JSON, Signal, CSV) silently produces zero kept lines.
-Also, `processAll` increments `filesProcessed` even when a file yields zero kept
-lines, so a non-WhatsApp upload silently produces an empty soul.md.
+([process.ts:20-21](../../src/stages/process.ts#L20-L21)). Other exports
+(iMessage, Telegram/Discord JSON, Signal, CSV) are now rejected with a clear
+error (brief 36), but still cannot be imported at all.
 
-## Decision / approach (audit-refined — fix the papercut now, defer the registry)
-- **Now (S):** add a zero-lines guard in `processAll`
-  ([process.ts:212-221](../../src/stages/process.ts#L212-L221)) —
-  `linesOut === 0 && questionnaireAnswers === 0` → throw "no recognized messages
-  — is this a WhatsApp export?". (Coordinate with the web-layer assertion in
-  [name-normalization-import-validation](name-normalization-import-validation.md)
-  so the shared core doesn't break questionnaire-only runs.)
-- **Deferred (L):** the parser-adapter registry (extract BRACKETED/DASHED into a
-  `whatsapp` adapter normalizing to `ParsedLine {sender, body}`, then add Telegram
-  JSON). `decisions.md` locks "WhatsApp-only" — flipping it needs a revisit + a
-  `log.md` note, and there's no demand signal yet. Gate on a real second-format
-  request. Keep the `ParsedLine` seam stable (the server's `processAll` consumes it).
-
-## First step
-Add the zero-recognized-lines guard at the web layer / pipeline (not the shared
-core path that questionnaire-only flows use).
+## Decision / approach (DEFERRED)
+- Extract `BRACKETED`/`DASHED` into a `whatsapp` adapter that normalizes to
+  `ParsedLine {sender, body}`, then add a second adapter (Telegram JSON is the
+  obvious first candidate).
+- **Gated on a real second-format request.** `decisions.md` locks "WhatsApp-only";
+  flipping it requires a revisit + a `log.md` note, and there's no demand signal
+  yet.
+- Keep the `ParsedLine` seam stable — the server's `processAll` consumes it.
 
 ## Refs
-code: [process.ts](../../src/stages/process.ts), [pipeline.ts](../../src/server/pipeline.ts), [conversations.ts](../../src/server/routes/conversations.ts) · corpus: [decisions.md](../wiki/decisions.md)
+code: [process.ts](../../src/stages/process.ts), [pipeline.ts](../../src/server/pipeline.ts) · corpus: [decisions.md](../wiki/decisions.md), [briefs/done/36](../briefs/done/36-zero-recognized-lines-guard.md)

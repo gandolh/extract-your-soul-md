@@ -4,6 +4,7 @@ import { createJob, finishJob, getActiveJob, getJob, getLatestResult } from '../
 import { requireAuth } from '../auth.js';
 import {
   NamesMismatchError,
+  NoRecognizedMessagesError,
   NothingToExtractError,
   hasExtractableInput,
   runUserExtraction,
@@ -15,7 +16,11 @@ import { OllamaRequestError, OllamaUnavailableError, pingOllama, type PingResult
  *  server log via request.log.error — only these curated strings reach the user. */
 function failureMessage(err: unknown): string {
   // Already-friendly, actionable domain errors — pass through.
-  if (err instanceof NothingToExtractError || err instanceof NamesMismatchError) {
+  if (
+    err instanceof NothingToExtractError ||
+    err instanceof NamesMismatchError ||
+    err instanceof NoRecognizedMessagesError
+  ) {
     return err.message;
   }
   if (err instanceof OllamaUnavailableError) {

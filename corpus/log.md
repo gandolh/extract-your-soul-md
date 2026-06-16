@@ -469,3 +469,161 @@ todos were moot (file removed in brief 04). Both typechecks + `build:server`
 clean. Effect is an unmeasured nudge — compare against the new reduce/map header
 hashes next eval-harness (brief 05) run. Nothing committed. `todos/` now holds 9
 genuinely-open items.
+
+## [2026-06-16] done | brief 29 — Representative Samples section (short verbatim tokens only)
+
+Shipped the conservative half of the deferred few-shot todo
+(`representative-samples-fewshot`). Added a `## Representative Samples` section to
+`buildReducePrompt` ([prompts.ts](../src/prompts.ts), after How To Imitate): 3-6
+of the person's OWN short signature tokens (greetings/sign-offs/fillers/
+catchphrases) quoted verbatim, under strict rules — only reuse tokens already in
+the batches (no composing/paraphrasing/inventing excerpts), short fragments not
+whole sentences, no identifying specifics, omit rather than pad. Appears for both
+corpus kinds. Material already exists (map preserves verbatim tokens post brief 06).
+
+**Scope was a user decision**: short verbatim tokens only, NOT full cross-register
+sentence excerpts. Excerpts are the highest re-ID surface (deanonymization-2026:
+79.2% style-only re-id) and the n-gram guard only *warns* today (doesn't filter),
+so prose excerpts stay deferred until (a) an active n-gram filter exists and (b)
+eval data shows the token version under-delivers. The +9% prose-with-few-shot
+figure (prose-2025) is still inferred, not measured.
+
+Both hard gates from the todo were satisfied at ship time: n-gram guard (brief 15)
++ eval harness that can A/B the +9% claim (brief 05) + map verbatim tokens (brief
+06). Verified the n-gram-guard interaction needs no code change: DEFAULT_NGRAM=7,
+the section emits few-word tokens, so intentional tokens don't trip false
+regurgitation warnings while a runaway long verbatim run is still caught.
+
+Both typechecks + build:server clean. Source todo removed at promote time. `todos/`
+now holds 8 genuinely-open items. Nothing committed.
+
+## [2026-06-16] done | brief 30 — map-prompt responsibility split + provenance-typed QA bullets
+
+The todo's primary "first step" (narrow the chat-prompt values bullet — the one
+true cross-prompt leak) was already shipped by brief 06: prompts.ts:15 reads
+"Opinions/enthusiasms only as directly stated". Confirmed, no change. QA voice
+bullets correctly left intact (dual-use signal).
+
+Shipped the todo's *optional* half: provenance-typed QA bullets. MAP_PROMPT_HEADER_QA
+now prefixes every bullet `in-prose:` (observed in how they wrote — strong) or
+`self-described:` (what they claim — weaker self-report), pre-tagging voice bullets
+in-prose and propositional bullets self-described. buildReducePrompt gains a gated
+REDUCE_PROVENANCE_RULE: trust in-prose over self-described for observable style,
+fold self-described into values/aspiration unless corroborated, strip the prefixes
+from the final doc. Operationalizes the self-report-vs-observer gap (~5% variance).
+
+Gating note: the new provenance rule is gated on hasQuestionnaire but independent
+of the chat-vs-QA batch rule — it helps even in a questionnaire-only corpus.
+Batch-level provenance already existed (extract.ts batch labels); this adds the
+missing bullet-level granularity within QA batches.
+
+Effect is an unmeasured nudge on small-model prefix adherence — eval-harness A/B
+(brief 05) against the new QA+reduce header hashes should confirm. Both typechecks
++ build:server clean. Source todo removed at promote time. `todos/` now holds 7
+genuinely-open items. Nothing committed.
+
+## [2026-06-16] done | brief 31 — Q12 narrative high-point prompt
+
+Pure data change. Appended Q12 (slug narrative-high-point) to questions.ts —
+agentive/proud counterpart to Q4's low-point, same close-friend framing, RO+EN,
+required. Added 'Q12' to the existing how-you-tell-it study right after Q4
+(['Q4','Q12','Q5','Q6','Q7']). No file-format/migration change (Q\d+ regex +
+MAP_PROMPT_HEADER_QA already accept higher ids); existing answer files lack the
+section = treated as skip. Resolved the matching open-questions thread (second
+targeted narrative prompt). Both typechecks + build:server clean. Source todo
+removed. `todos/` now holds 6 items. Nothing committed.
+
+## [2026-06-16] done | brief 32 — name self-vs-observed divergence
+
+Reduce-prompt edit. Rewrote the `## Self-Perception vs. Observed Voice` body in
+REDUCE_QA_SECTIONS from an abstract "describe the gap in 2-4 sentences" to a
+concrete "list 1-3 SPECIFIC divergences (e.g. claims concise / runs long), then
+default the imitator to the OBSERVED register." Stays orchestrator-gated on
+hasQuestionnaire. Dropped (per the audit) the "~38%/~5% observer-advantage as a
+blanket confidence weight" idea — wrong domain (trait inference, not style) and
+would over-discount the questionnaire's own observed prose; the existing
+conflict + provenance rules already weight at the right granularity.
+
+NO cache invalidation — this is a reduce prompt; only map headers fingerprint
+the .cache/bullets/ store, so it takes effect on the next extraction with zero
+re-mapping (contrast briefs 27/30). SKILL.md "mirror" is moot (removed brief 04).
+Unmeasured nudge; eval-harness A/B (brief 05) applies. Both typechecks +
+build:server clean. Source todo removed. `todos/` now holds 5 items. Nothing
+committed.
+
+## [2026-06-16] done | brief 33 — honest token accounting + UTF-8 byte heuristic
+
+Two no-dep fixes in the chunker. (1) chunk.ts now folds the per-chunk comment
+header (CHUNK_HEADER_FIXED_TOKENS=48) and per-file `--- name ---` framing
+(framingTokens()) into the packing budget, so the written chunk genuinely fits
+num_ctx instead of spilling past it into the HEADER/OUTPUT reserve. Oversized
+splitting sizes content against budget−header−framing. Manifest still reports
+content tokens (matches the header's "Estimated tokens" line). (2) estimateTokens
+switched from text.length/4 to Buffer.byteLength(utf8)/4 — BPE charges per byte,
+so RO diacritics (2B) / emoji (4B) now cost their real budget; conservative
+(larger) for non-ASCII, the safe direction vs silent truncation. ASCII unchanged.
+
+Third todo half (raise default model off llama3.1:8b) DROPPED as obsolete —
+decisions.md already locks the default to gpt-oss:120b-cloud (brief 08). No
+decisions.md change. No cache-fingerprint field changed; byte heuristic may shift
+chunk boundaries → legitimate re-map of changed chunks. Both typechecks +
+build:server clean. Source todo removed. `todos/` now holds 4 items. Nothing
+committed.
+
+## [2026-06-16] decision+done | brief 34 — node:test golden tests (flips "no test runner")
+
+First test infra. node:test + tsx loader (no new dep on Node 24). Added `npm
+test` (runs src/**/*.test.ts) and `npm run typecheck:test` (tsconfig.test.json;
+tsx strips types so tests get their own typecheck). Prod tsconfig now excludes
+*.test.ts so build:server ships no test code to dist/. 12 tests, all green:
+tokens (byte heuristic incl. brief-33 diacritic assertion), answers-file format
+contract round-trip (write→parse, [skipped], QUESTIONS-order), and fs-coupled
+processAll/chunkAll (voice filter, noise/dedup, continuation merge, questionnaire
+isolation, and the whole-file-fits-budget check that proves brief 33 end-to-end).
+
+DECISION: flips the locked "no test runner or linter — manual only" to
+"node:test for the no-LLM data-prep core; no frontend runner, no linter"
+(decisions.md updated). Dropped the todo's Vitest-for-frontend half (dep for
+little value). Ollama I/O stays manual. npm test + both typechecks + build:server
+clean. Source todo removed. `todos/` now holds 3 items. Nothing committed.
+
+## [2026-06-16] decision+done | brief 35 — CI (build + typecheck + test)
+
+Added .github/workflows/ci.yml — project's first CI. push-to-main + every PR:
+Node 24 + npm ci, then npm run build (server tsc + web Vite build),
+typecheck:web, typecheck:test, npm test. All four verified exit-0 locally. No
+Ollama in CI (every gate is deterministic/offline). The todo's "don't add npm
+test yet" caveat is now moot — brief 34 (landed just prior) added the scripts,
+so this ships the full gate set, not the build-only reduced set. decisions.md
+gains a "CI runs on GitHub Actions" entry (flips prior "no CI"). Source todo
+removed. `todos/` now holds 2 items (both deferred: hierarchical-tree-reduce,
+multi-platform-import-adapters). Nothing committed — workflow runs first on push.
+
+## [2026-06-16] done | brief 36 — zero-recognized-lines import guard
+
+Shipped the S half of the multi-platform-import-adapters todo (the L registry
+half stays deferred). New NoRecognizedMessagesError in server/pipeline.ts, sibling
+to NamesMismatchError: fires in runUserExtraction when conversations were imported,
+questionnaireAnswers===0, and every perSource has parsedSenders.length===0 (no
+WhatsApp line ever parsed → wrong format). Message points to WhatsApp export /
+studies. Wired into failureMessage (routes/results.ts) so it passes through to the
+user instead of the generic scrub. Questionnaire-only flows unaffected (guard
+requires no questionnaire). Left the names-mismatch guard firing regardless of
+questionnaire presence (a names problem is worth surfacing either way).
+
+Test: pipeline.test.ts gains a processAll case pinning the ProcessStats trigger
+signal (non-WhatsApp file → all parsedSenders empty). 13 tests pass; build:server
++ both typechecks clean. The multi-platform todo was TRIMMED (not removed) to the
+deferred registry-only remainder. `todos/` now holds 2 items, both deferred
+(hierarchical-tree-reduce, multi-platform-import-adapters registry). Nothing
+committed.
+
+## [2026-06-16] maintenance | backlog cleared to deferred-only
+
+With briefs 31-36 done, every buildable P2/P3 candidate from the 2026-06-16
+soul.md improvement backlog is shipped. The only open todos are two explicitly
+DEFERRED items, each gated on a trigger that hasn't fired: hierarchical-tree-reduce
+(a heavy user hitting the chunk ceiling — the assert-fail backstop already
+prevents silent loss) and the multi-platform adapter registry (a real
+second-format request — decisions.md locks WhatsApp-only). No work is ready to
+promote.

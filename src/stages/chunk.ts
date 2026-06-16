@@ -15,6 +15,21 @@ export type ChunkKind = 'freeform' | 'questionnaire';
 const HEADER_RESERVE = 768;
 const OUTPUT_RESERVE = 512;
 
+// Fixed cost of the per-chunk comment header (the `# Source files:` /
+// `# Estimated tokens:` / `# Kind:` / note lines + blank line) that chunkAll
+// writes ahead of the body. The source-file list and per-block `--- name ---`
+// separators are variable, so they are accounted per file in framingTokens();
+// this constant covers everything else. Generous by design — overcounting only
+// shrinks chunks slightly, while undercounting risks silent Ollama truncation.
+const CHUNK_HEADER_FIXED_TOKENS = 48;
+
+// Token cost a single file block adds to a chunk's FRAMING (not its content):
+// its name in the `# Source files:` CSV plus its `--- name ---\n` separator and
+// the `\n` join between bodies. Mirrors the exact strings written below.
+function framingTokens(name: string): number {
+  return estimateTokens(`${name}, `) + estimateTokens(`--- ${name} ---\n`) + estimateTokens('\n');
+}
+
 export interface ChunkEntry {
   file: string;
   sourceFiles: string[];
@@ -101,26 +116,37 @@ export function chunkAll(cfg: Config): Manifest {
   const qBlocks = allBlocks.filter((b) => b.name === QUESTIONNAIRE_PROCESSED_FILENAME);
   const freeformBlocks = allBlocks.filter((b) => b.name !== QUESTIONNAIRE_PROCESSED_FILENAME);
 
-  // Expand oversized files into parts that fit the budget.
+  // The body content of a single file can occupy at most this many tokens once
+  // its own framing (header + separator) is subtracted from the budget, so the
+  // written chunk — header + separators + body — still fits `num_ctx`.
+  const contentBudget = (name: string) => budget - CHUNK_HEADER_FIXED_TOKENS - framingTokens(name);
+
+  // Expand oversized files into parts whose content fits the framing-adjusted
+  // budget. The split parts inherit `#partN`-suffixed names, so size each part
+  // against its own (slightly longer) name.
   const expanded: FileBlock[] = [];
   for (const b of freeformBlocks) {
-    if (b.tokens <= budget) {
+    if (b.tokens <= contentBudget(b.name)) {
       expanded.push(b);
     } else {
-      expanded.push(...splitOversizedFile(b, budget));
+      expanded.push(...splitOversizedFile(b, contentBudget(`${b.name}#partN`)));
     }
   }
 
-  // First-fit packing into chunks (freeform files only).
-  type ChunkBuf = { sources: string[]; bodies: string[]; tokens: number; kind: ChunkKind };
+  // First-fit packing into chunks (freeform files only). A bucket's running
+  // total is content tokens + the fixed header + per-file framing, so the
+  // budget reflects the bytes actually written, not just the message bodies.
+  type ChunkBuf = { sources: string[]; bodies: string[]; tokens: number; framing: number; kind: ChunkKind };
+  const packed = (bucket: ChunkBuf) => CHUNK_HEADER_FIXED_TOKENS + bucket.framing + bucket.tokens;
   const buckets: ChunkBuf[] = [];
   for (const b of expanded) {
     let placed = false;
     for (const bucket of buckets) {
-      if (bucket.tokens + b.tokens <= budget) {
+      if (packed(bucket) + b.tokens + framingTokens(b.name) <= budget) {
         bucket.sources.push(b.name);
         bucket.bodies.push(b.content.endsWith('\n') ? b.content : b.content + '\n');
         bucket.tokens += b.tokens;
+        bucket.framing += framingTokens(b.name);
         placed = true;
         break;
       }
@@ -130,6 +156,7 @@ export function chunkAll(cfg: Config): Manifest {
         sources: [b.name],
         bodies: [b.content.endsWith('\n') ? b.content : b.content + '\n'],
         tokens: b.tokens,
+        framing: framingTokens(b.name),
         kind: 'freeform',
       });
     }
@@ -139,12 +166,13 @@ export function chunkAll(cfg: Config): Manifest {
   // we still split, but the split parts remain questionnaire-flavored.
   for (const q of qBlocks) {
     const parts =
-      q.tokens <= budget ? [q] : splitOversizedFile(q, budget);
+      q.tokens <= contentBudget(q.name) ? [q] : splitOversizedFile(q, contentBudget(`${q.name}#partN`));
     for (const p of parts) {
       buckets.push({
         sources: [p.name],
         bodies: [p.content.endsWith('\n') ? p.content : p.content + '\n'],
         tokens: p.tokens,
+        framing: framingTokens(p.name),
         kind: 'questionnaire',
       });
     }
