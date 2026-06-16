@@ -1,6 +1,6 @@
 # Deterministic extraction: temperature 0 + fixed seed
 
-**Priority:** P1 · **Goal:** engineering · **Impact:** medium · **Effort:** S · **Status:** todo · **Captured:** 2026-06-16
+**Priority:** P1 · **Goal:** engineering · **Impact:** medium · **Effort:** S · **Status:** done (→ [briefs/done/03](../briefs/done/03-deterministic-extraction-temp-seed.md), 2026-06-16) · **Captured:** 2026-06-16
 
 ## Problem
 `OLLAMA_TEMPERATURE=0.3` ([config.ts:51](../../src/config.ts#L51)) and no seed

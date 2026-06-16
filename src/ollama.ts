@@ -3,6 +3,7 @@ export interface OllamaOptions {
   model: string;
   numCtx: number;
   temperature: number;
+  seed: number;
 }
 
 export async function generate(opts: OllamaOptions, prompt: string): Promise<string> {
@@ -13,7 +14,7 @@ export async function generate(opts: OllamaOptions, prompt: string): Promise<str
       model: opts.model,
       prompt,
       stream: false,
-      options: { temperature: opts.temperature, num_ctx: opts.numCtx },
+      options: { temperature: opts.temperature, num_ctx: opts.numCtx, seed: opts.seed },
     }),
   });
   if (!res.ok) {

@@ -27,6 +27,12 @@ function assertFitsContext(label: string, prompt: string, numCtx: number): void 
   }
 }
 
+// Fixed seed for deterministic extraction. Voice extraction is analysis, not
+// creative writing — a constant seed (with temperature 0) makes a prompt edit's
+// effect attributable instead of lost in run-to-run noise. Invariant, so it does
+// not enter the cache key. Best-effort: GPU nondeterminism can still leak.
+const EXTRACTION_SEED = 42;
+
 async function extractChunk(
   cfg: Config,
   chunkPath: string,
@@ -55,6 +61,7 @@ async function extractChunk(
       model: cfg.ollamaModel,
       numCtx: cfg.ollamaNumCtx,
       temperature: cfg.ollamaTemperature,
+      seed: EXTRACTION_SEED,
     },
     prompt,
   );
@@ -94,6 +101,7 @@ export async function runOllamaPipeline(cfg: Config, manifest: Manifest): Promis
       model: cfg.ollamaModel,
       numCtx: cfg.ollamaNumCtx,
       temperature: cfg.ollamaTemperature,
+      seed: EXTRACTION_SEED,
     },
     reducePrompt,
   );

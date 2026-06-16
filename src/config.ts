@@ -48,7 +48,7 @@ const EnvSchema = z.object({
   OLLAMA_HOST: z.string().url().default('http://localhost:11434'),
   OLLAMA_MODEL: z.string().min(1).default('llama3.1:8b'),
   OLLAMA_NUM_CTX: intFromEnv.pipe(z.number().int().positive().default(8192)),
-  OLLAMA_TEMPERATURE: intFromEnv.pipe(z.number().min(0).max(2).default(0.3)),
+  OLLAMA_TEMPERATURE: intFromEnv.pipe(z.number().min(0).max(2).default(0)),
 });
 
 export type Config = {

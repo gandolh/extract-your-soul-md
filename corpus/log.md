@@ -102,3 +102,19 @@ truncating. `.env.example` documents the
 Reduce overflow backstop is interim; hierarchical tree-reduce stays the proper
 fix (still a todo). Next in P1 build-order: `deterministic-extraction-temp-seed`,
 then the eval harness (`style-card-eval-harness`). Nothing committed.
+
+## [2026-06-16] brief 03 — deterministic extraction (done)
+
+Promoted `deterministic-extraction-temp-seed` to `briefs/todo/03`, implemented,
+moved to `briefs/done/03`. `src/ollama.ts`: `OllamaOptions` gained `seed` and it's
+passed in the `/api/generate` options body. `src/stages/extract.ts`: fixed
+`EXTRACTION_SEED = 42` threaded into both map and reduce `generate()` calls.
+`src/config.ts` + `.env.example`: `OLLAMA_TEMPERATURE` default 0.3 → 0,
+determinism documented as best-effort (GPU nondeterminism can leak). Seed is a
+fixed constant, not env-configurable, not in the cache key. `npm run build` clean.
+
+This closes the P1 foundation trio (01 cache-fingerprint + 02 truncation + 03
+determinism) — prompt iteration is now honest: edits invalidate the cache, the
+model sees the whole chunk, and output is attributable to the edit rather than
+sampling noise. Next in P1 build-order: `style-card-eval-harness` (the eval
+harness that turns this into a measured A/B signal). Nothing committed.
