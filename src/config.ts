@@ -46,7 +46,7 @@ const EnvSchema = z.object({
   OLLAMA_MODEL: z.string().min(1).default('gpt-oss:120b-cloud'),
   // Bearer token for Ollama Cloud. Empty = local server (no auth header).
   OLLAMA_API_KEY: z.string().default(''),
-  OLLAMA_NUM_CTX: intFromEnv.pipe(z.number().int().positive().default(8192)),
+  OLLAMA_NUM_CTX: intFromEnv.pipe(z.number().int().positive().default(32768)),
   OLLAMA_TEMPERATURE: intFromEnv.pipe(z.number().min(0).max(2).default(0)),
 
   EVAL_HOLDOUT_N: intFromEnv.pipe(z.number().int().positive().default(8)),

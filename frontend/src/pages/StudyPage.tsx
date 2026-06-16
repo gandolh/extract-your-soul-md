@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, ApiError, type StudyDetail } from '../api/client';
 import { useToast } from '../components/Toaster';
@@ -16,10 +16,19 @@ export function StudyPage() {
   const [busy, setBusy] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [active, setActive] = useState<string | null>(null);
+  const [autosave, setAutosave] = useState<'idle' | 'saving' | 'saved'>('idle');
+
+  // Snapshot of the last-persisted answers (JSON), so the autosave effect can
+  // tell a real edit from the initial seed / a study switch and skip saving when
+  // nothing changed. Also the dirty signal for the beforeunload guard.
+  const baseline = useRef<string>('');
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setDetail(null);
     setNotFound(false);
+    setAutosave('idle');
+    if (timer.current) clearTimeout(timer.current);
     api
       .study(studyId)
       .then((d) => {
@@ -27,6 +36,7 @@ export function StudyPage() {
         const init: Record<string, string> = {};
         for (const q of d.questions) init[q.id] = q.savedBody;
         setAnswers(init);
+        baseline.current = JSON.stringify(init);
       })
       .catch((e) => {
         if (e instanceof ApiError && e.status === 404) setNotFound(true);
@@ -45,14 +55,57 @@ export function StudyPage() {
 
   const completed = Object.values(answers).filter((b) => b.trim().length > 0).length;
 
+  // The bare persistence call — no toast, no navigate. Returns the snapshot it
+  // saved so callers can update the baseline. Shared by autosave + manual save.
+  const persist = useCallback(async (): Promise<string | null> => {
+    if (!detail) return null;
+    const snapshot = JSON.stringify(answers);
+    await api.saveStudy(
+      detail.study.id,
+      detail.questions.map((q) => ({ id: q.id, body: answers[q.id] ?? '' })),
+    );
+    baseline.current = snapshot;
+    return snapshot;
+  }, [detail, answers]);
+
+  // Debounced autosave: ~1.5s after the last edit, if answers differ from the
+  // last-persisted baseline. The baseline guard means the initial seed and a
+  // study switch don't trigger a save.
+  useEffect(() => {
+    if (!detail) return;
+    if (JSON.stringify(answers) === baseline.current) return;
+    setAutosave('saving');
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      persist()
+        .then(() => setAutosave('saved'))
+        .catch(() => setAutosave('idle'));
+    }, 1500);
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, [answers, detail, persist]);
+
+  // Tab-close guard while there are unsaved edits (covers what autosave can't:
+  // a close mid-debounce). In-app nav loss is already a non-issue via autosave.
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (JSON.stringify(answers) !== baseline.current) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [answers]);
+
   async function save(thenGoTo?: string | null) {
     if (!detail) return;
+    if (timer.current) clearTimeout(timer.current); // cancel any pending autosave
     setBusy(true);
     try {
-      await api.saveStudy(
-        detail.study.id,
-        detail.questions.map((q) => ({ id: q.id, body: answers[q.id] ?? '' })),
-      );
+      await persist();
+      setAutosave('saved');
       toast('Answers saved.', 'ok');
       if (thenGoTo) navigate(`/studies/${thenGoTo}`);
       else if (thenGoTo === null && next === null) navigate('/results');
@@ -110,6 +163,14 @@ export function StudyPage() {
           <div className="max-w-[420px] flex-1">
             <Meter completed={completed} total={detail.questions.length} />
           </div>
+          {autosave !== 'idle' && (
+            <span
+              aria-live="polite"
+              className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-faint"
+            >
+              {autosave === 'saving' ? 'Saving…' : 'Saved'}
+            </span>
+          )}
         </div>
       </header>
 

@@ -46,6 +46,25 @@ export async function buildServer(cfg: Config, opts: BuildOptions): Promise<Fast
     bodyLimit: 8 * 1024 * 1024, // accommodate ~5 MB conversation uploads
   });
 
+  // Tolerate a JSON content-type with an empty body: bodyless POSTs like
+  // /api/extract and /api/eval are valid, but a client (or proxy) that still
+  // sends `Content-Type: application/json` would otherwise get FST_ERR_CTP_EMPTY_JSON_BODY.
+  // Treat empty/whitespace bodies as {} so routes see a well-formed object.
+  app.addContentTypeParser(
+    'application/json',
+    { parseAs: 'string' },
+    (_req, body, done) => {
+      const text = (body as string).trim();
+      if (text.length === 0) return done(null, {});
+      try {
+        done(null, JSON.parse(text));
+      } catch (err) {
+        (err as { statusCode?: number }).statusCode = 400;
+        done(err as Error, undefined);
+      }
+    },
+  );
+
   await app.register(fastifyCookie, { secret: cfg.sessionSecret });
 
   await app.register(authRoutes, { isProd: opts.isProd });

@@ -3,12 +3,13 @@ import { z } from 'zod';
 import {
   addConversation,
   deleteConversation,
+  getConversationContents,
   getNames,
   listConversations,
   setNames,
 } from '../../db/repos.js';
 import { requireAuth } from '../auth.js';
-import { looksLikeWhatsAppExport } from '../../stages/process.js';
+import { detectSenders, looksLikeWhatsAppExport, type DetectedSender } from '../../stages/process.js';
 
 const MAX_CONTENT_BYTES = 5 * 1024 * 1024; // 5 MB of text
 
@@ -61,6 +62,36 @@ export async function conversationRoutes(app: FastifyInstance): Promise<void> {
     if (!Number.isInteger(id)) return reply.code(400).send({ error: 'Bad id.' });
     deleteConversation(request.userId!, id);
     return reply.code(204).send();
+  });
+
+  // Detected senders across all of this user's conversations, grouped by the
+  // normalized key the voice filter matches on. Names-independent so the UI can
+  // surface "add this name" chips before any name is set. Cheap (no Ollama).
+  app.get('/api/conversations/senders', async (request) => {
+    // Merge per-file detections by normalized key; track each raw spelling's
+    // weight so the label is the most frequent spelling across all files.
+    const merged = new Map<string, { count: number; rawCounts: Map<string, number> }>();
+    for (const conv of getConversationContents(request.userId!)) {
+      for (const s of detectSenders(conv.content)) {
+        const g = merged.get(s.normalized) ?? { count: 0, rawCounts: new Map() };
+        g.count += s.count;
+        g.rawCounts.set(s.name, (g.rawCounts.get(s.name) ?? 0) + s.count);
+        merged.set(s.normalized, g);
+      }
+    }
+    const senders: DetectedSender[] = [...merged.entries()].map(([normalized, g]) => {
+      let name = normalized;
+      let best = -1;
+      for (const [raw, n] of g.rawCounts) {
+        if (n > best) {
+          best = n;
+          name = raw;
+        }
+      }
+      return { name, normalized, count: g.count };
+    });
+    senders.sort((a, b) => b.count - a.count);
+    return { senders };
   });
 
   app.get('/api/names', async (request) => {

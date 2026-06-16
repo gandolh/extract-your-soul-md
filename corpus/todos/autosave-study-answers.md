@@ -1,6 +1,6 @@
 # Autosave study answers + unsaved-changes guard
 
-**Priority:** P1 · **Goal:** ease-of-use · **Impact:** high · **Effort:** S · **Status:** todo · **Captured:** 2026-06-16
+**Priority:** P1 · **Goal:** ease-of-use · **Impact:** high · **Effort:** S · **Status:** done (→ [briefs/done/12](../briefs/done/12-autosave-study-answers.md), 2026-06-16) · **Captured:** 2026-06-16
 
 ## Problem
 [StudyPage.tsx](../../frontend/src/pages/StudyPage.tsx) holds all answers in local

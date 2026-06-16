@@ -1,19 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { api, ApiError, type Conversation } from '../api/client';
+import { api, ApiError, type Conversation, type DetectedSender } from '../api/client';
 import { useToast } from '../components/Toaster';
-import { Button, cardClass, Eyebrow, Headline, Tag, cx, FIELD_CLASS } from '../components/ui';
+import { Button, cardClass, Eyebrow, Headline, Notice, Tag, cx, FIELD_CLASS } from '../components/ui';
+import { normalizeName } from '../lib/normalizeName';
 
 export function ImportPage() {
   const toast = useToast();
   const [convos, setConvos] = useState<Conversation[]>([]);
   const [names, setNames] = useState<string[]>([]);
   const [namesText, setNamesText] = useState('');
+  const [senders, setSenders] = useState<DetectedSender[]>([]);
   const [over, setOver] = useState(false);
   const [busy, setBusy] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const reload = useCallback(() => {
     api.conversations().then((r) => setConvos(r.conversations)).catch(() => {});
+    api.senders().then((r) => setSenders(r.senders)).catch(() => {});
     api.names().then((r) => {
       setNames(r.names);
       setNamesText(r.names.join('\n'));
@@ -64,6 +67,23 @@ export function ImportPage() {
     }
   }
 
+  // The set of normalized names currently in the textarea — drives both the
+  // "already added" chip state and the live match count, updating as you type
+  // or click chips (before saving). Matches the backend's normalize-then-match.
+  const draftNormalized = new Set(
+    namesText.split('\n').map((s) => normalizeName(s)).filter(Boolean),
+  );
+  const matchedCount = senders
+    .filter((s) => draftNormalized.has(s.normalized))
+    .reduce((sum, s) => sum + s.count, 0);
+  const totalCount = senders.reduce((sum, s) => sum + s.count, 0);
+  const hasZeroMatch = convos.length > 0 && senders.length > 0 && matchedCount === 0;
+
+  function addName(raw: string) {
+    if (draftNormalized.has(normalizeName(raw))) return;
+    setNamesText((t) => (t.trim() ? `${t.replace(/\n*$/, '')}\n${raw}` : raw));
+  }
+
   return (
     <div className="flex flex-col gap-section">
       <header className="max-w-[60ch]">
@@ -98,6 +118,51 @@ export function ImportPage() {
             </Tag>
           )}
         </div>
+
+        {senders.length > 0 && (
+          <div className="flex flex-col gap-3">
+            <p className="text-[13px] text-text-secondary">
+              Detected in your imports — click the one(s) that are <em>you</em>:
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {senders.map((s) => {
+                const added = draftNormalized.has(s.normalized);
+                return (
+                  <button
+                    key={s.normalized}
+                    type="button"
+                    disabled={added}
+                    onClick={() => addName(s.name)}
+                    className={cx(
+                      'rounded-full border px-3 py-1 font-mono text-[12px] transition-colors',
+                      added
+                        ? 'cursor-default border-primary bg-primary-wash text-primary'
+                        : 'cursor-pointer border-outline/50 text-text-secondary hover:border-outline',
+                    )}
+                    title={added ? 'Already in your names' : `Add "${s.name}"`}
+                  >
+                    {added ? '✓ ' : '+ '}
+                    {s.name}{' '}
+                    <span className="text-text-faint">({s.count})</span>
+                  </button>
+                );
+              })}
+            </div>
+            {hasZeroMatch ? (
+              <Notice tone="err" className="max-w-[64ch]">
+                None of your names match these chats yet — there’ll be{' '}
+                <strong>no freeform voice signal</strong> from them. Click a chip above (or fix the
+                names) so your messages are picked up. Your questionnaire answers still count.
+              </Notice>
+            ) : (
+              matchedCount > 0 && (
+                <p className="font-mono text-[12px] text-text-faint">
+                  ✓ matched {matchedCount} of {totalCount} messages as yours
+                </p>
+              )
+            )}
+          </div>
+        )}
       </section>
 
       <hr className="border-0 border-t border-hairline" />

@@ -157,6 +157,44 @@ function parseLine(raw: string): ParsedLine | null {
   return { sender: m[1].trim(), body: m[2] };
 }
 
+export interface DetectedSender {
+  name: string; // most frequent raw spelling for this person
+  normalized: string; // normalizeName() key the voice filter matches on
+  count: number; // total messages across all raw spellings of this key
+}
+
+/** Detect who appears as a sender in a WhatsApp export, grouped by the same
+ *  normalized key the voice filter uses. Names-independent — works before the
+ *  user has set any names, so the UI can offer "add this name" chips. */
+export function detectSenders(content: string): DetectedSender[] {
+  // key -> { count, rawCounts: spelling -> n }
+  const groups = new Map<string, { count: number; rawCounts: Map<string, number> }>();
+  for (const line of content.split(/\r?\n/)) {
+    const parsed = parseLine(line);
+    if (!parsed) continue;
+    const key = normalizeName(parsed.sender);
+    if (key.length === 0) continue;
+    const g = groups.get(key) ?? { count: 0, rawCounts: new Map() };
+    g.count += 1;
+    g.rawCounts.set(parsed.sender, (g.rawCounts.get(parsed.sender) ?? 0) + 1);
+    groups.set(key, g);
+  }
+  const out: DetectedSender[] = [];
+  for (const [normalized, g] of groups) {
+    // Pick the most frequent raw spelling as the display label.
+    let name = normalized;
+    let best = -1;
+    for (const [raw, n] of g.rawCounts) {
+      if (n > best) {
+        best = n;
+        name = raw;
+      }
+    }
+    out.push({ name, normalized, count: g.count });
+  }
+  return out.sort((a, b) => b.count - a.count);
+}
+
 function isNoise(body: string, cfg: Config): boolean {
   let s = body.trim();
   if (

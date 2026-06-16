@@ -38,6 +38,7 @@ export interface StudyDetail {
   questions: StudyQuestion[];
 }
 export interface Conversation { id: number; filename: string; createdAt: string; }
+export interface DetectedSender { name: string; normalized: string; count: number; }
 export interface SoulResult { soulMd: string; prevMd: string | null; extractor: string; createdAt: string | null; }
 export interface ResultsState { canExtract: boolean; running: boolean; result: SoulResult | null; }
 
@@ -87,6 +88,7 @@ export const api = {
   addConversation: (filename: string, content: string) =>
     request<{ conversation: { id: number; filename: string } }>('POST', '/conversations', { filename, content }),
   deleteConversation: (id: number) => request<void>('DELETE', `/conversations/${id}`),
+  senders: () => request<{ senders: DetectedSender[] }>('GET', '/conversations/senders'),
   names: () => request<{ names: string[] }>('GET', '/names'),
   setNames: (names: string[]) => request<{ names: string[] }>('PUT', '/names', { names }),
 

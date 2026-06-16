@@ -1,6 +1,6 @@
 # Import diagnostics: detected senders, matched-message counts, "add this name" chips
 
-**Priority:** P1 · **Goal:** ease-of-use · **Impact:** high · **Effort:** M · **Status:** todo · **Captured:** 2026-06-16
+**Priority:** P1 · **Goal:** ease-of-use · **Impact:** high · **Effort:** M · **Status:** done (→ [briefs/done/11](../briefs/done/11-import-sender-detection-diagnostics.md), 2026-06-16) · **Captured:** 2026-06-16
 
 ## Problem
 The names step is a silent footgun. [ImportPage.tsx](../../frontend/src/pages/ImportPage.tsx)

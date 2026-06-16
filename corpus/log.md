@@ -247,3 +247,59 @@ Verified: build clean; mock-fetch test confirms Bearer header sent only with a
 key (cloud) and omitted without (local). Real cloud call needs the user's key —
 to be tested by the user. Content-hash caches (keyed incl. model) avoid
 re-billing on identical re-runs. Nothing committed.
+
+## [2026-06-16] brief 09 — tolerate empty JSON body (done)
+
+Found during the brief-08 cloud test: `POST /api/extract` with json content-type
+but no body returned Fastify's FST_ERR_CTP_EMPTY_JSON_BODY (400) before the route
+ran. The real frontend dodges it (no body → no content-type), but it's a latent
+trap for proxies/future callers. Added a custom `application/json` parser in
+`server/app.ts` that treats empty/whitespace bodies as {} and still 400s on
+malformed JSON. Verified all four cases on a throwaway server; build clean. No
+frontend change needed. Nothing committed.
+
+## [2026-06-16] brief 10 — bump OLLAMA_NUM_CTX to 32768 (done)
+
+Follow-on from brief 08: on gpt-oss:120b-cloud (128k ctx), num_ctx=8192 clamped
+the chunk budget to 6912. Set OLLAMA_NUM_CTX=32768 (config default + live .env +
+.env.example), so budget = min(30000, 32768-768-512) = 30000 — full target, no
+clamp (verified by running chunkAll in-process: manifest chunkTargetTokens=30000,
+was 6912). Also refreshed the stale chunking comment in .env.example (reserves
+768 not 600, post brief-06). build:server clean; cloud extract still ~23s. 32768
+is the right stop — higher gives nothing unless CHUNK_TARGET_TOKENS rises too.
+Nothing committed.
+
+## [2026-06-16] brief 11 — import sender-detection diagnostics (done)
+
+Promoted `import-sender-detection-diagnostics` to brief 11, implemented, done.
+The UI completion of brief 07: makes a names mismatch visible + fixable at import
+time (07 only failed loudly at extract time).
+
+Backend: `detectSenders()` + `DetectedSender` exported from process.ts (groups by
+normalizeName, labels with most-frequent raw spelling, sums counts); new
+`GET /api/conversations/senders` merges across the user's conversations
+(names-independent, no Ollama). Frontend: `api.senders()`, new
+`frontend/src/lib/normalizeName.ts` mirror (verified identical to backend, KEEP
+IN SYNC note), ImportPage Step 1 shows sender chips w/ counts → click appends raw
+name to the textarea (skips if normalized form already present), live "matched N
+of M" line + loud zero-match warning, all derived from the draft textarea.
+
+Decisions: group by normalized + show raw spelling; chips paste raw name; match
+count computed client-side from /senders counts + draft names (no extra endpoint).
+Verified: build + typecheck:web clean; /senders grouping live-tested
+(Cristian/~Cristian/CRISTIAN → 1 sender, count 4); normalize mirror agrees.
+
+This clears the last UX-correctness P1. Only open P1 left: autosave-study-answers
+(S). Nothing committed.
+
+## [2026-06-16] brief 12 — autosave study answers (done)
+
+Promoted `autosave-study-answers` to brief 12, implemented, done. Frontend-only
+(StudyPage.tsx): shared `persist()` (no toast/navigate), debounced 1500ms
+autosave on `answers` guarded by a `baseline` ref (seed + study-switch don't
+save), subtle idle/saving/saved indicator by the Meter, `beforeunload` guard when
+dirty, manual save cancels pending autosave + refreshes baseline. useBlocker
+skipped (declarative router). Verified: typecheck:web + build clean; partial
+autosave round-trip live-tested (Q1 saved, blanks skipped, answered:1).
+
+**This was the last open P1.** Backlog is now P2/P3 only. Nothing committed.
