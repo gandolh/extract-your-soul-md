@@ -406,3 +406,39 @@ local (no key) where /api/tags is authoritative. Integration-confirmed: live clo
 → ready; dead host → preflight fails in 39ms with work_dir:null (before any work).
 
 Build + both typechecks clean. Scratch tests + test user cleaned, DB left as found.
+
+## [2026-06-16] briefs 21–25 — import/UX polish cluster (done)
+
+Promoted and shipped five frontend-focused UX-polish todos as briefs 21–25, all
+verified in-browser (Playwright, prod build), none committed.
+
+- **21 soul.md Copy/Download** (Phase 1) — Copy + Download buttons + "review before
+  sharing" hint on ResultsPage, acting on the displayed version. Phase-2 re-run
+  diff deferred (noted in the brief).
+- **22 upload per-file feedback** — client 5 MB preflight (MAX_BYTES mirrors the
+  server cap) + per-file try/catch so one failure doesn't abort the batch + summary
+  toast. Server stays authoritative.
+- **23 persist language pref** — new `frontend/src/lang.ts` `useLangPref()`
+  (localStorage, **default 'ro'** per the questionnaire design); StudyPage uses it.
+  Verified: fresh login renders RO prompts. Skip-control half dropped (byte-identical
+  to blank).
+- **24 onboarding copy** — IntroPage step-01 ("11 open-ended prompts… take your
+  time") + step-03 ("runs locally and needs a running Ollama server"). Copy only.
+- **25 study depth guidance** — filled hintEn/hintRo for Q2–Q10 (data change);
+  StudyPage word counter + non-blocking "a few more sentences would help" cue under
+  ~25 words (checkmark NOT gated, per the dual-use-signal research stance) + bigger
+  textarea + take-your-time placeholder. Verified: 5-word answer shows cue + count +
+  still ✓; 35-word drops the cue.
+
+Both typechecks + build clean throughout. Test user + playwright artifacts cleaned,
+DB left as found.
+
+## [2026-06-16] maintenance | prune stale already-shipped todos
+
+The P1 briefs (01–07, 11, 12) were filed to `done/` but their source `todos/`
+files were never removed, so `todos/` showed 8 already-shipped items as if open
+(autosave, cache-fingerprint, deterministic-extraction, context-budget-truncation,
+import-sender-diagnostics, name-normalization, reframe-prompts, style-card-eval).
+Verified each against its 1:1 same-slug done brief, then removed all 8. `todos/`
+now holds 12 genuinely-open items only. (Going forward, promote→build→done should
+remove the todo at promote time, as 13–25 did.)

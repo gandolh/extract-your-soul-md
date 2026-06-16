@@ -20,7 +20,7 @@ export function IntroPage() {
       to: '/studies',
       eyebrow: 'Studies',
       title: 'Answer the studies',
-      desc: 'Three short forms of open-ended prompts. Vent, ramble, be informal — that is the signal.',
+      desc: 'Three short forms — 11 open-ended prompts in all. Take your time; longer answers carry more of you. Vent, ramble, be informal — that is the signal.',
     },
     {
       index: '02',
@@ -34,7 +34,7 @@ export function IntroPage() {
       to: '/results',
       eyebrow: 'Profile',
       title: 'Generate the profile',
-      desc: 'Run extraction to synthesize a voice profile. Re-run any time as you add material.',
+      desc: 'Run extraction to synthesize a voice profile — this runs locally and needs a running Ollama server. Re-run any time as you add material.',
     },
   ];
 

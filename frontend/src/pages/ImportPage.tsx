@@ -4,6 +4,10 @@ import { useToast } from '../components/Toaster';
 import { Button, cardClass, Eyebrow, Headline, Notice, Tag, cx, FIELD_CLASS } from '../components/ui';
 import { normalizeName } from '../lib/normalizeName';
 
+// Mirrors the server cap (conversations.ts route bodyLimit / 413 check). Client
+// preflight is UX-only; the server stays authoritative (defense in depth).
+const MAX_BYTES = 5 * 1024 * 1024;
+
 export function ImportPage() {
   const toast = useToast();
   const [convos, setConvos] = useState<Conversation[]>([]);
@@ -29,18 +33,43 @@ export function ImportPage() {
     async (files: FileList | File[]) => {
       const list = Array.from(files).filter((f) => /\.(txt|md)$/i.test(f.name));
       if (list.length === 0) return toast('Only .txt or .md exports are supported.', 'err');
+
+      // Client-side size preflight (server stays the source of truth at 5 MB).
+      // f.size (bytes) is a sound proxy for the server's UTF-8 byte length.
+      const oversized = list.filter((f) => f.size > MAX_BYTES);
+      const ok = list.filter((f) => f.size <= MAX_BYTES);
+
       setBusy(true);
+      // Per-file try/catch so one failure never aborts the rest of the batch.
+      let imported = 0;
+      const failed: string[] = [];
       try {
-        for (const f of list) {
-          const content = await f.text();
-          await api.addConversation(f.name, content);
+        for (const f of ok) {
+          try {
+            const content = await f.text();
+            await api.addConversation(f.name, content);
+            imported += 1;
+          } catch (err) {
+            failed.push(f.name + (err instanceof ApiError ? ` (${err.message})` : ''));
+          }
         }
-        toast(`Imported ${list.length} file${list.length > 1 ? 's' : ''}.`, 'ok');
-        reload();
-      } catch (err) {
-        toast(err instanceof ApiError ? err.message : 'Upload failed.', 'err');
       } finally {
         setBusy(false);
+      }
+      if (imported > 0) reload();
+
+      // One summary toast covering imported / skipped-too-large / failed.
+      const parts: string[] = [];
+      if (imported > 0) parts.push(`Imported ${imported}`);
+      if (oversized.length > 0) parts.push(`skipped ${oversized.length} over 5 MB`);
+      if (failed.length > 0) parts.push(`${failed.length} failed`);
+      const tone = failed.length > 0 || (imported === 0 && oversized.length > 0) ? 'err' : 'ok';
+      toast(parts.length > 0 ? parts.join(', ') + '.' : 'Nothing to import.', tone);
+      if (oversized.length > 0) {
+        toast(
+          `Too large (5 MB max): ${oversized.map((f) => f.name).join(', ')}. Split the export and re-import.`,
+          'err',
+        );
       }
     },
     [reload, toast],

@@ -88,6 +88,29 @@ export function ResultsPage() {
         ? `Reading your chunks (${job.chunkDone}/${job.chunkTotal})…`
         : 'Starting…';
 
+  // The markdown currently on screen (current profile, or the previous version
+  // when "View previous" is toggled) — what Copy/Download act on.
+  const shownMd = showPrev && result?.prevMd ? result.prevMd : (result?.soulMd ?? '');
+
+  async function copyMd() {
+    try {
+      await navigator.clipboard.writeText(shownMd);
+      toast('Copied to clipboard.', 'ok');
+    } catch {
+      toast('Could not copy — your browser blocked clipboard access.', 'err');
+    }
+  }
+
+  function downloadMd() {
+    const blob = new Blob([shownMd], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'soul.md';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="flex flex-col gap-section">
       <header className="flex flex-wrap items-end justify-between gap-4">
@@ -116,6 +139,16 @@ export function ResultsPage() {
               'Generate profile'
             )}
           </Button>
+          {result && (
+            <>
+              <Button variant="secondary" onClick={() => void copyMd()}>
+                Copy
+              </Button>
+              <Button variant="secondary" onClick={downloadMd}>
+                Download
+              </Button>
+            </>
+          )}
           {result?.prevMd && (
             <Button variant="ghost" onClick={() => setShowPrev((v) => !v)}>
               {showPrev ? 'Hide previous' : 'View previous'}
@@ -123,6 +156,11 @@ export function ResultsPage() {
           )}
         </div>
       </header>
+      {result && (
+        <p className="-mt-2 max-w-[64ch] font-mono text-[11px] text-text-faint">
+          Review before sharing — soul.md is built from your private words.
+        </p>
+      )}
 
       {state && !state.canExtract && !result && (
         <Notice tone="err" className="max-w-[64ch]">

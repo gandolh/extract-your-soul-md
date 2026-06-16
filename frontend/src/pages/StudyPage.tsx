@@ -4,6 +4,7 @@ import { api, ApiError, type StudyDetail } from '../api/client';
 import { useToast } from '../components/Toaster';
 import { Meter } from '../components/Layout';
 import { STUDY_ORDER } from '../studyOrder';
+import { useLangPref } from '../lang';
 import { Button, cardClass, Eyebrow, Headline, buttonClass, cx, FIELD_CLASS } from '../components/ui';
 
 export function StudyPage() {
@@ -12,7 +13,7 @@ export function StudyPage() {
   const toast = useToast();
   const [detail, setDetail] = useState<StudyDetail | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [lang, setLang] = useState<'en' | 'ro'>('en');
+  const [lang, setLang] = useLangPref();
   const [busy, setBusy] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [active, setActive] = useState<string | null>(null);
@@ -210,13 +211,32 @@ export function StudyPage() {
               {hint && <p className="mt-1 text-[13px] italic text-text-faint">{hint}</p>}
               <textarea
                 id={q.id}
-                className={cx(FIELD_CLASS, 'mt-3 min-h-[110px] resize-y leading-[1.5]')}
+                className={cx(FIELD_CLASS, 'mt-3 min-h-[150px] resize-y leading-[1.5]')}
                 value={answers[q.id] ?? ''}
                 onFocus={() => setActive(q.id)}
                 onBlur={() => setActive((a) => (a === q.id ? null : a))}
                 onChange={(e) => setAnswers((a) => ({ ...a, [q.id]: e.target.value }))}
-                placeholder={q.optional ? 'Optional — leave blank to skip.' : 'Enter your response here…'}
+                placeholder={
+                  q.optional
+                    ? 'Optional — leave blank to skip.'
+                    : 'Take your time — a few sentences carry more of you than one line.'
+                }
               />
+              {(() => {
+                const words = (answers[q.id] ?? '').trim().split(/\s+/).filter(Boolean).length;
+                // Non-blocking depth cue: the research stance is "as much or as
+                // little as you want", so we never gate the checkmark — just a
+                // gentle nudge when a non-optional answer is thin (< ~25 words).
+                const thin = !q.optional && words > 0 && words < 25;
+                return (
+                  <div className="mt-1.5 flex items-center justify-between font-mono text-[11px] text-text-faint">
+                    <span className={cx(thin && 'text-primary')}>
+                      {thin ? 'a few more sentences would help' : ' '}
+                    </span>
+                    <span>{words === 0 ? '' : `${words} word${words === 1 ? '' : 's'}`}</span>
+                  </div>
+                );
+              })()}
             </div>
           );
         })}

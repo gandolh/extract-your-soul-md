@@ -34,6 +34,8 @@ export const QUESTIONS: ReadonlyArray<Question> = [
       'Povestește-mi despre ceva care te pasionează și nu prea împărtășesc cei din jur. De ce contează pentru tine?',
     promptEn:
       "Tell me about something you're passionate about that few people around you share. Why does it matter?",
+    hintRo: 'Spune ce te-a atras prima dată și de ce ține pasiunea asta.',
+    hintEn: 'Say what first drew you in and why it has stuck.',
   },
   {
     id: 'Q3',
@@ -43,6 +45,8 @@ export const QUESTIONS: ReadonlyArray<Question> = [
       'Care e o convingere pe care o ai, dar pe care majoritatea celor din jur nu o împărtășesc? Nu trebuie să o aperi.',
     promptEn:
       "What's a belief you hold that most people around you don't? You don't have to defend it.",
+    hintRo: 'Nu trebuie să convingi pe nimeni — spune doar cum sună în capul tău.',
+    hintEn: "No need to convince anyone — just say how it sounds in your head.",
   },
   {
     id: 'Q4',
@@ -52,6 +56,8 @@ export const QUESTIONS: ReadonlyArray<Question> = [
       'Povestește o dată când ceva a mers prost și ce a ieșit până la urmă. Scrie ca și cum i-ai povesti unui prieten apropiat.',
     promptEn:
       "Tell me about a time something went wrong and what came of it. Write it the way you'd tell a close friend.",
+    hintRo: 'Lasă povestea să curgă — context, ce s-a întâmplat, cum a ieșit.',
+    hintEn: 'Let the story run — the setup, what happened, how it ended up.',
   },
   {
     id: 'Q5',
@@ -61,6 +67,8 @@ export const QUESTIONS: ReadonlyArray<Question> = [
       'Cum scrii diferit cu: (a) un prieten apropiat, (b) un coleg de la muncă, (c) un necunoscut căruia trebuie să-i fii politicos?',
     promptEn:
       'How would you describe how you write differently to: (a) a close friend, (b) a colleague at work, (c) a stranger you\'re being polite to?',
+    hintRo: 'Exemple concrete ajută — un mesaj tipic pentru fiecare.',
+    hintEn: 'Concrete examples help — a typical message for each.',
   },
   {
     id: 'Q6',
@@ -70,6 +78,8 @@ export const QUESTIONS: ReadonlyArray<Question> = [
       'Când scrii, încerci mai des să te conectezi cu cineva sau să-l informezi? Sunt contexte în care lucrurile se inversează?',
     promptEn:
       'When you write, are you more often trying to connect with someone or to inform them? Are there contexts where this flips?',
+    hintRo: 'Dacă se schimbă după situație, spune când și de ce.',
+    hintEn: 'If it shifts by situation, say when and why.',
   },
   {
     id: 'Q7',
@@ -78,6 +88,8 @@ export const QUESTIONS: ReadonlyArray<Question> = [
     promptRo: 'Umorul tău — când apare, ce aromă are? Exemple sunt binevenite.',
     promptEn:
       'Your humor — when it shows up, what flavor is it? Examples welcome.',
+    hintRo: 'Un exemplu de glumă sau de moment care ți s-a părut amuzant.',
+    hintEn: 'An example joke or a moment you found funny.',
   },
   {
     id: 'Q8',
@@ -87,6 +99,8 @@ export const QUESTIONS: ReadonlyArray<Question> = [
       'Cum ai VREA să pari când scrii? Unde se rupe asta de felul în care scrii de fapt?',
     promptEn:
       'How would you LIKE to come across in writing? Where does it diverge from how you actually write?',
+    hintRo: 'Fii sincer despre diferența dintre intenție și rezultat.',
+    hintEn: 'Be honest about the gap between intention and result.',
   },
   {
     id: 'Q9',
@@ -96,6 +110,8 @@ export const QUESTIONS: ReadonlyArray<Question> = [
       'Completează sincer: Cel mai mult vreau să fiu văzut ca ____, și cel mai mult mă tem să fiu văzut ca ____.',
     promptEn:
       'Finish this honestly: I most want to be seen as ____, and I most fear being seen as ____.',
+    hintRo: 'Poți să te și extinzi după ce completezi — de ce anume astea.',
+    hintEn: 'Feel free to expand after filling the blanks — why these.',
   },
   {
     id: 'Q10',
@@ -105,6 +121,8 @@ export const QUESTIONS: ReadonlyArray<Question> = [
       'Scrie 3–4 propoziții într-un stil pe care îl admiri — al oricui, real sau ficțional. Apoi pe scurt: de ce acel stil?',
     promptEn:
       'Write 3–4 sentences in a style you admire — anyone, real or fictional. Then briefly: why that style?',
+    hintRo: 'Scrie chiar în acel stil, nu doar despre el.',
+    hintEn: 'Actually write in that style, not just about it.',
   },
   {
     id: 'Q11',

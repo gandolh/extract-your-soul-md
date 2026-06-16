@@ -12,10 +12,12 @@ corpus is maintained; [log.md](log.md) for its history.
   done** (shipped as briefs 01–12), plus P2/P3 briefs 13 (anti-generic guard),
   14 (async job model), 15 (n-gram regurgitation guard), and the security cluster
   16–19 (session-secret guard, session sweep, sanitized errors, register
-  enumeration) and 20 (ollama preflight/timeout/retry/readiness). Remaining work
-  is **P2/P3 only** — next candidates incl. hierarchical tree-reduce, the
-  remaining import/UX polish, and the deferred auth rate-limiting (gated on a real
-  public deploy).
+  enumeration), 20 (ollama preflight/timeout/retry/readiness), and the import/UX
+  polish cluster 21–25 (soul.md copy/download, per-file upload feedback, language
+  persistence, onboarding copy, study depth guidance). Remaining work is **P2/P3
+  only** — next candidates incl. hierarchical tree-reduce (deferred until a heavy
+  user hits the chunk ceiling), the soul.md re-run **diff** (brief 21 Phase 2,
+  deferred), and the deferred auth rate-limiting (gated on a real public deploy).
 - [briefs/todo/](briefs/todo/) — numbered work specs ready to build.
 - [briefs/done/](briefs/done/) — completed specs (immutable, with outcome notes).
   01 cache-fingerprint · 02 truncation · 03 determinism · 04 collapse-to-API ·
@@ -24,7 +26,10 @@ corpus is maintained; [log.md](log.md) for its history.
   13 anti-generic-reduce-guard · 14 async-extraction-job-model ·
   15 ngram-verbatim-overlap-guard · 16 session-secret-prod-guard ·
   17 expired-session-sweep · 18 sanitize-extract-error-responses ·
-  19 register-enumeration · 20 ollama-preflight-timeout-retry.
+  19 register-enumeration · 20 ollama-preflight-timeout-retry ·
+  21 soulmd-copy-download · 22 upload-per-file-feedback ·
+  23 persist-language-preference · 24 onboarding-expectations-copy ·
+  25 study-depth-guidance.
 - [briefs/superseded/](briefs/superseded/) — specs later undone/replaced.
 - [log.md](log.md) — chronological record of every meaningful corpus change.
 
