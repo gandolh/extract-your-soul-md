@@ -442,3 +442,30 @@ import-sender-diagnostics, name-normalization, reframe-prompts, style-card-eval)
 Verified each against its 1:1 same-slug done brief, then removed all 8. `todos/`
 now holds 12 genuinely-open items only. (Going forward, promote→build→done should
 remove the todo at promote time, as 13–25 did.)
+
+## [2026-06-16] done | accuracy cluster — briefs 26–28 (reduce-prompt gating, anti-padding, drift anchor)
+
+Promoted and shipped the three small `prompts.ts`-centered accuracy todos as a
+batch (the strongest spec-ready candidates with `briefs/todo/` empty):
+
+- **26 gate-questionnaire-conditional-sections** — replaced the static
+  `REDUCE_PROMPT_HEADER` const with `buildReducePrompt(hasQuestionnaire)`. The
+  three questionnaire-only sections + the QA-vs-chat conflict rule are now
+  interpolated only when a chunk has `kind === 'questionnaire'` (computed in
+  `extract.ts` from the manifest). Stops `llama3.1:8b` hallucinating a core
+  motivation/fear from a chat-only corpus. Within-questionnaire over-inclusion
+  still rests on the model.
+- **27 forbid-bullet-count-padding** — dropped the fixed "5-15" / "8-20" bullet
+  counts in both map prompts for "Emit only well-supported observations — fewer
+  is better… do NOT pad to a count." Thin corpora no longer get padded into
+  invented voice.
+- **28 drift-anchor-reinjection** — appended a `## Drift Anchor` section to the
+  reduce prompt (compressed, re-pasteable restatement of How-To-Imitate, present
+  for both corpus kinds) + a UI usage note in `ResultsPage.tsx` ("re-paste every
+  dozen-or-so turns"). soul.md stays a clean artifact.
+
+All three source todos removed at promote time. `SKILL.md` mirrors in the 26/28
+todos were moot (file removed in brief 04). Both typechecks + `build:server`
+clean. Effect is an unmeasured nudge — compare against the new reduce/map header
+hashes next eval-harness (brief 05) run. Nothing committed. `todos/` now holds 9
+genuinely-open items.

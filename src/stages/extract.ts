@@ -6,7 +6,7 @@ import type { Config } from '../config.js';
 import type { Manifest, ChunkKind } from './chunk.js';
 import { generate } from '../ollama.js';
 import { estimateTokens } from '../tokens.js';
-import { MAP_PROMPT_HEADER, MAP_PROMPT_HEADER_QA, REDUCE_PROMPT_HEADER } from '../prompts.js';
+import { MAP_PROMPT_HEADER, MAP_PROMPT_HEADER_QA, buildReducePrompt } from '../prompts.js';
 import { findVerbatimOverlap, DEFAULT_NGRAM } from '../regurgitation.js';
 
 function hash(s: string): string {
@@ -108,7 +108,8 @@ export async function runOllamaPipeline(
   process.stdout.write(`  ${color.magenta('reduce')}... `);
   onProgress?.('reduce', 0, 1);
   const t0 = Date.now();
-  const reducePrompt = REDUCE_PROMPT_HEADER + bullets.join('\n\n');
+  const hasQuestionnaire = manifest.chunks.some((c) => c.kind === 'questionnaire');
+  const reducePrompt = buildReducePrompt(hasQuestionnaire) + bullets.join('\n\n');
   assertFitsContext('reduce', reducePrompt, cfg.ollamaNumCtx);
   const soul = await generate(
     {

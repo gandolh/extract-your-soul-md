@@ -12,11 +12,14 @@ corpus is maintained; [log.md](log.md) for its history.
   done** (shipped as briefs 01–12), plus P2/P3 briefs 13 (anti-generic guard),
   14 (async job model), 15 (n-gram regurgitation guard), and the security cluster
   16–19 (session-secret guard, session sweep, sanitized errors, register
-  enumeration), 20 (ollama preflight/timeout/retry/readiness), and the import/UX
+  enumeration), 20 (ollama preflight/timeout/retry/readiness), the import/UX
   polish cluster 21–25 (soul.md copy/download, per-file upload feedback, language
-  persistence, onboarding copy, study depth guidance). Remaining work is **P2/P3
-  only** — next candidates incl. hierarchical tree-reduce (deferred until a heavy
-  user hits the chunk ceiling), the soul.md re-run **diff** (brief 21 Phase 2,
+  persistence, onboarding copy, study depth guidance), and the accuracy cluster
+  26–28 (orchestrator-gated questionnaire reduce sections, anti-bullet-padding,
+  drift-anchor re-injection). Remaining work is **P2/P3 only** — next candidates
+  incl. representative-samples few-shot (the bigger drift lever), the map-prompt
+  responsibility split, hierarchical tree-reduce (deferred until a heavy user
+  hits the chunk ceiling), the soul.md re-run **diff** (brief 21 Phase 2,
   deferred), and the deferred auth rate-limiting (gated on a real public deploy).
 - [briefs/todo/](briefs/todo/) — numbered work specs ready to build.
 - [briefs/done/](briefs/done/) — completed specs (immutable, with outcome notes).
@@ -29,7 +32,8 @@ corpus is maintained; [log.md](log.md) for its history.
   19 register-enumeration · 20 ollama-preflight-timeout-retry ·
   21 soulmd-copy-download · 22 upload-per-file-feedback ·
   23 persist-language-preference · 24 onboarding-expectations-copy ·
-  25 study-depth-guidance.
+  25 study-depth-guidance · 26 gate-questionnaire-conditional-sections ·
+  27 forbid-bullet-count-padding · 28 drift-anchor-reinjection.
 - [briefs/superseded/](briefs/superseded/) — specs later undone/replaced.
 - [log.md](log.md) — chronological record of every meaningful corpus change.
 

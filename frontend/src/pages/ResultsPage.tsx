@@ -158,7 +158,9 @@ export function ResultsPage() {
       </header>
       {result && (
         <p className="-mt-2 max-w-[64ch] font-mono text-[11px] text-text-faint">
-          Review before sharing — soul.md is built from your private words.
+          Review before sharing — soul.md is built from your private words. In a
+          long chat, re-paste the <span className="text-text-muted">Drift Anchor</span>{' '}
+          block every dozen-or-so turns to keep the voice from drifting back to generic.
         </p>
       )}
 
