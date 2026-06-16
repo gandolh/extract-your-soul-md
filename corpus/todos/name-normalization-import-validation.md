@@ -1,6 +1,6 @@
 # Fix the silent names mismatch: normalize names + zero-match assertion + format sniff
 
-**Priority:** P1 · **Goal:** accuracy · **Impact:** high · **Effort:** M · **Status:** todo · **Captured:** 2026-06-16
+**Priority:** P1 · **Goal:** accuracy · **Impact:** high · **Effort:** M · **Status:** done (→ [briefs/done/07](../briefs/done/07-name-normalization-import-validation.md), 2026-06-16) · **Captured:** 2026-06-16
 
 ## Problem
 The "your messages only" filter is the load-bearing voice filter

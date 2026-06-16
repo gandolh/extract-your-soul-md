@@ -4,6 +4,7 @@ import { getLatestResult } from '../../db/repos.js';
 import { requireAuth } from '../auth.js';
 import {
   ExtractionBusyError,
+  NamesMismatchError,
   NothingToExtractError,
   hasExtractableInput,
   isExtracting,
@@ -52,7 +53,7 @@ export async function resultRoutes(app: FastifyInstance, opts: ResultsRouteOpts)
       if (err instanceof ExtractionBusyError) {
         return reply.code(409).send({ error: err.message });
       }
-      if (err instanceof NothingToExtractError) {
+      if (err instanceof NothingToExtractError || err instanceof NamesMismatchError) {
         return reply.code(400).send({ error: err.message });
       }
       request.log.error(err);

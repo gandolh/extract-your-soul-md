@@ -25,6 +25,9 @@ const running = new Set<number>();
 
 export class ExtractionBusyError extends Error {}
 export class NothingToExtractError extends Error {}
+// A conversation parsed fine but none of its senders matched the user's "you"
+// names — the voice filter would silently yield an empty profile. Fail loudly.
+export class NamesMismatchError extends Error {}
 
 export function isExtracting(userId: number): boolean {
   return running.has(userId);
@@ -75,9 +78,21 @@ export async function runUserExtraction(baseCfg: Config, userId: number): Promis
       'web extraction',
     );
 
-    // 3. Existing pipeline, unchanged.
+    // 3. Existing pipeline.
     const myNames = new Set(getNames(userId));
-    processAll(cfg, myNames);
+    const stats = processAll(cfg, myNames);
+
+    // Guard the load-bearing voice filter: if a conversation parsed lines but
+    // none matched the user's names, the profile would be silently empty.
+    const mismatched = stats.perSource.filter((s) => s.parsedSenders.length > 0 && s.myLinesIn === 0);
+    if (mismatched.length > 0 && stats.myLinesIn === 0) {
+      const senders = [...new Set(mismatched.flatMap((s) => s.parsedSenders))].slice(0, 20);
+      throw new NamesMismatchError(
+        `None of your imported messages matched your names. Senders found in the export: ${senders.join(', ')}. ` +
+          `Add the exact name that appears as "you" to your names list and re-run.`,
+      );
+    }
+
     const manifest = chunkAll(cfg);
     const outPath = await runOllamaPipeline(cfg, manifest);
     const soulMd = readFileSync(outPath, 'utf8');

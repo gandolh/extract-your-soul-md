@@ -17,8 +17,19 @@ export const QUESTIONNAIRE_MARKER = "# QUESTIONNAIRE";
 //   [3/15/24, 9:42:11 PM] Cristian: hey
 // Also handles the variant without brackets used on some Android exports:
 //   15/03/24, 21:42 - Gandolh: hey
-const BRACKETED = /^\[[^\]]+\]\s+([^:]+?):\s?(.*)$/;
-const DASHED = /^[\d/.\-: ,APMapm]+\s-\s([^:]+?):\s?(.*)$/;
+export const BRACKETED = /^\[[^\]]+\]\s+([^:]+?):\s?(.*)$/;
+export const DASHED = /^[\d/.\-: ,APMapm]+\s-\s([^:]+?):\s?(.*)$/;
+
+/** Does this text look like a WhatsApp export? Samples the first ~50 non-empty
+ *  lines; true if any matches a known line format. */
+export function looksLikeWhatsAppExport(content: string): boolean {
+  const sample = content
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
+    .slice(0, 50);
+  return sample.some((l) => BRACKETED.test(l) || DASHED.test(l));
+}
 
 const URL_RE = /\bhttps?:\/\/\S+/gi;
 const MEDIA_PLACEHOLDERS = [
@@ -36,6 +47,13 @@ const MEDIA_PLACEHOLDERS = [
   "null",
 ];
 
+export interface SourceStats {
+  filename: string;
+  parsedSenders: string[]; // distinct normalized senders seen in this file
+  myLinesIn: number; // lines that matched one of the user's names
+  linesOut: number; // kept after noise/dup filtering
+}
+
 export interface ProcessStats {
   filesProcessed: number;
   totalLinesIn: number;
@@ -43,6 +61,7 @@ export interface ProcessStats {
   linesOut: number;
   duplicatesDropped: number;
   questionnaireAnswers: number;
+  perSource: SourceStats[];
 }
 
 interface ParsedQA {
@@ -113,6 +132,20 @@ function processQuestionnaire(cfg: Config, stats: ProcessStats): void {
   stats.questionnaireAnswers = answered.length;
 }
 
+// Normalize a display name for matching the user's own messages. The voice
+// filter is load-bearing, so a mis-cased name, a WhatsApp `~` group prefix, or a
+// stray bidi/zero-width mark must NOT silently drop every message. Normalize,
+// then exact-match — no fuzzy/substring (that risks false self-matches).
+export function normalizeName(s: string): string {
+  return s
+    .trim()
+    .replace(/^~\s*/, '') // WhatsApp group-participant prefix
+    .replace(/[​-‏﻿]/g, '') // zero-width + bidi marks (ZWSP..RLM, BOM)
+    .normalize('NFC')
+    .toLowerCase()
+    .trim();
+}
+
 interface ParsedLine {
   sender: string;
   body: string;
@@ -147,6 +180,10 @@ export function processAll(cfg: Config, myNames: Set<string>): ProcessStats {
   const outDir = path.resolve(cfg.inputsProcessedDir);
   mkdirSync(outDir, { recursive: true });
 
+  // Normalize the "you" names once so matching is caller-proof and consistent
+  // with how each sender is normalized at the compare site below.
+  const normalizedNames = new Set([...myNames].map(normalizeName));
+
   const stats: ProcessStats = {
     filesProcessed: 0,
     totalLinesIn: 0,
@@ -154,6 +191,7 @@ export function processAll(cfg: Config, myNames: Set<string>): ProcessStats {
     linesOut: 0,
     duplicatesDropped: 0,
     questionnaireAnswers: 0,
+    perSource: [],
   };
 
   let entries: string[] = [];
@@ -176,15 +214,21 @@ export function processAll(cfg: Config, myNames: Set<string>): ProcessStats {
     const kept: string[] = [];
     // Track continuation: WhatsApp messages can span lines (newline within message body).
     let lastWasMine = false;
+    // Per-source diagnostics so the web layer can surface a names mismatch.
+    const sendersSeen = new Set<string>();
+    let myLinesInFile = 0;
 
     for (const line of lines) {
       stats.totalLinesIn++;
       const parsed = parseLine(line);
       if (parsed) {
-        const mine = myNames.has(parsed.sender);
+        const normSender = normalizeName(parsed.sender);
+        sendersSeen.add(normSender);
+        const mine = normalizedNames.has(normSender);
         lastWasMine = mine;
         if (!mine) continue;
         stats.myLinesIn++;
+        myLinesInFile++;
         if (isNoise(parsed.body, cfg)) continue;
         const cleaned = cleanBody(parsed.body, cfg);
         const key = cleaned.toLowerCase();
@@ -210,6 +254,12 @@ export function processAll(cfg: Config, myNames: Set<string>): ProcessStats {
     const outPath = path.join(outDir, name.replace(/\.md$/i, ".txt"));
     writeFileSync(outPath, kept.join("\n") + (kept.length ? "\n" : ""), "utf8");
     stats.filesProcessed++;
+    stats.perSource.push({
+      filename: name,
+      parsedSenders: [...sendersSeen],
+      myLinesIn: myLinesInFile,
+      linesOut: kept.length,
+    });
   }
 
   processQuestionnaire(cfg, stats);

@@ -7,10 +7,12 @@ import { QUESTIONNAIRE_PROCESSED_FILENAME } from './process.js';
 export type ChunkKind = 'freeform' | 'questionnaire';
 
 // Reserve room inside the model context window for the prompt header and the
-// generated output. HEADER_RESERVE covers the largest map header (MAP_QA≈377
-// tok) plus the per-chunk file header and `--- name ---` separators; the chunk
-// budget is whatever fits in `num_ctx` once those are subtracted.
-const HEADER_RESERVE = 600;
+// generated output. HEADER_RESERVE covers the largest map header (MAP_QA≈565 tok
+// after the imitation-spec reframe, brief 06) plus the per-chunk file header and
+// `--- name ---` separators; the chunk budget is whatever fits in `num_ctx` once
+// those are subtracted. The extract.ts assertFitsContext() backstop catches any
+// overflow if a header grows past this.
+const HEADER_RESERVE = 768;
 const OUTPUT_RESERVE = 512;
 
 export interface ChunkEntry {

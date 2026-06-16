@@ -1,19 +1,24 @@
 export const MAP_PROMPT_HEADER = `You are analyzing a batch of messages written by ONE person (the user) in private chats.
-Your task: extract concise observations about this person's VOICE and PERSONALITY.
+Your task: extract concise observations that another LLM could USE to MECHANICALLY IMITATE this person's writing — a style card, not a personality report. Favor concrete, reproducible features over abstract traits.
 
 Output 5-15 bullet points covering, when evident:
 - Tone & register (formal / casual / sarcastic / warm / blunt)
-- Recurring vocabulary, slang, filler words, signature phrases
-- Languages used and code-switching habits
+- Function-word habits: pronoun and article density, lowercase "i", contractions vs. full forms
+- Typical message length in words (short fragments vs. long paragraphs)
+- Capitalization quirks (all-lowercase, sentence case, ALL CAPS for emphasis)
+- Emoji rate per message and WHICH emoji recur; same for punctuation marks
+- Signature openers, closers, interjections, and catchphrases (quote these short tokens exactly — see rules)
+- Recurring vocabulary, slang, filler words
+- Languages used and code-switching habits (what triggers a switch)
 - Humor style (dry, self-deprecating, absurd, none)
 - Recurring topics, hobbies, professional context
-- Values, opinions, recurring complaints or enthusiasms
+- Opinions/enthusiasms only as directly stated
 - How they handle disagreement, apology, affection
-- Sentence-length and punctuation habits
+- Sentence-length and punctuation habits (note if they use the em-dash "—": record it as a fact, but it is a common AI tell — do NOT recommend leaning into it)
 
 Rules:
 - ONLY use what is supported by the messages below. Do NOT speculate.
-- Do NOT quote verbatim — paraphrase to avoid leaking private content.
+- Privacy vs. voice: do NOT reproduce whole private sentences or named facts/entities (people, places, employers, specifics) — paraphrase those. But DO preserve short, high-frequency, non-private stylistic tokens verbatim (greetings, sign-offs, fillers, interjections, catchphrases) — these ARE the voice and "uses casual greetings" destroys imitability.
 - Output ONLY the bullet list, no preamble, no closing remarks.
 
 Messages:
@@ -25,25 +30,34 @@ block is one question and the user's free-text response. Skipped questions
 are absent.
 
 Each answer is BOTH:
-- propositional content (beliefs, values, motivations, narrative arcs), AND
-- a voice sample (how they explain themselves in their natural register).
+- a voice sample (how they explain themselves in their natural register), AND
+- propositional content (beliefs, values, motivations, narrative arcs).
 
-Output 8-20 bullet points covering, when evident:
+The voice sample is the PRIMARY signal — the explanatory prose shows how this
+person actually writes. Extract that first and most. The propositional content
+is secondary context.
+
+Output 8-20 bullet points. Lead with VOICE FEATURES drawn from the prose itself,
+when evident:
+- Function-word habits, typical sentence/answer length, capitalization quirks
+- Emoji and punctuation habits (note the em-dash "—" as a fact, but it is a common AI tell — do NOT recommend leaning into it)
+- Signature openers, closers, interjections, catchphrases (quote these short tokens exactly — see rules)
+- Recurring vocabulary, slang, fillers
+- Code-switching range: how their register shifts across contexts (friend, work, stranger), and what triggers a switch
+- Humor style with named flavors (dry, absurd, observational, self-deprecating, etc.)
+- Whether they tend to write to CONNECT or to INFORM
+
+Then, as a SECONDARY set (fewer bullets), the propositional content, when evident:
 - Core values, recurring beliefs, "north star" themes
 - Core motivation (what they want to be seen as) and core fear (what they fear being seen as)
 - Narrative-identity tendencies (redemption vs. contamination framing of life events)
-- Recurring frustrations and how they describe them
-- Hidden passions / topics they care about but rarely message about
+- Recurring frustrations; hidden passions they rarely message about
 - Self-perception gap: how they'd LIKE to come across vs. how they actually write
-- Code-switching range: how their register shifts across contexts (friend, work, stranger)
-- Whether they tend to write to CONNECT or to INFORM
-- Humor style with named flavors (dry, absurd, observational, self-deprecating, etc.)
 - Aspirational register: who they admire in writing and why
-- Stylistic habits visible in the explanatory prose of the answers themselves
 
 Rules:
 - ONLY use what is supported by the answers below. Do NOT speculate.
-- Do NOT quote verbatim — paraphrase to avoid leaking private content.
+- Privacy vs. voice: do NOT reproduce whole private sentences or named facts/entities — paraphrase those. But DO preserve short, high-frequency, non-private stylistic tokens verbatim (greetings, sign-offs, fillers, interjections, catchphrases) — these ARE the voice.
 - Output ONLY the bullet list, no preamble, no closing remarks.
 
 Questionnaire answers:
@@ -64,6 +78,7 @@ Required structure:
 
 ## Vocabulary & Signature Phrases
 - bullet list of recurring words, slang, fillers, code-switches
+- preserve the person's actual short signature tokens (greetings, sign-offs, interjections, catchphrases) verbatim — these are the voice; do NOT generalize them into descriptions like "uses casual greetings"
 
 ## Humor
 (2-3 sentences, or "none observed")
@@ -92,10 +107,11 @@ register a downstream LLM should imitate by default. Omit the section entirely
 if not evident.)
 
 ## Stylistic Habits
+- function-word habits, typical message length in words, capitalization quirks
 - sentence length tendencies
-- punctuation tendencies
+- punctuation tendencies (if the em-dash "—" appears, record it — but flag it as a common AI tell and do NOT tell the imitator to use it)
 - formatting habits
-- emoji habits
+- emoji habits (rate per message + which emoji recur)
 
 ## How To Imitate
 A short paragraph giving an LLM concrete instructions to write as this person.
@@ -103,7 +119,7 @@ A short paragraph giving an LLM concrete instructions to write as this person.
 Rules:
 - Reconcile contradictions across batches by noting context (e.g. "more formal with strangers, blunt with close friends") rather than picking one.
 - When a questionnaire batch and a chat-log batch conflict, the chat-log batch wins for observable style (vocabulary, punctuation, sentence rhythm); the questionnaire batch wins for values, beliefs, motivations, and aspirational register.
-- Do NOT quote verbatim phrases from the source.
+- Privacy vs. voice: do NOT reproduce whole private sentences or named facts/entities from the source — but DO keep the short, high-frequency, non-private stylistic tokens (greetings, sign-offs, fillers, catchphrases) verbatim, since they are the imitable core of the voice.
 - Output ONLY the markdown document. No preamble.
 
 Observation batches:

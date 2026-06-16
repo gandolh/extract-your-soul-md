@@ -197,6 +197,7 @@ export async function runUserEval(
               numCtx: cfg.ollamaNumCtx,
               temperature: cfg.ollamaTemperature,
               seed: EVAL_SEED,
+              apiKey: cfg.ollamaApiKey,
             },
             prompt,
           );

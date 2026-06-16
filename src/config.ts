@@ -42,8 +42,10 @@ const EnvSchema = z.object({
   DROP_URLS: boolFromEnv.pipe(z.boolean().default(true)),
   DROP_MEDIA_PLACEHOLDERS: boolFromEnv.pipe(z.boolean().default(true)),
 
-  OLLAMA_HOST: z.string().url().default('http://localhost:11434'),
-  OLLAMA_MODEL: z.string().min(1).default('llama3.1:8b'),
+  OLLAMA_HOST: z.string().url().default('https://ollama.com'),
+  OLLAMA_MODEL: z.string().min(1).default('gpt-oss:120b-cloud'),
+  // Bearer token for Ollama Cloud. Empty = local server (no auth header).
+  OLLAMA_API_KEY: z.string().default(''),
   OLLAMA_NUM_CTX: intFromEnv.pipe(z.number().int().positive().default(8192)),
   OLLAMA_TEMPERATURE: intFromEnv.pipe(z.number().min(0).max(2).default(0)),
 
@@ -68,6 +70,7 @@ export type Config = {
   dropMediaPlaceholders: boolean;
   ollamaHost: string;
   ollamaModel: string;
+  ollamaApiKey: string;
   ollamaNumCtx: number;
   ollamaTemperature: number;
   evalHoldoutN: number;
@@ -100,6 +103,7 @@ export function loadConfig(): Config {
     dropMediaPlaceholders: e.DROP_MEDIA_PLACEHOLDERS,
     ollamaHost: e.OLLAMA_HOST,
     ollamaModel: e.OLLAMA_MODEL,
+    ollamaApiKey: e.OLLAMA_API_KEY,
     ollamaNumCtx: e.OLLAMA_NUM_CTX,
     ollamaTemperature: e.OLLAMA_TEMPERATURE,
     evalHoldoutN: e.EVAL_HOLDOUT_N,

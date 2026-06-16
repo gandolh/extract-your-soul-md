@@ -8,6 +8,7 @@ import {
   setNames,
 } from '../../db/repos.js';
 import { requireAuth } from '../auth.js';
+import { looksLikeWhatsAppExport } from '../../stages/process.js';
 
 const MAX_CONTENT_BYTES = 5 * 1024 * 1024; // 5 MB of text
 
@@ -44,6 +45,12 @@ export async function conversationRoutes(app: FastifyInstance): Promise<void> {
     }
     if (Buffer.byteLength(content, 'utf8') > MAX_CONTENT_BYTES) {
       return reply.code(413).send({ error: 'File too large (5 MB max).' });
+    }
+    if (!looksLikeWhatsAppExport(content)) {
+      return reply.code(422).send({
+        error:
+          "This doesn't look like a WhatsApp export. Export a chat via WhatsApp → ⋮ → More → Export chat, and upload the .txt.",
+      });
     }
     const { id } = addConversation(request.userId!, filename, content);
     return reply.code(201).send({ conversation: { id, filename } });

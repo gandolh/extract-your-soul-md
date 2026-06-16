@@ -43,6 +43,11 @@ not formally revisited.
 - **Extraction is Ollama-only**, run synchronously per-user via `/api/extract`.
   The higher-quality Claude path was deliberately dropped with the CLI (single
   surface > the quality path that needed repo-root `chunks/`).
+- **Defaults target Ollama Cloud** (`https://ollama.com`, `gpt-oss:120b-cloud`)
+  since 2026-06-16 ([briefs/done/08](../briefs/done/08-ollama-cloud-backend.md)).
+  `OLLAMA_API_KEY` is sent as a `Bearer` header when set; blank key + a localhost
+  `OLLAMA_HOST` falls back to a local server. Same `/api/generate` contract either
+  way — the only change is the auth header and the model tag.
 - **`node:sqlite` (Node ≥ 24), not `better-sqlite3`** — for now. Migration later
   is mechanical (same API surface).
 - **The frontend keeps its own Vite root + tsconfig**, separate from the

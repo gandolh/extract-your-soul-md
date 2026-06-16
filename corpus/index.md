@@ -12,12 +12,13 @@ corpus is maintained; [log.md](log.md) for its history.
   shipped as briefs 01–03, plus the new brief 04 API-only collapse).
   `single-source-reduce-template` (P2) was deleted as obsolete after the CLI
   removal. The P1 foundation arc (briefs 01–05) is complete — incl. the eval
-  harness. Open P1s: autosave, import-sender-detection, name-normalization,
-  reframe-prompts.
+  harness. Also done: brief 06 (reframe prompts) + brief 07 (name normalization +
+  import validation). Open P1s: autosave-study-answers,
+  import-sender-detection-diagnostics.
 - [briefs/todo/](briefs/todo/) — numbered work specs ready to build.
 - [briefs/done/](briefs/done/) — completed specs (immutable, with outcome notes).
   01 cache-fingerprint · 02 truncation · 03 determinism · 04 collapse-to-API ·
-  05 eval-harness.
+  05 eval-harness · 06 reframe-prompts · 07 name-normalization · 08 ollama-cloud.
 - [briefs/superseded/](briefs/superseded/) — specs later undone/replaced.
 - [log.md](log.md) — chronological record of every meaningful corpus change.
 

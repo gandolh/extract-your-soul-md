@@ -62,6 +62,7 @@ async function extractChunk(
       numCtx: cfg.ollamaNumCtx,
       temperature: cfg.ollamaTemperature,
       seed: EXTRACTION_SEED,
+      apiKey: cfg.ollamaApiKey,
     },
     prompt,
   );
@@ -102,6 +103,7 @@ export async function runOllamaPipeline(cfg: Config, manifest: Manifest): Promis
       numCtx: cfg.ollamaNumCtx,
       temperature: cfg.ollamaTemperature,
       seed: EXTRACTION_SEED,
+      apiKey: cfg.ollamaApiKey,
     },
     reducePrompt,
   );

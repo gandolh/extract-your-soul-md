@@ -1,6 +1,6 @@
 # Reframe map/reduce prompts from personality report to imitation spec
 
-**Priority:** P1 · **Goal:** accuracy · **Impact:** high · **Effort:** S · **Status:** todo · **Captured:** 2026-06-16
+**Priority:** P1 · **Goal:** accuracy · **Impact:** high · **Effort:** S · **Status:** done (→ [briefs/done/06](../briefs/done/06-reframe-prompts-imitation-spec.md), 2026-06-16) · **Captured:** 2026-06-16
 
 ## Problem
 `MAP_PROMPT_HEADER` opens "extract observations about VOICE and PERSONALITY"

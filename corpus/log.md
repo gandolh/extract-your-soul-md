@@ -190,3 +190,60 @@ Verified: build + typecheck:web clean; smoke-tested route guards (200 status,
 needs a live Ollama, not exercised here. LLM-judge layer deferred (optional).
 
 P1 foundation arc complete (briefs 01–05). Nothing committed.
+
+## [2026-06-16] brief 06 — reframe prompts to imitation spec (done)
+
+Promoted `reframe-prompts-imitation-spec` to brief 06, implemented, done. All
+three headers in `src/prompts.ts` reframed from personality-report to style-card:
+voice-first framing, explicit mechanical-feature asks (function-word habits,
+message length, capitalization, emoji rate + which, signature tokens,
+code-switch triggers), em-dash flagged as an AI tell (record, don't lean in).
+Verbatim ban NARROWED (not lifted): ban private sentences + named entities, but
+permit short non-private stylistic tokens verbatim — the imitable core. QA header
+demoted its abstract-personality block to secondary; voice features lead.
+
+Side-effect handled: headers grew (MAP 217→457, MAP_QA 377→565, REDUCE 575→741
+tok), so bumped `HEADER_RESERVE` 600→768 in `chunk.ts` (+fixed stale comment) so
+the per-chunk file header still fits on top of MAP_QA. Budget 7080→6912 at 8192
+ctx; 715-tok worst-case headroom. Brief-01 cache fingerprint auto-invalidates the
+bullet cache on this edit. `npm run build` clean.
+
+NOT yet measured — the reframe should be validated with the brief-05 eval (A/B/C,
+before vs. after) on a populated user + live Ollama; left as the next validation
+step. P1 foundation arc (01–05) was complete; this is the first measurable
+fidelity change on top of it. Nothing committed.
+
+## [2026-06-16] brief 07 — name normalization + import validation (done)
+
+Promoted `name-normalization-import-validation` to brief 07, implemented all 3
+slices, done. Fixes the silent first-run failure where a mis-cased/`~`-prefixed/
+bidi-marked name matched 0 messages and produced an empty soul.md with no warning.
+
+- `normalizeName()` exported from `process.ts` (trim → strip `~` → strip
+  zero-width/bidi → NFC → lowercase); `processAll` normalizes both the names Set
+  and each sender (caller-proof).
+- `ProcessStats.perSource` ({filename, parsedSenders, myLinesIn, linesOut}); new
+  `NamesMismatchError` thrown from `runUserExtraction` (→ 400 in results route)
+  when conversations parsed but matched 0 names globally, listing senders seen.
+- `looksLikeWhatsAppExport()` + exported `BRACKETED`/`DASHED`; conversations POST
+  returns 422 for non-WhatsApp uploads.
+
+Verified: build + typecheck:web clean; normalizeName runtime cases pass; live
+route test confirms 422 (bad upload) / 201 (real export) / 400 (names mismatch
+path reasoned). Sequences before `import-sender-detection-diagnostics` (the UI
+that surfaces `perSource`). Nothing committed.
+
+## [2026-06-16] brief 08 — Ollama Cloud backend (done)
+
+User request: run extraction against Ollama Cloud, key via env. Additive change,
+local mode preserved. `src/ollama.ts` `OllamaOptions.apiKey?` → `Authorization:
+Bearer <key>` when set. `config.ts` defaults flipped to cloud
+(`OLLAMA_HOST=https://ollama.com`, `OLLAMA_MODEL=gpt-oss:120b-cloud`) + new
+`OLLAMA_API_KEY` (blank default). `apiKey` threaded into all 3 `generate()` call
+sites (extract.ts ×2, eval-run.ts ×1). `.env.example` Ollama block rewritten
+(cloud default + local override). `wiki/decisions.md` updated.
+
+Verified: build clean; mock-fetch test confirms Bearer header sent only with a
+key (cloud) and omitted without (local). Real cloud call needs the user's key —
+to be tested by the user. Content-hash caches (keyed incl. model) avoid
+re-billing on identical re-runs. Nothing committed.
