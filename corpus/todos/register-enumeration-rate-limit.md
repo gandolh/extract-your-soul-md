@@ -7,7 +7,7 @@ Register leaks account existence by returning 409 "That username is taken."
 ([auth.ts route:36](../../src/server/routes/auth.ts#L36)) even though login uses a
 generic message. No throttling anywhere; `/api/auth/*` and `/api/extract` are
 unthrottled. But the server binds to `localhost` by default
-([index.ts:53](../../src/index.ts#L53)) and auth is deliberately "pragmatic"
+([index.ts:20](../../src/index.ts#L20)) and auth is deliberately "pragmatic"
 ([decisions.md](../wiki/decisions.md)) — so there's no live attack surface today.
 
 ## Decision / approach (audit-refined — ship the free fix, defer the rest)

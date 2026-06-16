@@ -118,3 +118,75 @@ determinism) — prompt iteration is now honest: edits invalidate the cache, the
 model sees the whole chunk, and output is attributable to the edit rather than
 sampling noise. Next in P1 build-order: `style-card-eval-harness` (the eval
 harness that turns this into a measured A/B signal). Nothing committed.
+
+## [2026-06-16] brief 04 — collapse to API + frontend only (done)
+
+Architectural decision (user, 2026-06-16): the project is **API + frontend only,
+no CLI** — full commit to Ollama-only, single surface. New `briefs/todo/04`
+(no source todo; decision-driven), implemented, moved to `briefs/done/04`.
+
+Removed: the CLI orchestration in `src/index.ts` (inverted to a thin `runServe`
+entry), `--interview`/`--ollama`/`--en` flags, `src/stages/interview.ts` (REPL),
+`loadMyNames`+`MY_NAMES_FILE`+`myNamesFile` config field, the Claude
+`/extract-soul` skill + `soul-chunk-extractor` agent, and the `start`/`interview`
+npm scripts. The shared pipeline (`process → chunk → extract`) is untouched and
+still invoked per-user by `server/pipeline.ts`. Docs rewritten: root CLAUDE.md,
+README.md, `wiki/architecture.md`, `wiki/decisions.md` (recorded the locked
+decision). `npm run build` + `typecheck:web` clean; server boots and serves /api.
+
+This supersedes the CLI-only framing in the eval-harness todo
+(`style-card-eval-harness`) — brief 05 will build eval as a synchronous
+`POST /api/eval` endpoint + frontend view, not an `--eval` CLI flag. Nothing
+committed.
+
+## [2026-06-16] todo reconciliation after CLI removal (brief 04)
+
+Swept all 16 todos that referenced the now-deleted CLI/Claude surfaces and
+reconciled them to the API-only reality (user: strip silently, full sweep).
+
+- **Deleted `single-source-reduce-template.md`** (P2) — its entire purpose was
+  eliminating drift between `prompts.ts` and the two deleted Claude files
+  (`SKILL.md`, `soul-chunk-extractor.md`). `prompts.ts` is now the sole source;
+  nothing to single-source. Removed its inbound sequencing ref from
+  `name-self-vs-observed-divergence` and `gate-questionnaire-conditional-sections`.
+- **Stripped dead "mirror into the Claude path" instructions and `.claude/…`
+  refs** from: anti-generic-reduce-guard, drift-anchor-reinjection,
+  forbid-bullet-count-padding, gate-questionnaire-conditional-sections,
+  map-prompt-responsibility-split, name-self-vs-observed-divergence,
+  reframe-prompts-imitation-spec, representative-samples-fewshot,
+  hierarchical-tree-reduce, ngram-verbatim-overlap-guard. The `prompts.ts` edit
+  is now the whole job for each.
+- **Rewrote `style-card-eval-harness`** to target `POST /api/eval` + a frontend
+  view (was an `--eval` CLI flag); holdout source = user `conversations` rows /
+  work-dir, A-condition spec = stored `soul.md` from the `results` table.
+- **Rationale-only fixes**: token-accounting-header-model (Path A → the brief-02
+  Ollama budget as the precision justification); extraction-context-budget-
+  truncation (dropped the false "Claude path unaffected" line).
+- **Cosmetic/stale-ref fixes**: persist-language-preference (`--en` prior art
+  gone), multi-platform-import-adapters ("both CLI + web" → server's processAll),
+  study-depth-guidance-hints ("two doors / REPL" → StudyPage),
+  register-enumeration-rate-limit (index.ts:53 → :20 after the entry inversion).
+- Updated `index.md` backlog tally (34→33 todos). Nothing committed.
+
+## [2026-06-16] brief 05 — style-card eval harness (done)
+
+Promoted `style-card-eval-harness` to `briefs/todo/05`, implemented, moved to
+`briefs/done/05`. The project's headline bet (style card > raw examples for
+imitation) is now measurable.
+
+New `src/eval.ts` (pure stylometric metrics: burstiness, sentence-length
+variance, TTR, function-word + char-distribution L1 distance) and
+`src/server/eval-run.ts` (`runUserEval` — holdout built via throwaway work-dir +
+`processAll`, three conditions A=soul.md / B=raw examples / C=both, scored against
+the real continuation, content-hash cached, deterministic via temp 0 + fixed
+seed, guarded by `NothingToEvalError`/`EvalBusyError` + per-user lock). Exposed as
+synchronous `POST /api/eval` (+ `GET` status) with 400/409/500 guards; new
+`EVAL_HOLDOUT_N`/`EVAL_RAW_K` config. Frontend `EvalPage` (per-condition metric
+table + per-sample breakdown), `/eval` route + nav link, api client methods.
+
+Verified: build + typecheck:web clean; smoke-tested route guards (200 status,
+400 no-soul.md, 401 unauth). Caught + fixed a bad Tailwind class
+(`border-border-subtle` → `border-hairline`) before ship. Deep generation path
+needs a live Ollama, not exercised here. LLM-judge layer deferred (optional).
+
+P1 foundation arc complete (briefs 01–05). Nothing committed.

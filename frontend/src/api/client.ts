@@ -41,6 +41,28 @@ export interface Conversation { id: number; filename: string; createdAt: string;
 export interface SoulResult { soulMd: string; prevMd: string | null; extractor: string; createdAt: string | null; }
 export interface ResultsState { canExtract: boolean; running: boolean; result: SoulResult | null; }
 
+export type EvalCondition = 'A' | 'B' | 'C';
+export interface MetricBundle {
+  burstinessDelta: number;
+  sentenceLengthVarianceDelta: number;
+  typeTokenRatioDelta: number;
+  functionWordDistance: number;
+  charDistributionDistance: number;
+}
+export interface EvalSample {
+  prefix: string;
+  realContinuation: string;
+  generated: Record<EvalCondition, string>;
+  scores: Record<EvalCondition, MetricBundle>;
+}
+export interface EvalResult {
+  n: number;
+  k: number;
+  conditionLabels: Record<EvalCondition, string>;
+  aggregate: Record<EvalCondition, MetricBundle>;
+  samples: EvalSample[];
+}
+
 export const api = {
   // auth
   me: () => request<{ user: User }>('GET', '/auth/me'),
@@ -71,4 +93,9 @@ export const api = {
   // results
   results: () => request<ResultsState>('GET', '/results'),
   extract: () => request<{ ok: boolean; result: SoulResult }>('POST', '/extract'),
+
+  // eval
+  evalStatus: () => request<{ running: boolean }>('GET', '/eval'),
+  runEval: (params?: { n?: number; k?: number }) =>
+    request<{ ok: boolean; result: EvalResult }>('POST', '/eval', params ?? {}),
 };

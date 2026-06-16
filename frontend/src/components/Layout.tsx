@@ -39,6 +39,9 @@ export function Layout() {
             <NavLink to="/results" className={({ isActive }) => cx(NAV_LINK, isActive && '!border-primary !text-primary')}>
               Profile
             </NavLink>
+            <NavLink to="/eval" className={({ isActive }) => cx(NAV_LINK, isActive && '!border-primary !text-primary')}>
+              Eval
+            </NavLink>
             {user && (
               <span className="font-mono text-[12px] text-text-faint">— {user.username}</span>
             )}

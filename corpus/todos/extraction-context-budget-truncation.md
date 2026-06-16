@@ -11,8 +11,7 @@ past `num_ctx`; the prompt header survives (it's first), so roughly the last ~22
 of every 30k chunk is discarded before the model reads a word — the model writes
 confident bullets from ~30% of the corpus. The **reduce step overflows too**
 ([extract.ts:65](../../src/stages/extract.ts#L65)): all per-chunk bullets + a
-~575-token header accumulate unbounded. Hits both CLI (`--ollama`) and web paths.
-The Claude `/extract-soul` path is unaffected (no `num_ctx` limit).
+~575-token header accumulate unbounded. Hits the (sole) Ollama extraction path.
 
 ## Decision / approach (grilled 2026-06-16)
 - **Budget derives from the context window.** In

@@ -29,4 +29,4 @@ re-id). Revisit only after the eval harness can measure the +9% claim (currently
 "inferred, not measured").
 
 ## Refs
-code: [prompts.ts](../../src/prompts.ts), `.claude/skills/extract-soul/SKILL.md` · corpus: [prose-2025](../wiki/sources/prose-2025.md), [style-card-artifact](../wiki/concepts/style-card-artifact.md), [regurgitation-risk](../wiki/concepts/regurgitation-risk.md)
+code: [prompts.ts](../../src/prompts.ts) · corpus: [prose-2025](../wiki/sources/prose-2025.md), [style-card-artifact](../wiki/concepts/style-card-artifact.md), [regurgitation-risk](../wiki/concepts/regurgitation-risk.md)

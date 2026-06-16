@@ -20,20 +20,29 @@ not formally revisited.
   [concepts/dual-use-signal.md](concepts/dual-use-signal.md).
 - **The questionnaire is another input source, not a separate pipeline.** It flows
   through the same `process → chunk → extract` machinery.
-- **The interview is dumb; interpretation is smart.** No LLM calls at REPL/capture
+- **Capture is dumb; interpretation is smart.** No LLM calls at study-capture
   time; all interpretation happens at extract time.
-- **`answers.md` has one format across all producers.** The REPL, the web form,
-  and the `process.ts` parser share the `## Qn — Title` section format and the
-  `[skipped]` marker, owned by `answers-file.ts`. Don't break the contract.
+- **`answers.md` has one format across all producers.** The web studies forms
+  (via `answers-file.ts`'s `writeAnswersFile`) and the `process.ts` parser share
+  the `## Qn — Title` section format and the `[skipped]` marker, owned by
+  `answers-file.ts`. Don't break the contract.
 
 ## Engineering
 
 - **`out/my-soul.md` is the stable output contract.** Other tools depend only on
   it; back up to `.prev.md` before overwriting.
-- **SQLite is the web platform's source of truth.** The CLI pipeline code is
-  reused unchanged; DB rows are materialized to files on demand at extraction.
-- **The programmatic (web) extractor is Ollama-only.** The Claude `/extract-soul`
-  path needs a Claude Code session and stays CLI-only.
+- **The project is API + frontend only — no CLI.** Decided 2026-06-16
+  ([log.md](../log.md), [briefs/done/04](../briefs/done/04-collapse-to-api-frontend-only.md)).
+  The CLI pipeline (`npm run start`, `--interview`, `--ollama`) and the Claude
+  `/extract-soul` skill path were removed; the web platform already covered every
+  capability. `src/index.ts` is now a thin server entry. Was previously "two front
+  doors over a shared core".
+- **SQLite is the source of truth.** The shared pipeline code (`process → chunk →
+  extract`) is reused by `server/pipeline.ts`; DB rows are materialized to a
+  throwaway work dir on demand at extraction.
+- **Extraction is Ollama-only**, run synchronously per-user via `/api/extract`.
+  The higher-quality Claude path was deliberately dropped with the CLI (single
+  surface > the quality path that needed repo-root `chunks/`).
 - **`node:sqlite` (Node ≥ 24), not `better-sqlite3`** — for now. Migration later
   is mechanical (same API surface).
 - **The frontend keeps its own Vite root + tsconfig**, separate from the

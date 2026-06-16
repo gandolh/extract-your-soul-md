@@ -24,8 +24,7 @@ Edit the "## Self-Perception vs. Observed Voice" body in
 [prompts.ts](../../src/prompts.ts) to enumerate concrete divergence points.
 
 ## Dependencies & sequencing
-Only fires when both questionnaire + chat batches exist and diverge. After
-[single-source-reduce-template](single-source-reduce-template.md).
+Only fires when both questionnaire + chat batches exist and diverge.
 
 ## Refs
-code: [prompts.ts](../../src/prompts.ts), `.claude/skills/extract-soul/SKILL.md` · corpus: [self-report-vs-observer-gap](../wiki/concepts/self-report-vs-observer-gap.md)
+code: [prompts.ts](../../src/prompts.ts) · corpus: [self-report-vs-observer-gap](../wiki/concepts/self-report-vs-observer-gap.md)

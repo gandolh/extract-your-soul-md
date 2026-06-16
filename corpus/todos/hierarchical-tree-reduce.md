@@ -16,7 +16,6 @@ removes the ceiling.
 - Tree-reduce: batch the per-chunk bullets into `num_ctx`-sized groups, reduce
   each group to an intermediate summary, then reduce the intermediates (recurse if
   needed). No corpus-size ceiling.
-- Mirror in the Claude SKILL.md path for parity.
 
 ## First step
 In `runOllamaPipeline`, when the bullet set + reduce header exceeds `num_ctx`,
@@ -29,4 +28,4 @@ Builds on
 it).
 
 ## Refs
-code: [extract.ts](../../src/stages/extract.ts), [prompts.ts](../../src/prompts.ts), `.claude/skills/extract-soul/SKILL.md`
+code: [extract.ts](../../src/stages/extract.ts), [prompts.ts](../../src/prompts.ts)

@@ -16,16 +16,13 @@ AI tells. Matters most for new web users with one study answered.
   [prompts.ts:31](../../src/prompts.ts#L31) with: "Emit only well-supported
   observations — fewer is better. If the chunk is thin, return few bullets; do
   NOT pad to a count. Cover, when evident:".
-- **Also edit `.claude/agents/soul-chunk-extractor.md`** (lines 30 & 43 hardcode
-  the same counts and lack the don't-pad rule) — that's the real Path A target.
-  `SKILL.md:120` already carries the sparseness rule for the reduce step.
 
 ## First step
 Change [prompts.ts:4](../../src/prompts.ts#L4) count line to the anti-padding
-wording; mirror at lines 31 and in soul-chunk-extractor.md.
+wording; mirror at line 31 (the other map prompt).
 
 ## Dependencies & sequencing
 Pure prompt text. After [cache-fingerprint](cache-fingerprint-prompt-model-ctx.md).
 
 ## Refs
-code: [prompts.ts](../../src/prompts.ts), `.claude/agents/soul-chunk-extractor.md` · corpus: [self-report-vs-observer-gap](../wiki/concepts/self-report-vs-observer-gap.md), [ai-tells](../wiki/concepts/ai-tells.md)
+code: [prompts.ts](../../src/prompts.ts) · corpus: [self-report-vs-observer-gap](../wiki/concepts/self-report-vs-observer-gap.md), [ai-tells](../wiki/concepts/ai-tells.md)

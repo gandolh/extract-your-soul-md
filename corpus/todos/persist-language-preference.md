@@ -7,8 +7,7 @@ The EN/RO `lang` toggle is local component state defaulting to `'en'`
 ([StudyPage.tsx:15](../../frontend/src/pages/StudyPage.tsx#L15)), so it resets on
 every study and reload — a Romanian-primary user re-toggles on each of the three
 studies. This also inverts the documented Romanian-primary default
-([02-questionnaire-design](../wiki/sources-raw/02-questionnaire-design.md), CLI
-`--en`).
+([02-questionnaire-design](../wiki/sources-raw/02-questionnaire-design.md)).
 
 ## Decision / approach (audit-refined — language half only)
 - Replace the local `useState` with a `useLangPref()` hook backed by
@@ -26,4 +25,4 @@ Create `frontend/src/lang.ts` with `useLangPref()`; swap
 [StudyPage.tsx:15](../../frontend/src/pages/StudyPage.tsx#L15) to use it.
 
 ## Refs
-code: [StudyPage.tsx](../../frontend/src/pages/StudyPage.tsx), [index.ts](../../src/index.ts) (`--en`) · corpus: [02-questionnaire-design](../wiki/sources-raw/02-questionnaire-design.md)
+code: [StudyPage.tsx](../../frontend/src/pages/StudyPage.tsx) · corpus: [02-questionnaire-design](../wiki/sources-raw/02-questionnaire-design.md)

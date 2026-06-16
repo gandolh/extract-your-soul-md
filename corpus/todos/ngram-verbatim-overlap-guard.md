@@ -19,8 +19,8 @@ NOT replace the real safety net (gitignore + manual review).
   code-switch), deterministic, no new dependency.
 - **Drop entity-NER redaction** — multilingual NER is L-effort and error-prone,
   and redacting names doesn't remove style-based re-identifiability anyway.
-- Covers the web path automatically (pipeline reuses `runOllamaPipeline`). Path A
-  (Claude) can only get a softer prompt instruction, not real enforcement.
+- Enforced in `runOllamaPipeline` (the only extraction path), so it's a real
+  post-generation check rather than a soft prompt instruction.
 
 ## First step
 Add a 7-gram shingle scan over the soul output vs source text in

@@ -21,8 +21,8 @@ sub-30-word probe neither front door implements.
   ([studies.ts:30,80](../../src/server/routes/studies.ts#L30)).
 - Bump the textarea min-height; add per-question placeholders.
 - **Fill `hintEn/hintRo` for the nine missing questions (Q2-Q10)** in
-  [questions.ts](../../src/questions.ts) — hints already render in **both** front
-  doors (StudyPage + the REPL), so this single data change improves both.
+  [questions.ts](../../src/questions.ts) — hints already render in StudyPage, so
+  this single data change improves the studies forms directly.
 
 ## First step
 Add `hintEn/hintRo` to Q2-Q10 in [questions.ts](../../src/questions.ts) (field

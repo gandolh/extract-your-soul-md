@@ -216,7 +216,7 @@ export function processAll(cfg: Config, myNames: Set<string>): ProcessStats {
 
   if (stats.filesProcessed === 0) {
     throw new Error(
-      `No inputs found. Add WhatsApp exports under ${inDir} or run \`npm run start -- --interview\` first.`,
+      `No inputs found under ${inDir}. Import a conversation or answer at least one study first.`,
     );
   }
 

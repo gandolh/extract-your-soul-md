@@ -20,7 +20,7 @@ lines, so a non-WhatsApp upload silently produces an empty soul.md.
   `whatsapp` adapter normalizing to `ParsedLine {sender, body}`, then add Telegram
   JSON). `decisions.md` locks "WhatsApp-only" — flipping it needs a revisit + a
   `log.md` note, and there's no demand signal yet. Gate on a real second-format
-  request. Keep the `ParsedLine` seam stable (both CLI + web use `processAll`).
+  request. Keep the `ParsedLine` seam stable (the server's `processAll` consumes it).
 
 ## First step
 Add the zero-recognized-lines guard at the web layer / pipeline (not the shared

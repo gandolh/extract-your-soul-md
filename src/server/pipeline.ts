@@ -1,7 +1,7 @@
 // Per-user extraction: materialize a throwaway work dir from the user's DB
-// rows, run the UNCHANGED file-based pipeline (process → chunk → ollama)
-// against it, then read the result back into SQLite. The Claude /extract-soul
-// agent path stays CLI-only; the programmatic extractor here is always Ollama.
+// rows, run the file-based pipeline (process → chunk → ollama) against it, then
+// read the result back into SQLite. This is the only extraction path — the
+// project is API + frontend only and extraction is always Ollama.
 
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';

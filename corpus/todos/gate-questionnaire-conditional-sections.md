@@ -18,17 +18,11 @@ machine decision, not a model judgment.
 - In [extract.ts](../../src/stages/extract.ts) compute
   `const hasQuestionnaire = manifest.chunks.some(c => c.kind === 'questionnaire')`
   and build the prompt from it.
-- Mirror in `.claude/skills/extract-soul/SKILL.md` step 3 (check manifest kind
-  first) so Path A and Path B stay aligned.
 - Honest limit: this kills the all-chat hallucination only; within-questionnaire
   over-inclusion still rests on the model.
 
 ## First step
 Split `REDUCE_PROMPT_HEADER` into a `buildReducePrompt(hasQuestionnaire)` builder.
 
-## Dependencies & sequencing
-Easier after [single-source-reduce-template](single-source-reduce-template.md)
-(else edit both copies).
-
 ## Refs
-code: [prompts.ts](../../src/prompts.ts), [extract.ts](../../src/stages/extract.ts), `.claude/skills/extract-soul/SKILL.md`
+code: [prompts.ts](../../src/prompts.ts), [extract.ts](../../src/stages/extract.ts)

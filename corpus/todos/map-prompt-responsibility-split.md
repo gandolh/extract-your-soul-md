@@ -10,7 +10,7 @@ the one genuine cross-prompt leak.
 
 ## Decision / approach (audit-refined — narrow scope; most of the original idea was research-contradicted)
 - Narrow or remove the values bullet at [prompts.ts:10](../../src/prompts.ts#L10)
-  (and `soul-chunk-extractor.md:37`) to "opinions/enthusiasms only as directly
+  to "opinions/enthusiasms only as directly
   stated"; let Values & Worldview be QA-fed.
 - **Do NOT** strip the QA prompt's voice/style bullets
   ([prompts.ts:38,40,42](../../src/prompts.ts#L38-L42)) — those implement the
@@ -20,8 +20,7 @@ the one genuine cross-prompt leak.
   "in-prose:") so the reduce tie-break operates on typed inputs.
 
 ## First step
-Narrow [prompts.ts:10](../../src/prompts.ts#L10) + mirror at
-`soul-chunk-extractor.md:37`.
+Narrow the values bullet at [prompts.ts:10](../../src/prompts.ts#L10).
 
 ## Refs
-code: [prompts.ts](../../src/prompts.ts), `.claude/agents/soul-chunk-extractor.md` · corpus: [dual-use-signal](../wiki/concepts/dual-use-signal.md), [03-integration-plan](../wiki/sources-raw/03-integration-plan.md)
+code: [prompts.ts](../../src/prompts.ts) · corpus: [dual-use-signal](../wiki/concepts/dual-use-signal.md), [03-integration-plan](../wiki/sources-raw/03-integration-plan.md)

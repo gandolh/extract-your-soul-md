@@ -1,6 +1,4 @@
 import 'dotenv/config';
-import { readFileSync, existsSync } from 'node:fs';
-import path from 'node:path';
 import { z } from 'zod';
 
 const boolFromEnv = z
@@ -26,7 +24,6 @@ const EnvSchema = z.object({
   INPUTS_PROCESSED_DIR: z.string().min(1).default('inputs/processed'),
   CHUNKS_DIR: z.string().min(1).default('chunks'),
   OUT_DIR: z.string().min(1).default('out'),
-  MY_NAMES_FILE: z.string().min(1).default('inputs/my-names.txt'),
   QUESTIONNAIRE_DIR: z.string().min(1).default('inputs/questionnaire'),
   QUESTIONNAIRE_FILE: z.string().min(1).default('answers.md'),
 
@@ -49,6 +46,9 @@ const EnvSchema = z.object({
   OLLAMA_MODEL: z.string().min(1).default('llama3.1:8b'),
   OLLAMA_NUM_CTX: intFromEnv.pipe(z.number().int().positive().default(8192)),
   OLLAMA_TEMPERATURE: intFromEnv.pipe(z.number().min(0).max(2).default(0)),
+
+  EVAL_HOLDOUT_N: intFromEnv.pipe(z.number().int().positive().default(8)),
+  EVAL_RAW_K: intFromEnv.pipe(z.number().int().positive().default(5)),
 });
 
 export type Config = {
@@ -56,7 +56,6 @@ export type Config = {
   inputsProcessedDir: string;
   chunksDir: string;
   outDir: string;
-  myNamesFile: string;
   questionnaireDir: string;
   questionnaireFile: string;
   dbPath: string;
@@ -71,6 +70,8 @@ export type Config = {
   ollamaModel: string;
   ollamaNumCtx: number;
   ollamaTemperature: number;
+  evalHoldoutN: number;
+  evalRawK: number;
 };
 
 export function loadConfig(): Config {
@@ -87,7 +88,6 @@ export function loadConfig(): Config {
     inputsProcessedDir: e.INPUTS_PROCESSED_DIR,
     chunksDir: e.CHUNKS_DIR,
     outDir: e.OUT_DIR,
-    myNamesFile: e.MY_NAMES_FILE,
     questionnaireDir: e.QUESTIONNAIRE_DIR,
     questionnaireFile: e.QUESTIONNAIRE_FILE,
     dbPath: e.DB_PATH,
@@ -102,22 +102,7 @@ export function loadConfig(): Config {
     ollamaModel: e.OLLAMA_MODEL,
     ollamaNumCtx: e.OLLAMA_NUM_CTX,
     ollamaTemperature: e.OLLAMA_TEMPERATURE,
+    evalHoldoutN: e.EVAL_HOLDOUT_N,
+    evalRawK: e.EVAL_RAW_K,
   });
-}
-
-export function loadMyNames(myNamesFile: string): string[] {
-  const abs = path.resolve(myNamesFile);
-  if (!existsSync(abs)) {
-    throw new Error(
-      `My-names file not found at ${abs}. Create it with one name per line (the names that appear as "you" in WhatsApp exports).`,
-    );
-  }
-  const lines = readFileSync(abs, 'utf8')
-    .split('\n')
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0 && !l.startsWith('#'));
-  if (lines.length === 0) {
-    throw new Error(`My-names file at ${abs} is empty.`);
-  }
-  return lines;
 }

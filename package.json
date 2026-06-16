@@ -9,14 +9,12 @@
   },
   "scripts": {
     "dev": "run-p dev:api dev:web",
-    "dev:api": "tsx watch src/index.ts --serve --port=4317",
+    "dev:api": "tsx watch src/index.ts --port=4317",
     "dev:web": "vite",
     "build": "npm run build:server && npm run build:web",
     "build:server": "tsc -p tsconfig.json",
     "build:web": "vite build",
-    "start": "tsx src/index.ts",
-    "serve:prod": "node --no-warnings=ExperimentalWarning dist/index.js --serve --port=4317",
-    "interview": "tsx src/index.ts --interview",
+    "serve:prod": "node --no-warnings=ExperimentalWarning dist/index.js --port=4317",
     "typecheck:web": "tsc -p frontend/tsconfig.json --noEmit"
   },
   "author": "",

@@ -8,6 +8,7 @@ import { StudiesPage } from './pages/StudiesPage';
 import { StudyPage } from './pages/StudyPage';
 import { ImportPage } from './pages/ImportPage';
 import { ResultsPage } from './pages/ResultsPage';
+import { EvalPage } from './pages/EvalPage';
 import { type ReactNode } from 'react';
 
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -41,6 +42,7 @@ export default function App() {
         <Route path="/studies/:studyId" element={<StudyPage />} />
         <Route path="/import" element={<ImportPage />} />
         <Route path="/results" element={<ResultsPage />} />
+        <Route path="/eval" element={<EvalPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

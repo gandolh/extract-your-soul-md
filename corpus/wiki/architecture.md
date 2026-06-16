@@ -5,25 +5,26 @@ questionnaire path, see [overview.md](overview.md). The root
 [CLAUDE.md](../../CLAUDE.md) is the authoritative run-command reference; this page
 is the orientation layer.
 
-## Two front doors over one shared core
+## One surface: API + frontend
 
 ```
-            ┌──────────────── shared pipeline (src/stages/) ────────────────┐
-            │  process.ts  →  chunk.ts  →  extract.ts (Ollama) / map-reduce  │
-            └───────────────────────────────────────────────────────────────┘
-                 ▲                                            ▲
-                 │                                            │
-   CLI pipeline (npm run start)                  Web platform (npm run dev)
-   file-based, single-user                       React SPA + Fastify + SQLite
-   src/index.ts                                  src/server/, src/db/, frontend/
+   Web platform (npm run dev)
+   React SPA + Fastify + SQLite
+   src/index.ts (thin server entry) · src/server/ · src/db/ · frontend/
+        │
+        ▼
+   shared pipeline (src/stages/)
+   process.ts → chunk.ts → extract.ts (Ollama map/reduce)
 ```
 
-1. **CLI pipeline** — the original single-user, file-based data prep + extraction.
-   Pure data prep by default (no LLM); two extraction paths (Claude `/extract-soul`
-   skill, or local Ollama).
-2. **Web platform** — multi-user React SPA + Fastify API + SQLite, layered over
-   the *unchanged* CLI core. SQLite (`data/soul.sqlite`) is the source of truth;
-   it generates the file-based pipeline inputs on demand at extraction time.
+The project is **API + frontend only** — there is no CLI (removed 2026-06-16,
+[briefs/done/04](../briefs/done/04-collapse-to-api-frontend-only.md)). A
+multi-user React SPA + Fastify API + SQLite. `src/index.ts` is a thin entry that
+just loads config and starts the server. SQLite (`data/soul.sqlite`) is the
+source of truth; the shared pipeline (`src/stages/`) is invoked per-user by
+`server/pipeline.ts`, which materializes DB rows into a throwaway work dir at
+extraction time. The previous "two front doors" design (a separate CLI pipeline +
+the Claude `/extract-soul` skill) is gone.
 
 ## Pipeline stages (`src/stages/`)
 
@@ -33,10 +34,10 @@ is the orientation layer.
 - **`chunk.ts`** — file-bounded first-fit packing into ~30k-token chunks +
   `manifest.json` (records ordering, sources, `kind: freeform | questionnaire`).
   The questionnaire is always isolated into its own chunk.
-- **`interview.ts`** — the `--interview` REPL (Stage 0): walks the 10+1 questions,
-  writes `answers.md` via `answers-file.ts`.
-- **`extract.ts`** + **`ollama.ts`** — the Ollama map/reduce path (Path B), with
-  per-chunk content-hash caching under `.cache/bullets/`.
+- **`extract.ts`** + **`ollama.ts`** — the Ollama map/reduce path, with per-chunk
+  caching under `.cache/bullets/` (keyed on kind + model + ctx + temp + prompt +
+  content). Deterministic: temperature 0 + fixed seed. Questionnaire capture is
+  the studies forms in the SPA — there is no longer a REPL.
 
 Shared helpers: `config.ts` (zod-validated env), `questions.ts` (the question
 data), `prompts.ts` (map/reduce prompt headers, incl. the Q&A variant),
@@ -58,10 +59,10 @@ grouping questions into themed web studies), `color.ts`.
 ### Per-user extraction (`src/server/pipeline.ts`)
 `POST /api/extract` clones `Config` into a throwaway work dir, writes the user's
 conversations + answers there via the unchanged `writeAnswersFile`, runs the
-unchanged `processAll → chunkAll → runOllamaPipeline`, reads the result into the
-`results` table, deletes the work dir. The programmatic extractor is
-**always Ollama** — the Claude `/extract-soul` path can't run from inside an HTTP
-request, so it stays CLI-only.
+`processAll → chunkAll → runOllamaPipeline`, reads the result into the `results`
+table, deletes the work dir. Extraction is **always Ollama**, run synchronously
+(an in-memory per-user lock guards against concurrent runs). This is the only
+extraction path.
 
 ## The output contract
 

@@ -15,8 +15,9 @@ logic.
 ## Decision / approach (audit-refined — the truncation fix is the real win; this is cleanup)
 - **Fold the header + `--- name ---` separators into the token budget** inside
   `chunkAll` so the manifest is honest. (Small but correct.)
-- **Keep the heuristic** — `decisions.md` locks it, and Path A (Claude, huge
-  window) makes precision near-irrelevant. Optionally refine to UTF-8-byte/4
+- **Keep the heuristic** — `decisions.md` locks it, and the ~4 chars/token
+  estimate is good enough for the only consumer (the `OLLAMA_NUM_CTX`-derived
+  chunk budget from brief 02). Optionally refine to UTF-8-byte/4
   (better reflects BPE cost of diacritics/emoji) as a no-dependency change. Do
   NOT pull `gpt-tokenizer` (its BPE doesn't match Llama's).
 - **Raise the default model** as a *separate* config-only change (e.g. a stronger

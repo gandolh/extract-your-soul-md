@@ -29,4 +29,4 @@ Smaller-bore than shipping few-shot samples (the bigger drift lever) —
 see [representative-samples-fewshot](representative-samples-fewshot.md).
 
 ## Refs
-code: [prompts.ts](../../src/prompts.ts), [ResultsPage.tsx](../../frontend/src/pages/ResultsPage.tsx), `.claude/skills/extract-soul/SKILL.md` · corpus: [llm-persona-techniques](../wiki/frameworks/llm-persona-techniques.md)
+code: [prompts.ts](../../src/prompts.ts), [ResultsPage.tsx](../../frontend/src/pages/ResultsPage.tsx) · corpus: [llm-persona-techniques](../wiki/frameworks/llm-persona-techniques.md)

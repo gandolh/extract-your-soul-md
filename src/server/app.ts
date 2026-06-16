@@ -13,6 +13,7 @@ import { authRoutes } from './routes/auth.js';
 import { studyRoutes } from './routes/studies.js';
 import { conversationRoutes } from './routes/conversations.js';
 import { resultRoutes } from './routes/results.js';
+import { evalRoutes } from './routes/eval.js';
 
 export interface BuildOptions {
   isProd: boolean;
@@ -51,6 +52,7 @@ export async function buildServer(cfg: Config, opts: BuildOptions): Promise<Fast
   await app.register(studyRoutes);
   await app.register(conversationRoutes);
   await app.register(resultRoutes, { cfg });
+  await app.register(evalRoutes, { cfg });
 
   app.get('/api/health', async () => ({ ok: true }));
 

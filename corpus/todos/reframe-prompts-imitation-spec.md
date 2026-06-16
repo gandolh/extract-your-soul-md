@@ -30,10 +30,6 @@ the artifact is a style card, not a personality report
 - Demote the QA abstract-personality block to a smaller secondary section so it
   stops crowding out the voice-feature extraction the QA prose affords
   ([dual-use-signal](../wiki/concepts/dual-use-signal.md)).
-- **Mirror every edit** into the Claude path: `.claude/agents/soul-chunk-extractor.md`
-  and the reduce structure in `.claude/skills/extract-soul/SKILL.md` (the bullet
-  shape is duplicated — easier once
-  [single-source-reduce-template](single-source-reduce-template.md) lands).
 - Few-shot "Representative Samples" stays **deferred** —
   [representative-samples-fewshot](representative-samples-fewshot.md).
 
@@ -47,4 +43,4 @@ After [cache-fingerprint](cache-fingerprint-prompt-model-ctx.md)
 [style-card-eval-harness](style-card-eval-harness.md).
 
 ## Refs
-code: [prompts.ts](../../src/prompts.ts), `.claude/agents/soul-chunk-extractor.md`, `.claude/skills/extract-soul/SKILL.md` · corpus: [llm-style-imitation-gap](../wiki/concepts/llm-style-imitation-gap.md), [style-card-artifact](../wiki/concepts/style-card-artifact.md), [ai-tells](../wiki/concepts/ai-tells.md)
+code: [prompts.ts](../../src/prompts.ts) · corpus: [llm-style-imitation-gap](../wiki/concepts/llm-style-imitation-gap.md), [style-card-artifact](../wiki/concepts/style-card-artifact.md), [ai-tells](../wiki/concepts/ai-tells.md)
