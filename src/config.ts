@@ -1,6 +1,11 @@
 import 'dotenv/config';
 import { z } from 'zod';
 
+// The dev fallback signing key. Exported so the prod startup guard (app.ts) can
+// detect a deploy that never set a real SESSION_SECRET and refuse to sign cookies
+// with a publicly-known, forgeable key. Generate a real one with `openssl rand -hex 32`.
+export const DEV_SESSION_SECRET = 'dev-insecure-session-secret-change-me';
+
 const boolFromEnv = z
   .string()
   .optional()
@@ -35,7 +40,7 @@ const EnvSchema = z.object({
   SESSION_SECRET: z
     .string()
     .min(16, 'SESSION_SECRET must be at least 16 chars')
-    .default('dev-insecure-session-secret-change-me'),
+    .default(DEV_SESSION_SECRET),
 
   CHUNK_TARGET_TOKENS: intFromEnv.pipe(z.number().int().positive().default(30_000)),
   MIN_MESSAGE_LENGTH: intFromEnv.pipe(z.number().int().nonnegative().default(3)),
@@ -48,6 +53,10 @@ const EnvSchema = z.object({
   OLLAMA_API_KEY: z.string().default(''),
   OLLAMA_NUM_CTX: intFromEnv.pipe(z.number().int().positive().default(32768)),
   OLLAMA_TEMPERATURE: intFromEnv.pipe(z.number().min(0).max(2).default(0)),
+  // Per-request timeout for a single Ollama call (map or reduce). A hung server
+  // would otherwise block up to Fastify's 15-min ceiling. 10 min default covers a
+  // slow cloud reduce; transient blips are retried (see ollama.ts).
+  OLLAMA_TIMEOUT_MS: intFromEnv.pipe(z.number().int().positive().default(600_000)),
 
   EVAL_HOLDOUT_N: intFromEnv.pipe(z.number().int().positive().default(8)),
   EVAL_RAW_K: intFromEnv.pipe(z.number().int().positive().default(5)),
@@ -73,6 +82,7 @@ export type Config = {
   ollamaApiKey: string;
   ollamaNumCtx: number;
   ollamaTemperature: number;
+  ollamaTimeoutMs: number;
   evalHoldoutN: number;
   evalRawK: number;
 };
@@ -106,6 +116,7 @@ export function loadConfig(): Config {
     ollamaApiKey: e.OLLAMA_API_KEY,
     ollamaNumCtx: e.OLLAMA_NUM_CTX,
     ollamaTemperature: e.OLLAMA_TEMPERATURE,
+    ollamaTimeoutMs: e.OLLAMA_TIMEOUT_MS,
     evalHoldoutN: e.EVAL_HOLDOUT_N,
     evalRawK: e.EVAL_RAW_K,
   });

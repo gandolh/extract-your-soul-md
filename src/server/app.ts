@@ -1,14 +1,16 @@
 // Builds the Fastify instance: cookie plugin, the four route groups, and (in
 // production) static serving of the built SPA with a history-API fallback.
 
-import { existsSync } from 'node:fs';
+import { existsSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Fastify, { type FastifyInstance } from 'fastify';
 import fastifyCookie from '@fastify/cookie';
 import fastifyStatic from '@fastify/static';
-import type { Config } from '../config.js';
+import { type Config, DEV_SESSION_SECRET } from '../config.js';
 import { initDb } from '../db/db.js';
+import { reclaimStaleJobs } from '../db/repos.js';
+import { sweepExpiredSessions } from '../db/maintenance.js';
 import { authRoutes } from './routes/auth.js';
 import { studyRoutes } from './routes/studies.js';
 import { conversationRoutes } from './routes/conversations.js';
@@ -37,7 +39,34 @@ function spaDir(): string | null {
 }
 
 export async function buildServer(cfg: Config, opts: BuildOptions): Promise<FastifyInstance> {
+  // Secrets guard: never sign cookies with the publicly-known dev key in prod.
+  // Runs before anything else so a misconfigured deploy fails fast and loud.
+  if (cfg.sessionSecret === DEV_SESSION_SECRET) {
+    if (opts.isProd) {
+      throw new Error(
+        'SESSION_SECRET is the insecure dev default in production. ' +
+          'Set a real one (e.g. `openssl rand -hex 32`) before deploying.',
+      );
+    }
+    // eslint-disable-next-line no-console
+    console.warn(
+      '⚠ SESSION_SECRET is the insecure dev default — fine for local dev, ' +
+        'but set a real one (`openssl rand -hex 32`) before any deployment.',
+    );
+  }
+
   initDb(cfg.dbPath);
+
+  // A job left enqueued/running means the process died mid-extraction. Mark
+  // those failed and remove their orphaned throwaway work dirs.
+  for (const job of reclaimStaleJobs()) {
+    if (job.work_dir) rmSync(job.work_dir, { recursive: true, force: true });
+  }
+
+  // Expired-session housekeeping: sweep on boot, then hourly. unref() so the
+  // timer never keeps the process alive on its own.
+  sweepExpiredSessions();
+  setInterval(() => sweepExpiredSessions(), 60 * 60 * 1000).unref();
 
   const app = Fastify({
     logger: opts.isProd ? true : { transport: undefined, level: 'warn' },

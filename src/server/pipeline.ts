@@ -10,6 +10,7 @@ import { writeAnswersFile } from '../answers-file.js';
 import { processAll } from '../stages/process.js';
 import { chunkAll } from '../stages/chunk.js';
 import { runOllamaPipeline } from '../stages/extract.js';
+import { pingOllama, OllamaUnavailableError } from '../ollama.js';
 import {
   getAnswersForUser,
   getConversationContents,
@@ -17,21 +18,15 @@ import {
   getNames,
   hasConversations,
   saveResult,
+  startJob,
+  updateJobProgress,
 } from '../db/repos.js';
 import { readFileSync } from 'node:fs';
 
-// One extraction per user at a time — Ollama runs are heavy and serial.
-const running = new Set<number>();
-
-export class ExtractionBusyError extends Error {}
 export class NothingToExtractError extends Error {}
 // A conversation parsed fine but none of its senders matched the user's "you"
 // names — the voice filter would silently yield an empty profile. Fail loudly.
 export class NamesMismatchError extends Error {}
-
-export function isExtracting(userId: number): boolean {
-  return running.has(userId);
-}
 
 /** True if the user has any material (answers or conversations) to extract. */
 export function hasExtractableInput(userId: number): boolean {
@@ -39,16 +34,38 @@ export function hasExtractableInput(userId: number): boolean {
   return getAnswersForUser(userId).some((a) => a.body.trim().length > 0);
 }
 
-export async function runUserExtraction(baseCfg: Config, userId: number): Promise<string> {
-  if (running.has(userId)) throw new ExtractionBusyError('Extraction already running.');
+/**
+ * Run extraction for an already-created job row. The route creates the job
+ * (acquiring the DB lock) and fires this via setImmediate; this writes the work
+ * dir onto the job, drives progress, and persists the result. Throws on failure
+ * so the route's catch can mark the job failed — but ALWAYS removes the work dir.
+ */
+export async function runUserExtraction(
+  baseCfg: Config,
+  userId: number,
+  jobId: number,
+): Promise<string> {
   if (!hasExtractableInput(userId)) {
     throw new NothingToExtractError('Fill in at least one study answer or import a conversation first.');
   }
-  running.add(userId);
+
+  // Preflight: fail fast (before any mkdir/process work) if Ollama is down or the
+  // model isn't pulled — otherwise we'd process → chunk and only discover it on
+  // the first generate(). The ping's reason carries the friendly message.
+  const ready = await pingOllama({
+    host: baseCfg.ollamaHost,
+    model: baseCfg.ollamaModel,
+    apiKey: baseCfg.ollamaApiKey,
+  });
+  if (!ready.ok) {
+    throw new OllamaUnavailableError(baseCfg.ollamaHost, { cause: ready.reason });
+  }
 
   const workRoot = path.resolve(baseCfg.workDir);
   mkdirSync(workRoot, { recursive: true });
   const work = mkdtempSync(path.join(workRoot, `u${userId}-`));
+  // Record the dir on the job immediately so a crash leaves a reclaimable trail.
+  startJob(jobId, work);
 
   // A per-run Config clone with every path made absolute and pointed into the
   // work dir. The base config is frozen — this spread is a fresh object.
@@ -94,7 +111,9 @@ export async function runUserExtraction(baseCfg: Config, userId: number): Promis
     }
 
     const manifest = chunkAll(cfg);
-    const outPath = await runOllamaPipeline(cfg, manifest);
+    const outPath = await runOllamaPipeline(cfg, manifest, (stage, done, total) =>
+      updateJobProgress(jobId, stage, done, total),
+    );
     const soulMd = readFileSync(outPath, 'utf8');
 
     // 4. Persist; carry the prior soul.md into prev_md (backup-on-overwrite).
@@ -103,6 +122,5 @@ export async function runUserExtraction(baseCfg: Config, userId: number): Promis
     return soulMd;
   } finally {
     rmSync(work, { recursive: true, force: true });
-    running.delete(userId);
   }
 }

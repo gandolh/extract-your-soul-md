@@ -115,11 +115,13 @@ if not evident.)
 
 ## How To Imitate
 A short paragraph giving an LLM concrete instructions to write as this person.
+Include their natural sentence-length and rhythm variation (avoid uniform, evenly-paced cadence — that reads as generic AI prose).
 
 Rules:
 - Reconcile contradictions across batches by noting context (e.g. "more formal with strangers, blunt with close friends") rather than picking one.
 - When a questionnaire batch and a chat-log batch conflict, the chat-log batch wins for observable style (vocabulary, punctuation, sentence rhythm); the questionnaire batch wins for values, beliefs, motivations, and aspirational register.
 - Privacy vs. voice: do NOT reproduce whole private sentences or named facts/entities from the source — but DO keep the short, high-frequency, non-private stylistic tokens (greetings, sign-offs, fillers, catchphrases) verbatim, since they are the imitable core of the voice.
+- Prefer specific over vague. Drop any descriptor that would apply to most people. Keep distinctive/rare/surprising features over common ones. Never pad a section to fit the template — omit it.
 - Output ONLY the markdown document. No preamble.
 
 Observation batches:

@@ -239,3 +239,96 @@ export function saveResult(
     )
     .run(userId, soulMd, prevMd, extractor);
 }
+
+// ---- jobs ----------------------------------------------------------------
+
+export type JobStatus = 'enqueued' | 'running' | 'done' | 'failed';
+
+export interface JobRow {
+  id: number;
+  user_id: number;
+  status: JobStatus;
+  stage: string | null;
+  chunk_done: number;
+  chunk_total: number;
+  work_dir: string | null;
+  error: string | null;
+  started_at: string;
+  finished_at: string | null;
+}
+
+/** The live (enqueued|running) job for a user, if any. The DB-level lock. */
+export function getActiveJob(userId: number): JobRow | undefined {
+  return row<JobRow>(
+    getDb()
+      .prepare(
+        "SELECT * FROM jobs WHERE user_id = ? AND status IN ('enqueued', 'running') LIMIT 1",
+      )
+      .get(userId) as Row | undefined,
+  );
+}
+
+export function getJob(jobId: number): JobRow | undefined {
+  return row<JobRow>(
+    getDb().prepare('SELECT * FROM jobs WHERE id = ?').get(jobId) as Row | undefined,
+  );
+}
+
+/**
+ * Insert an enqueued job. The partial unique index (one live job per user)
+ * makes this throw if one is already live — the race-free lock acquisition.
+ */
+export function createJob(userId: number): { id: number } {
+  const info = getDb()
+    .prepare("INSERT INTO jobs (user_id, status) VALUES (?, 'enqueued')")
+    .run(userId);
+  return { id: Number(info.lastInsertRowid) };
+}
+
+/** Record the work dir + flip enqueued → running once the run actually starts. */
+export function startJob(jobId: number, workDir: string): void {
+  getDb()
+    .prepare("UPDATE jobs SET status = 'running', work_dir = ? WHERE id = ?")
+    .run(workDir, jobId);
+}
+
+export function updateJobProgress(
+  jobId: number,
+  stage: string,
+  chunkDone: number,
+  chunkTotal: number,
+): void {
+  getDb()
+    .prepare('UPDATE jobs SET stage = ?, chunk_done = ?, chunk_total = ? WHERE id = ?')
+    .run(stage, chunkDone, chunkTotal, jobId);
+}
+
+export function finishJob(jobId: number, status: 'done' | 'failed', error?: string): void {
+  getDb()
+    .prepare(
+      "UPDATE jobs SET status = ?, error = ?, finished_at = datetime('now') WHERE id = ?",
+    )
+    .run(status, error ?? null, jobId);
+}
+
+/**
+ * Reclaim jobs left live by a crash/restart: their work dirs are returned so the
+ * caller can rmSync them, then the rows are flipped to failed. Run once on boot.
+ */
+export function reclaimStaleJobs(): JobRow[] {
+  const conn = getDb();
+  const stale = rows<JobRow>(
+    conn
+      .prepare("SELECT * FROM jobs WHERE status IN ('enqueued', 'running')")
+      .all() as Row[],
+  );
+  if (stale.length > 0) {
+    conn
+      .prepare(
+        "UPDATE jobs SET status = 'failed', error = 'Interrupted by a server restart.', " +
+          "finished_at = datetime('now') WHERE status IN ('enqueued', 'running')",
+      )
+      .run();
+  }
+  return stale;
+}

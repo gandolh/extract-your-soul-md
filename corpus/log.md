@@ -303,3 +303,106 @@ skipped (declarative router). Verified: typecheck:web + build clean; partial
 autosave round-trip live-tested (Q1 saved, blanks skipped, answered:1).
 
 **This was the last open P1.** Backlog is now P2/P3 only. Nothing committed.
+
+## [2026-06-16] brief 13 — anti-generic reduce guard (done)
+
+Promoted `anti-generic-reduce-guard` to brief 13 (first P2 picked up after the
+P1 milestone), implemented, done. Prompt-only change in `src/prompts.ts`:
+one rule appended to the `REDUCE_PROMPT_HEADER` "Rules:" block — _prefer specific
+over vague, drop descriptors that apply to most people, keep distinctive/rare
+features over common, never pad a section to fit the template (omit it)_ — plus a
+cadence nudge in "How To Imitate" (natural sentence-length/rhythm variation, avoid
+uniform AI cadence). Directly targets the small-model regress-to-bland failure
+mode that makes soul.md read as a generic "casual, warm, sarcastic" person.
+
+Cross-link half dropped per the audit (no `ai-patterns.md` in repo; anti-tell
+stripping lives in the external add-soul plugin). Effect is an unmeasured nudge —
+verify via the eval harness (brief 05); the prompt-header hash is in the reduce
+cache key (brief 01) so this invalidates only reduce. Backend typecheck clean.
+Nothing committed.
+
+## [2026-06-16] brief 14 — async extraction job model (done)
+
+Promoted `async-extraction-job-model` to brief 14, implemented, verified end-to-end
+against the live cloud backend, done. `POST /api/extract` is no longer a
+multi-minute blocking request: a `jobs` table (with a partial-unique-index lock,
+`status IN ('enqueued','running')`) replaces the in-memory `Set` — the lock now
+survives restarts. The route creates the job, returns **202 + jobId in ~11ms**,
+and runs the pipeline via `setImmediate`; `onProgress(stage, done, total)` threads
+through `runOllamaPipeline → updateJobProgress`. `GET /api/results` surfaces a
+`job` block (status/stage/chunk), new `GET /api/extract/:jobId` for polling. On
+boot, `reclaimStaleJobs()` fails crashed jobs + rmSyncs their orphaned work dirs.
+Frontend drives `running` from server state (mid-run reload resumes polling),
+renders a real progress bar, reports the terminal outcome once.
+
+Verified: build + typecheck:web clean; runtime — 401/400/202/409 guards, live
+map→reduce→done with persisted soul.md + lock release, and boot reclamation
+(seeded stale running job + orphan dir → flipped to failed + dir removed). Test
+user + artifacts cleaned, DB left as found. Pre-ship fix: invalid
+`bg-surface-sunken` class → real `bg-surface-highest` token (brief-05-class bug).
+Clears the "/api/extract is synchronous" honest-limitation. Nothing committed.
+
+## [2026-06-16] brief 15 — n-gram verbatim-overlap guard (done)
+
+Promoted `ngram-verbatim-overlap-guard` to brief 15, implemented, verified, done.
+New pure module `src/regurgitation.ts` (`findVerbatimOverlap`, 7-gram shingles,
+lowercase/punctuation-stripped/NFC, language-agnostic, deterministic, no deps),
+wired into `runOllamaPipeline` after the reduce: it compares the generated profile
+against the raw chunk source (minus questionnaire `#`-scaffolding) and, on a hit,
+**logs + warns but writes soul.md unchanged** — stripping risks mangling the voice
+and the real safety net is gitignore + manual review (verbatim prevention is
+necessary-but-not-sufficient per the research). Turns the soft 3×-repeated prompt
+instruction into actual post-generation enforcement. Dropped NER per the audit.
+
+Verified: 7/7 pure-logic checks (real leak caught, short catchphrase spared,
+case/punct-insensitive, n-gram boundary, tokenizer, empty-safe); integration test
+on a synthetic distinctive voice caught a GENUINE regurgitation — the reduce quoted
+a ~15-word source sentence verbatim as a "signature line", warning fired, soul.md
+written unchanged (leaked span confirmed present = log-only not strip). Backend
+typecheck clean. Test user + artifacts cleaned, DB left as found. Nothing committed.
+
+## [2026-06-16] briefs 16–19 — security-hardening cluster (done)
+
+Promoted and shipped four S-effort security/hardening todos as briefs 16–19,
+all verified at runtime, none committed.
+
+- **16 session-secret prod guard** — `config.ts` exports `DEV_SESSION_SECRET`;
+  `buildServer` throws in prod (exit 1, actionable msg) / warns in dev if the
+  secret is still the dev default. `.env.example` notes the guard + the TLS
+  requirement for prod `secure` cookies. CSRF dropped (SameSite=lax suffices).
+- **17 expired-session sweep** — new `src/db/maintenance.ts`
+  `sweepExpiredSessions()`, called on boot + hourly `.unref()` interval.
+  **Verification caught a real bug:** the todo's assumed `expires_at <=
+  datetime('now')` is wrong — `toISOString()`'s `T`/`Z` form string-sorts after
+  SQLite's space-separated now, so expired rows read as valid. Fixed to
+  `datetime(expires_at) <= datetime('now')`.
+- **18 sanitize errors** — re-scoped: brief 14 already made extract async, so the
+  raw-error leak now lands in the job `error` field, not a 500. `ollama.ts` throws
+  typed `OllamaUnavailableError`/`OllamaRequestError` (raw cause in `cause`);
+  `results.ts` `failureMessage()` + `eval.ts` map them to safe strings (503/502/
+  generic). Verified: dead Ollama host → job shows "…not reachable…", raw
+  ECONNREFUSED stays in the server log only.
+- **19 register enumeration** — conflict body → generic "Could not create
+  account." (409 kept). Rate-limit half deferred (gated on a real public deploy;
+  localhost-bound + pragmatic auth = no live surface today).
+
+Build + typecheck clean throughout. Test user/sessions cleaned, DB left as found.
+
+## [2026-06-16] brief 20 — ollama preflight + timeout/retry + readiness gate (done)
+
+Promoted `ollama-preflight-timeout-retry` to brief 20, all three slices shipped,
+verified, done. (1) `generate()` now has per-request timeout (AbortSignal.timeout,
+new OLLAMA_TIMEOUT_MS) + 3× retry-with-backoff on transient failure (network/5xx,
+not 4xx). (2) `pingOllama()` preflight at the top of runUserExtraction fails fast
+before any process/chunk work; reason surfaced via the sanitized job error. (3)
+`GET /api/results` returns ollamaReady/ollamaReason (30s TTL + single-flight),
+ResultsPage gates the Generate button + shows a Notice.
+
+**Verification caught a real bug:** the model-membership check false-reported the
+cloud model "not pulled" (ollama.com lists bare `gpt-oss:120b`, not our
+`-cloud`-suffixed id; cloud models aren't pulled) — would have blocked ALL cloud
+extraction. Fixed: skip membership when an API key is set (cloud); keep it for
+local (no key) where /api/tags is authoritative. Integration-confirmed: live cloud
+→ ready; dead host → preflight fails in 39ms with work_dir:null (before any work).
+
+Build + both typechecks clean. Scratch tests + test user cleaned, DB left as found.

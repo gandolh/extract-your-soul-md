@@ -7,6 +7,7 @@ import type { Manifest, ChunkKind } from './chunk.js';
 import { generate } from '../ollama.js';
 import { estimateTokens } from '../tokens.js';
 import { MAP_PROMPT_HEADER, MAP_PROMPT_HEADER_QA, REDUCE_PROMPT_HEADER } from '../prompts.js';
+import { findVerbatimOverlap, DEFAULT_NGRAM } from '../regurgitation.js';
 
 function hash(s: string): string {
   return createHash('sha256').update(s).digest('hex').slice(0, 16);
@@ -63,6 +64,7 @@ async function extractChunk(
       temperature: cfg.ollamaTemperature,
       seed: EXTRACTION_SEED,
       apiKey: cfg.ollamaApiKey,
+      timeoutMs: cfg.ollamaTimeoutMs,
     },
     prompt,
   );
@@ -70,18 +72,28 @@ async function extractChunk(
   return out;
 }
 
-export async function runOllamaPipeline(cfg: Config, manifest: Manifest): Promise<string> {
+/** Reported as the pipeline advances, so a caller (the web job model) can persist
+ * progress. `stage` is 'map' while extracting chunks, 'reduce' for synthesis. */
+export type ProgressFn = (stage: 'map' | 'reduce', done: number, total: number) => void;
+
+export async function runOllamaPipeline(
+  cfg: Config,
+  manifest: Manifest,
+  onProgress?: ProgressFn,
+): Promise<string> {
   const chunksDir = path.resolve(cfg.chunksDir);
   const cacheDir = path.resolve('.cache', 'bullets');
   mkdirSync(cacheDir, { recursive: true });
 
+  const total = manifest.chunks.length;
   const bullets: string[] = [];
   for (let i = 0; i < manifest.chunks.length; i++) {
     const entry = manifest.chunks[i];
     const kindTag = entry.kind === 'questionnaire' ? color.magenta('Q&A') : color.blue('chat');
     process.stdout.write(
-      `  ${kindTag} ${color.yellow(`${i + 1}/${manifest.chunks.length}`)} (${color.cyan(entry.file)})... `,
+      `  ${kindTag} ${color.yellow(`${i + 1}/${total}`)} (${color.cyan(entry.file)})... `,
     );
+    onProgress?.('map', i, total);
     const t0 = Date.now();
     const out = await extractChunk(cfg, path.join(chunksDir, entry.file), cacheDir, entry.kind);
     process.stdout.write(color.dim(`${((Date.now() - t0) / 1000).toFixed(1)}s\n`));
@@ -92,7 +104,9 @@ export async function runOllamaPipeline(cfg: Config, manifest: Manifest): Promis
     bullets.push(`### Batch ${i + 1} (from ${sourceLabel})\n${out.trim()}`);
   }
 
+  onProgress?.('map', total, total);
   process.stdout.write(`  ${color.magenta('reduce')}... `);
+  onProgress?.('reduce', 0, 1);
   const t0 = Date.now();
   const reducePrompt = REDUCE_PROMPT_HEADER + bullets.join('\n\n');
   assertFitsContext('reduce', reducePrompt, cfg.ollamaNumCtx);
@@ -104,10 +118,44 @@ export async function runOllamaPipeline(cfg: Config, manifest: Manifest): Promis
       temperature: cfg.ollamaTemperature,
       seed: EXTRACTION_SEED,
       apiKey: cfg.ollamaApiKey,
+      timeoutMs: cfg.ollamaTimeoutMs,
     },
     reducePrompt,
   );
   process.stdout.write(color.dim(`${((Date.now() - t0) / 1000).toFixed(1)}s\n`));
+
+  // Verbatim-overlap guard: flag any long (DEFAULT_NGRAM-word) run that leaked
+  // from the private source into the profile. Log + warn only — soul.md is
+  // written unchanged; the manual-review gate (gitignore + eyeball) acts on it.
+  // Source is the raw chunk text, minus the questionnaire instruction header
+  // (lines starting with '#' are OUR scaffolding, not the user's words).
+  const sourceText = manifest.chunks
+    .map((entry) => {
+      const raw = readFileSync(path.join(chunksDir, entry.file), 'utf8');
+      return entry.kind === 'questionnaire'
+        ? raw
+            .split('\n')
+            .filter((l) => !l.startsWith('#'))
+            .join('\n')
+        : raw;
+    })
+    .join('\n');
+  const overlap = findVerbatimOverlap(soul, sourceText, DEFAULT_NGRAM);
+  if (overlap.hits.length > 0) {
+    process.stdout.write(
+      color.yellow(
+        `  ⚠ regurgitation: ${overlap.hits.length} verbatim ${overlap.ngram}-gram` +
+          `${overlap.hits.length === 1 ? '' : 's'} from your source leaked into the profile. ` +
+          `Review out/my-soul.md before downstream use.\n`,
+      ),
+    );
+    for (const hit of overlap.hits.slice(0, 10)) {
+      process.stdout.write(color.dim(`      “…${hit.shingle}…”\n`));
+    }
+    if (overlap.hits.length > 10) {
+      process.stdout.write(color.dim(`      …and ${overlap.hits.length - 10} more\n`));
+    }
+  }
 
   const outDir = path.resolve(cfg.outDir);
   mkdirSync(outDir, { recursive: true });

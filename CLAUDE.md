@@ -68,9 +68,9 @@ The generated `soul.md` (stored in the `results` table, surfaced via `/api/resul
 
 ## Honest limitations
 
-- Extraction is **Ollama-only** — a local Ollama server must be running. It is the single extraction path.
+- Extraction is **Ollama-only** — Ollama (local server or the configured cloud host) must be reachable. It is the single extraction path. A preflight (`pingOllama`) checks reachability/model before any work and fails fast with a friendly reason; `generate()` has a per-request timeout (`OLLAMA_TIMEOUT_MS`) + retry-with-backoff; `GET /api/results` exposes `ollamaReady` so the UI gates the Generate button.
 - `node:sqlite` is experimental (Node ≥ 24); the server suppresses the warning. Migrating to `better-sqlite3` later is mechanical (same API surface).
 - `@base-ui-components/react` is pre-1.0 (pinned to an exact RC); its API may shift.
-- Auth is pragmatic (username/password, scrypt, cookie sessions). Set a real `SESSION_SECRET` and run behind TLS for any non-local deployment.
-- `/api/extract` is synchronous — an Ollama run can take minutes (Fastify `requestTimeout` is raised to accommodate it). A job queue + polling is the obvious next step.
+- Auth is pragmatic (username/password, scrypt, cookie sessions). Run behind TLS for any non-local deployment (prod sets `secure` cookies). The server **refuses to boot in production** if `SESSION_SECRET` is still the dev default (warns in dev) — set a real one (`openssl rand -hex 32`). Register returns a generic conflict message (no user enumeration); expired sessions are swept on boot + hourly. Auth/extract rate-limiting is still **not** implemented (deferred; gated on a real public deploy).
+- `/api/extract` is an **async persisted job**: the route inserts a `jobs` row (a partial-unique-index per-user lock that survives restarts), returns `202 + jobId`, and runs the pipeline via `setImmediate`. The client polls `GET /api/results` (which carries a `job` block — status/stage/chunk progress) or `GET /api/extract/:jobId`. Crashed jobs are reclaimed on boot (`reclaimStaleJobs` → failed + orphaned work-dir removed). Single-process `setImmediate`, not an external queue — matches the local-Ollama single-box reality.
 - LLM stochasticity → outputs can still drift across model/prompt changes (the fixed seed + temperature 0 only make a *given* config reproducible). WhatsApp-only parsers (`src/stages/process.ts`). Token estimator tuned for Romanian/English.

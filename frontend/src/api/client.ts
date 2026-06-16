@@ -40,7 +40,23 @@ export interface StudyDetail {
 export interface Conversation { id: number; filename: string; createdAt: string; }
 export interface DetectedSender { name: string; normalized: string; count: number; }
 export interface SoulResult { soulMd: string; prevMd: string | null; extractor: string; createdAt: string | null; }
-export interface ResultsState { canExtract: boolean; running: boolean; result: SoulResult | null; }
+export type JobStatus = 'enqueued' | 'running' | 'done' | 'failed';
+export interface JobProgress {
+  id: number;
+  status: JobStatus;
+  stage: 'map' | 'reduce' | null;
+  chunkDone: number;
+  chunkTotal: number;
+}
+export interface JobDetail extends JobProgress { error: string | null; }
+export interface ResultsState {
+  canExtract: boolean;
+  ollamaReady: boolean;
+  ollamaReason: string | null;
+  running: boolean;
+  job: JobProgress | null;
+  result: SoulResult | null;
+}
 
 export type EvalCondition = 'A' | 'B' | 'C';
 export interface MetricBundle {
@@ -94,7 +110,8 @@ export const api = {
 
   // results
   results: () => request<ResultsState>('GET', '/results'),
-  extract: () => request<{ ok: boolean; result: SoulResult }>('POST', '/extract'),
+  extract: () => request<{ ok: boolean; jobId: number }>('POST', '/extract'),
+  job: (jobId: number) => request<JobDetail>('GET', `/extract/${jobId}`),
 
   // eval
   evalStatus: () => request<{ running: boolean }>('GET', '/eval'),

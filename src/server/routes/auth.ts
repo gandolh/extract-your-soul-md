@@ -33,7 +33,9 @@ export async function authRoutes(app: FastifyInstance, opts: AuthRouteOpts): Pro
     }
     const { username, password } = parsed.data;
     if (findUserByUsername(username)) {
-      return reply.code(409).send({ error: 'That username is taken.' });
+      // Generic body (keep 409) so register doesn't leak account existence —
+      // matches login's generic "Wrong username or password." message.
+      return reply.code(409).send({ error: 'Could not create account.' });
     }
     const { id } = createUser(username, hashPassword(password));
     startSession(reply, id, opts.isProd);

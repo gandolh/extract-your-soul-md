@@ -9,15 +9,22 @@ corpus is maintained; [log.md](log.md) for its history.
 - [todos/](todos/) — captured ideas/tasks as prose, pre-spec. **soul.md
   improvement backlog captured 2026-06-16** (originally P1×8 / P2×16 / P3×9 after
   deleting the obsolete `single-source-reduce-template`). **All P1s are now
-  done** (shipped as briefs 01–12). Remaining work is **P2/P3 only** — next
-  candidates incl. async extraction job model, hierarchical tree-reduce,
-  anti-generic/forbid-padding prompt guards, n-gram regurgitation guard, the
-  remaining import/UX polish, and the security hardening todos.
+  done** (shipped as briefs 01–12), plus P2/P3 briefs 13 (anti-generic guard),
+  14 (async job model), 15 (n-gram regurgitation guard), and the security cluster
+  16–19 (session-secret guard, session sweep, sanitized errors, register
+  enumeration) and 20 (ollama preflight/timeout/retry/readiness). Remaining work
+  is **P2/P3 only** — next candidates incl. hierarchical tree-reduce, the
+  remaining import/UX polish, and the deferred auth rate-limiting (gated on a real
+  public deploy).
 - [briefs/todo/](briefs/todo/) — numbered work specs ready to build.
 - [briefs/done/](briefs/done/) — completed specs (immutable, with outcome notes).
   01 cache-fingerprint · 02 truncation · 03 determinism · 04 collapse-to-API ·
   05 eval-harness · 06 reframe-prompts · 07 name-normalization · 08 ollama-cloud ·
-  09 empty-json-body · 10 bump-num-ctx · 11 import-diagnostics · 12 autosave.
+  09 empty-json-body · 10 bump-num-ctx · 11 import-diagnostics · 12 autosave ·
+  13 anti-generic-reduce-guard · 14 async-extraction-job-model ·
+  15 ngram-verbatim-overlap-guard · 16 session-secret-prod-guard ·
+  17 expired-session-sweep · 18 sanitize-extract-error-responses ·
+  19 register-enumeration · 20 ollama-preflight-timeout-retry.
 - [briefs/superseded/](briefs/superseded/) — specs later undone/replaced.
 - [log.md](log.md) — chronological record of every meaningful corpus change.
 

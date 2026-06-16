@@ -198,6 +198,7 @@ export async function runUserEval(
               temperature: cfg.ollamaTemperature,
               seed: EVAL_SEED,
               apiKey: cfg.ollamaApiKey,
+              timeoutMs: cfg.ollamaTimeoutMs,
             },
             prompt,
           );

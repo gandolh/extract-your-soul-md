@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import type { Config } from '../../config.js';
 import { requireAuth } from '../auth.js';
 import { EvalBusyError, NothingToEvalError, isEvaluating, runUserEval } from '../eval-run.js';
+import { OllamaRequestError, OllamaUnavailableError } from '../../ollama.js';
 
 interface EvalRouteOpts {
   cfg: Config;
@@ -29,8 +30,18 @@ export async function evalRoutes(app: FastifyInstance, opts: EvalRouteOpts): Pro
         return reply.code(400).send({ error: err.message });
       }
       request.log.error(err);
-      const message = err instanceof Error ? err.message : 'Eval failed.';
-      return reply.code(500).send({ error: message });
+      // Sanitize: never leak raw Ollama bodies / fetch errors / fs paths.
+      if (err instanceof OllamaUnavailableError) {
+        return reply
+          .code(503)
+          .send({ error: 'The Ollama server is not reachable — start it and try again.' });
+      }
+      if (err instanceof OllamaRequestError) {
+        return reply
+          .code(502)
+          .send({ error: 'The model rejected the request. Please try again.' });
+      }
+      return reply.code(500).send({ error: 'Eval failed — please try again.' });
     }
   });
 }

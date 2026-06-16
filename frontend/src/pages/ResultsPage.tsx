@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { Link } from 'react-router-dom';
 import { api, ApiError, type ResultsState } from '../api/client';
@@ -6,30 +6,65 @@ import { useToast } from '../components/Toaster';
 import { Markdown } from '../components/Markdown';
 import { Button, Card, cardClass, Eyebrow, Headline, Notice, Tag } from '../components/ui';
 
+const POLL_MS = 2000;
+
 export function ResultsPage() {
   const toast = useToast();
   const [state, setState] = useState<ResultsState | null>(null);
-  const [running, setRunning] = useState(false);
   const [showPrev, setShowPrev] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  // The id of the job we last saw running, so we can announce its terminal
+  // outcome exactly once when polling observes it has cleared.
+  const watchedJob = useRef<number | null>(null);
+
+  // Running state is driven entirely by the server's active-job flag — a reload
+  // mid-run picks the poll loop back up instead of re-enabling the button.
+  const running = state?.running ?? false;
 
   useEffect(() => {
     api.results().then(setState).catch(() => {});
   }, []);
 
+  // Poll while a job is live; on the transition to no-live-job, fetch the
+  // terminal job detail to report done vs. failed.
+  useEffect(() => {
+    if (!running) return;
+    watchedJob.current = state?.job?.id ?? watchedJob.current;
+    const timer = setInterval(() => {
+      api
+        .results()
+        .then(async (fresh) => {
+          setState(fresh);
+          if (!fresh.running && watchedJob.current != null) {
+            const finishedId = watchedJob.current;
+            watchedJob.current = null;
+            try {
+              const detail = await api.job(finishedId);
+              if (detail.status === 'done') toast('Profile generated.', 'ok');
+              else toast(detail.error ?? 'Extraction failed.', 'err');
+            } catch {
+              /* job detail unavailable — the result table still updated */
+            }
+          }
+        })
+        .catch(() => {});
+    }, POLL_MS);
+    return () => clearInterval(timer);
+  }, [running, state?.job?.id, toast]);
+
   async function runExtraction() {
     setConfirmOpen(false);
-    setRunning(true);
     try {
       const r = await api.extract();
-      const fresh = await api.results();
-      setState(fresh);
-      toast('Profile generated.', 'ok');
-      void r;
+      watchedJob.current = r.jobId;
+      // Optimistically flip to running so the poll effect starts immediately.
+      setState((s) =>
+        s
+          ? { ...s, running: true, job: { id: r.jobId, status: 'enqueued', stage: null, chunkDone: 0, chunkTotal: 0 } }
+          : s,
+      );
     } catch (err) {
       toast(err instanceof ApiError ? err.message : 'Extraction failed.', 'err');
-    } finally {
-      setRunning(false);
     }
   }
 
@@ -39,6 +74,19 @@ export function ResultsPage() {
   }
 
   const result = state?.result ?? null;
+  const job = state?.job ?? null;
+  const progressPct =
+    job && job.stage === 'reduce'
+      ? 95
+      : job && job.chunkTotal > 0
+        ? Math.round((job.chunkDone / job.chunkTotal) * 90)
+        : 0;
+  const stageLabel =
+    job?.stage === 'reduce'
+      ? 'Synthesizing the profile…'
+      : job?.stage === 'map'
+        ? `Reading your chunks (${job.chunkDone}/${job.chunkTotal})…`
+        : 'Starting…';
 
   return (
     <div className="flex flex-col gap-section">
@@ -54,7 +102,10 @@ export function ResultsPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <Button disabled={running || (state ? !state.canExtract : true)} onClick={onRunClick}>
+          <Button
+            disabled={running || (state ? !state.canExtract || !state.ollamaReady : true)}
+            onClick={onRunClick}
+          >
             {running ? (
               <>
                 <span className="spin" /> Generating…
@@ -87,11 +138,29 @@ export function ResultsPage() {
         </Notice>
       )}
 
+      {state && !state.ollamaReady && !running && (
+        <Notice tone="err" className="max-w-[64ch]">
+          {state.ollamaReason ?? 'The Ollama server is not reachable.'} Extraction runs locally
+          through Ollama, so it must be running before you can generate a profile.
+        </Notice>
+      )}
+
       {running && (
-        <p className="font-mono text-[12px] text-text-faint">
-          Running map/reduce over your chunks. This can take a few minutes on a local model — keep
-          this tab open.
-        </p>
+        <div className="flex max-w-[64ch] flex-col gap-2">
+          <div className="flex items-center justify-between font-mono text-[12px] text-text-secondary">
+            <span>{stageLabel}</span>
+            <span className="text-text-faint">{progressPct}%</span>
+          </div>
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-highest">
+            <div
+              className="h-full rounded-full bg-primary transition-[width] duration-500 ease-out"
+              style={{ width: `${Math.max(progressPct, 4)}%` }}
+            />
+          </div>
+          <p className="font-mono text-[11px] text-text-faint">
+            Runs in the background — safe to leave or reload this tab.
+          </p>
+        </div>
       )}
 
       {result ? (

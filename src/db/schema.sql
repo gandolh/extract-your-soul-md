@@ -58,3 +58,24 @@ CREATE TABLE IF NOT EXISTS results (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_results_user ON results(user_id, created_at);
+
+-- One extraction run. Replaces the old in-memory lock: the "is this user
+-- extracting?" check is now a query for a row in status enqueued|running, so the
+-- lock survives a server restart. On boot, jobs left enqueued/running (the
+-- process died mid-run) are reclaimed: marked failed + their work_dir removed.
+CREATE TABLE IF NOT EXISTS jobs (
+  id          INTEGER PRIMARY KEY,
+  user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  status      TEXT NOT NULL,                          -- enqueued|running|done|failed
+  stage       TEXT,                                   -- map|reduce|null
+  chunk_done  INTEGER NOT NULL DEFAULT 0,
+  chunk_total INTEGER NOT NULL DEFAULT 0,
+  work_dir    TEXT,                                   -- throwaway dir to reclaim on stale
+  error       TEXT,
+  started_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  finished_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_jobs_user ON jobs(user_id, started_at);
+-- At most one live (enqueued|running) job per user — the DB-level lock.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_jobs_active
+  ON jobs(user_id) WHERE status IN ('enqueued', 'running');
