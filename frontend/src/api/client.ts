@@ -62,16 +62,16 @@ export interface StudySummary {
   band: StudyBand; reportKey: ReportKey | null;
   total: number; completed: number;
 }
-export interface ChoiceOption { value: string; labelEn: string; labelRo: string; }
+export interface ChoiceOption { value: string; label: string; }
 export interface StudyQuestion {
   id: string; slug: string; title: string;
-  promptEn: string; promptRo: string;
-  hintEn: string | null; hintRo: string | null;
+  prompt: string;
+  hint: string | null;
   optional: boolean; savedBody: string;
   kind: 'text' | 'choice';
   choiceMode: 'scale' | 'single' | null;
-  leftEn: string | null; leftRo: string | null;
-  rightEn: string | null; rightRo: string | null;
+  left: string | null;
+  right: string | null;
   choices: ChoiceOption[] | null;
 }
 export interface StudyDetail {

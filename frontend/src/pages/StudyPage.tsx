@@ -5,7 +5,6 @@ import { useReports, useSaveStudy, useStudy } from '../api/queries';
 import { useToast } from '../components/Toaster';
 import { Meter } from '../components/Layout';
 import { STUDY_ORDER } from '../studyOrder';
-import { useLangPref, type Lang } from '../lang';
 import { Button, cardClass, Eyebrow, Headline, buttonClass, cx, FIELD_CLASS } from '../components/ui';
 import { decodeChoiceBody, encodeChoiceBody } from '../choiceBody';
 import { ReportSection } from '../components/ReportSection';
@@ -15,7 +14,6 @@ export function StudyPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [lang, setLang] = useLangPref();
   const [busy, setBusy] = useState(false);
   const [active, setActive] = useState<string | null>(null);
   const [autosave, setAutosave] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -159,25 +157,9 @@ export function StudyPage() {
   return (
     <div className="flex flex-col gap-section">
       <header className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <Eyebrow>
-            Study {idx >= 0 ? `${String(idx + 1).padStart(2, '0')} / ${STUDY_ORDER.length}` : ''}
-          </Eyebrow>
-          <div className="inline-flex overflow-hidden rounded-md border border-hairline" role="group" aria-label="Prompt language">
-            {(['en', 'ro'] as const).map((l) => (
-              <button
-                key={l}
-                onClick={() => setLang(l)}
-                className={cx(
-                  'px-3 py-1 font-mono text-[11px] font-medium uppercase tracking-[0.05em] transition-colors',
-                  lang === l ? 'bg-primary-strong text-on-primary' : 'bg-transparent text-text-faint hover:text-text-primary',
-                )}
-              >
-                {l.toUpperCase()}
-              </button>
-            ))}
-          </div>
-        </div>
+        <Eyebrow>
+          Study {idx >= 0 ? `${String(idx + 1).padStart(2, '0')} / ${STUDY_ORDER.length}` : ''}
+        </Eyebrow>
         <Headline>{detail.study.title}</Headline>
         <p className="max-w-[64ch] text-[14px] leading-[22px] text-text-secondary">{detail.study.description}</p>
         <div className="flex items-center gap-3">
@@ -204,7 +186,6 @@ export function StudyPage() {
             key={q.id}
             q={q}
             index={i}
-            lang={lang}
             body={answers[q.id] ?? ''}
             isActive={active === q.id}
             onActivate={() => setActive(q.id)}
@@ -252,7 +233,6 @@ export function StudyPage() {
 function QuestionCard({
   q,
   index,
-  lang,
   body,
   isActive,
   onActivate,
@@ -261,15 +241,14 @@ function QuestionCard({
 }: {
   q: StudyQuestion;
   index: number;
-  lang: Lang;
   body: string;
   isActive: boolean;
   onActivate: () => void;
   onDeactivate: () => void;
   onChange: (body: string) => void;
 }) {
-  const prompt = lang === 'en' ? q.promptEn : q.promptRo;
-  const hint = lang === 'en' ? q.hintEn : q.hintRo;
+  const prompt = q.prompt;
+  const hint = q.hint;
   const answered = body.trim().length > 0;
 
   const cardCx = cardClass(cx('p-6 transition-colors', isActive && 'border-primary-strong'));
@@ -350,15 +329,15 @@ function QuestionCard({
       {q.choiceMode === 'scale' ? (
         <ScaleField
           name={q.id}
-          left={lang === 'en' ? q.leftEn : q.leftRo}
-          right={lang === 'en' ? q.rightEn : q.rightRo}
+          left={q.left}
+          right={q.right}
           value={selected}
           onSelect={setSelected}
         />
       ) : (
         <div className="mt-3 flex flex-col gap-2" role="radiogroup" aria-label={prompt}>
           {(q.choices ?? []).map((c) => {
-            const label = lang === 'en' ? c.labelEn : c.labelRo;
+            const label = c.label;
             const checked = selected === c.value;
             return (
               <label
