@@ -112,7 +112,24 @@ const REDUCE_PROVENANCE_RULE = `
 // reduce step is told to treat it as background colour for values/worldview and
 // to let observed voice win every style call. Gated on hasProfile.
 const REDUCE_PROFILE_RULE = `
-- A "Self-Reported Personality Profile" block may appear among the batches. It is the user's own picked answers to short trait questionnaires (Big Five, tone, reaction frame, type indicator) — SELF-REPORT, the weakest evidence here. Use it only as soft background for Values & Worldview and Tone; let OBSERVED voice (chat logs, and the prose of any questionnaire answers) win every concrete style judgment. Never state a trait percentage or a 4-letter type as fact in the document; translate it into how-they-write language, hedged. If it conflicts with observed voice, the observed voice wins outright.`;
+- A "Self-Reported Personality Profile" block may appear among the batches. It is the user's own picked answers to short trait questionnaires (Big Five, tone, reaction frame, type indicator) — SELF-REPORT, the weakest evidence here. Use it only as soft background for Values & Worldview, Tone, and the "Personality Notes" section; let OBSERVED voice (chat logs, and the prose of any questionnaire answers) win every concrete style judgment. Never state a trait percentage or a 4-letter type as fact in the document; translate it into how-they-write language, hedged. If it conflicts with observed voice, the observed voice wins outright.`;
+
+// When a profile is present, soul.md gets a short "Personality Notes" section
+// that turns the trait readout into DIRECTIONAL guidance for the imitator —
+// what each strong trait means for word choice, stance, and pacing — rather
+// than leaving the numbers as inert background. Still hedged, still subordinate
+// to observed voice. Gated on hasProfile.
+const REDUCE_PROFILE_SECTION = `
+## Personality Notes
+(2-5 sentences, ONLY if a "Self-Reported Personality Profile" block is present.
+Translate the strongest, most lopsided trait readings into plain directions a
+writer could follow — e.g. "leans introverted, so keep openers low-key and don't
+manufacture enthusiasm"; "high openness — comfortable with tangents and abstract
+framing." Cover only the traits that are clearly high or low; skip anything near
+the midpoint. Frame as how-they-come-across guidance, not a clinical readout, and
+NEVER cite percentages or a type code. If observed voice already contradicts a
+self-reported trait, say so in one clause and defer to the observed voice. Omit
+the whole section if no trait is decisively high or low.)`;
 
 /**
  * Build the reduce prompt. The three questionnaire-derived sections (and the
@@ -147,7 +164,7 @@ Required structure:
 
 ## Values & Worldview
 - bullet list
-${hasQuestionnaire ? REDUCE_QA_SECTIONS : ''}
+${hasQuestionnaire ? REDUCE_QA_SECTIONS : ''}${hasProfile ? REDUCE_PROFILE_SECTION : ''}
 ## Stylistic Habits
 - function-word habits, typical message length in words, capitalization quirks
 - sentence length tendencies

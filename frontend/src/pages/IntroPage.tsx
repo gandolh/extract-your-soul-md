@@ -19,7 +19,7 @@ export function IntroPage() {
     },
     {
       index: '02',
-      to: '/import',
+      to: '/conversations',
       eyebrow: 'Conversations',
       title: 'Import conversations',
       desc: 'Drop in WhatsApp exports. Only the lines you wrote are kept; everything else is filtered out.',

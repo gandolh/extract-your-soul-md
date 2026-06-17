@@ -131,26 +131,28 @@ function scoreBigFive(answers: Map<string, RecordedAnswer>): ReportPayload {
   };
 }
 
-// honesty-tone axes are independent bipolar self-descriptions. Each is one
-// scale item; percent = toward the RIGHT pole. We label both poles in readout.
-const HONESTY_TONE_AXES: Array<{ id: string; key: string; label: string; left: string; right: string }> = [
-  { id: 'Q23', key: 'modesty', label: 'Self-presentation', left: 'Modest', right: 'Self-promoting' },
-  { id: 'Q24', key: 'rapport', label: 'Rapport vs. report', left: 'Connect', right: 'Inform' },
-  { id: 'Q25', key: 'formality', label: 'Formality', left: 'Casual', right: 'Formal' },
-  { id: 'Q26', key: 'seriousness', label: 'Seriousness', left: 'Playful', right: 'Serious' },
-  { id: 'Q27', key: 'irreverence', label: 'Irreverence', left: 'Respectful', right: 'Irreverent' },
-  { id: 'Q28', key: 'enthusiasm', label: 'Energy', left: 'Matter-of-fact', right: 'Enthusiastic' },
+// honesty-tone axes are independent bipolar self-descriptions. Each axis is now
+// backed by 1+ scale items carrying a matching `toneAxis` in questions.ts; we
+// average them (value 1 = LEFT pole, 5 = RIGHT). percent = toward the RIGHT pole.
+const HONESTY_TONE_AXES: Array<{ key: Question['toneAxis']; label: string; left: string; right: string }> = [
+  { key: 'modesty', label: 'Self-presentation', left: 'Modest', right: 'Self-promoting' },
+  { key: 'rapport', label: 'Rapport vs. report', left: 'Connect', right: 'Inform' },
+  { key: 'formality', label: 'Formality', left: 'Casual', right: 'Formal' },
+  { key: 'seriousness', label: 'Seriousness', left: 'Playful', right: 'Serious' },
+  { key: 'irreverence', label: 'Irreverence', left: 'Respectful', right: 'Irreverent' },
+  { key: 'enthusiasm', label: 'Energy', left: 'Matter-of-fact', right: 'Enthusiastic' },
 ];
 
 function scoreHonestyTone(answers: Map<string, RecordedAnswer>): ReportPayload {
   const axes: AxisResult[] = [];
   for (const a of HONESTY_TONE_AXES) {
-    const v = scaleValue(answers, a.id);
-    if (v === null) continue;
-    const percent = Math.round(((v - 1) / 4) * 100);
+    const items = QUESTIONS.filter((q) => q.reportKey === 'honesty-tone' && q.toneAxis === a.key);
+    const r = traitPercent(answers, items);
+    if (!r) continue;
+    const percent = r.percent;
     // Read out as a lean toward whichever pole the answer favors.
     const lean = percent === 50 ? `Balanced` : percent > 50 ? `${a.right} (${percent}%)` : `${a.left} (${100 - percent}%)`;
-    axes.push({ key: a.key, label: a.label, percent, readout: lean, answered: 1 });
+    axes.push({ key: a.key as string, label: a.label, percent, readout: lean, answered: r.answered });
   }
   return {
     key: 'honesty-tone',

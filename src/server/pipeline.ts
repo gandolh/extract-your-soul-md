@@ -105,11 +105,17 @@ export async function runUserExtraction(
   };
 
   try {
-    // 1. Conversations → work/freeform/<filename>
+    // 1. Conversations → work/freeform/<id>-<filename>. Prefix the row id so two
+    //    conversations that sanitize to the same basename never collide, and so
+    //    the per-file name map below has a unique key per conversation.
     mkdirSync(cfg.inputsFreeformDir, { recursive: true });
+    const globalNames = getNames(userId);
+    const namesByFile = new Map<string, Set<string>>();
     for (const conv of getConversationContents(userId)) {
-      const safe = path.basename(conv.filename).replace(/[^\w.\- ]/g, '_');
+      const safe = `${conv.id}-${path.basename(conv.filename).replace(/[^\w.\- ]/g, '_')}`;
       writeFileSync(path.join(cfg.inputsFreeformDir, safe), conv.content, 'utf8');
+      // Per-conversation names if set, else the user's global fallback list.
+      namesByFile.set(safe, new Set(conv.names ?? globalNames));
     }
 
     // 2. Study answers → work/questionnaire/answers.md (UNCHANGED writer).
@@ -120,9 +126,9 @@ export async function runUserExtraction(
       'web extraction',
     );
 
-    // 3. Existing pipeline.
-    const myNames = new Set(getNames(userId));
-    const stats = processAll(cfg, myNames);
+    // 3. Existing pipeline. Per-file name resolution: each conversation matches
+    //    its own "you" names (or the global fallback when it set none).
+    const stats = processAll(cfg, (filename) => namesByFile.get(filename) ?? new Set(globalNames));
 
     // Guard the load-bearing voice filter against two silent-empty-profile cases.
     // Both only fire when the questionnaire didn't supply material either

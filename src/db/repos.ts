@@ -26,6 +26,18 @@ export interface UserRow {
 export interface ConversationRow {
   id: number;
   filename: string;
+  provider: string;
+  // JSON-decoded per-conversation "you" names; null = fall back to global names.
+  names: string[] | null;
+  created_at: string;
+}
+
+export interface ConversationContent {
+  id: number;
+  filename: string;
+  content: string;
+  provider: string;
+  names: string[] | null;
   created_at: string;
 }
 
@@ -199,33 +211,72 @@ export function setReportInclude(userId: number, reportKey: string, include: boo
 
 // ---- conversations -------------------------------------------------------
 
+// Decode the stored JSON names column into a string[] | null. A malformed or
+// non-array value degrades to null (fall back to global names) rather than
+// throwing — the voice filter is load-bearing, so never hard-fail a read.
+function decodeNames(raw: unknown): string[] | null {
+  if (typeof raw !== 'string' || raw.length === 0) return null;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (Array.isArray(parsed)) return parsed.filter((n): n is string => typeof n === 'string');
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export function addConversation(
   userId: number,
   filename: string,
   content: string,
+  provider = 'whatsapp',
 ): { id: number } {
   const info = getDb()
-    .prepare('INSERT INTO conversations (user_id, filename, content) VALUES (?, ?, ?)')
-    .run(userId, filename, content);
+    .prepare('INSERT INTO conversations (user_id, filename, content, provider) VALUES (?, ?, ?, ?)')
+    .run(userId, filename, content, provider);
   return { id: Number(info.lastInsertRowid) };
 }
 
 export function listConversations(userId: number): ConversationRow[] {
-  return rows<ConversationRow>(
+  const raw = rows<{ id: number; filename: string; provider: string; names: string | null; created_at: string }>(
     getDb()
-      .prepare('SELECT id, filename, created_at FROM conversations WHERE user_id = ? ORDER BY created_at DESC')
+      .prepare('SELECT id, filename, provider, names, created_at FROM conversations WHERE user_id = ? ORDER BY created_at DESC')
       .all(userId) as Row[],
   );
+  return raw.map((r) => ({ ...r, names: decodeNames(r.names) }));
 }
 
-export function getConversationContents(
-  userId: number,
-): Array<{ filename: string; content: string }> {
-  return rows<{ filename: string; content: string }>(
+export function getConversation(userId: number, id: number): ConversationContent | undefined {
+  const r = row<{ id: number; filename: string; content: string; provider: string; names: string | null; created_at: string }>(
     getDb()
-      .prepare('SELECT filename, content FROM conversations WHERE user_id = ?')
+      .prepare('SELECT id, filename, content, provider, names, created_at FROM conversations WHERE user_id = ? AND id = ?')
+      .get(userId, id) as Row | undefined,
+  );
+  if (!r) return undefined;
+  return { ...r, names: decodeNames(r.names) };
+}
+
+export function getConversationContents(userId: number): ConversationContent[] {
+  const raw = rows<{ id: number; filename: string; content: string; provider: string; names: string | null; created_at: string }>(
+    getDb()
+      .prepare('SELECT id, filename, content, provider, names, created_at FROM conversations WHERE user_id = ?')
       .all(userId) as Row[],
   );
+  return raw.map((r) => ({ ...r, names: decodeNames(r.names) }));
+}
+
+// Set (or clear) the per-conversation "you" names. An empty array stores '[]'
+// (explicitly "no names for this chat"); pass null to clear back to the global
+// fallback. Trims/dedupes like setNames does for the global list.
+export function setConversationNames(userId: number, id: number, names: string[] | null): boolean {
+  const encoded =
+    names === null
+      ? null
+      : JSON.stringify([...new Set(names.map((n) => n.trim()).filter((n) => n.length > 0))]);
+  const info = getDb()
+    .prepare('UPDATE conversations SET names = ? WHERE user_id = ? AND id = ?')
+    .run(encoded, userId, id);
+  return info.changes > 0;
 }
 
 export function deleteConversation(userId: number, id: number): void {

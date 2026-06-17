@@ -57,8 +57,12 @@ export const STUDIES: ReadonlyArray<Study> = [
     id: 'big-five',
     title: 'The Big Five',
     description:
-      'Ten quick self-ratings (TIPI) across the five core personality traits. Add a note to any if you want.',
-    questionIds: ['Q13', 'Q14', 'Q15', 'Q16', 'Q17', 'Q18', 'Q19', 'Q20', 'Q21', 'Q22'],
+      'Quick self-ratings across the five core personality traits — four items each (TIPI + BFI/Mini-IPIP) so the read is steadier than a two-item snapshot. Add a note to any if you want.',
+    questionIds: [
+      'Q13', 'Q14', 'Q15', 'Q16', 'Q17', 'Q18', 'Q19', 'Q20', 'Q21', 'Q22',
+      'Q46', 'Q47', 'Q48', 'Q49', 'Q50',
+      'Q57', 'Q58', 'Q59', 'Q60', 'Q61',
+    ],
     band: 'profile',
     reportKey: 'big-five',
   },
@@ -66,8 +70,8 @@ export const STUDIES: ReadonlyArray<Study> = [
     id: 'honesty-tone',
     title: 'Stance & Tone',
     description:
-      'How you present yourself and the tone you default to — modesty, rapport, formality, humor.',
-    questionIds: ['Q23', 'Q24', 'Q25', 'Q26', 'Q27', 'Q28'],
+      'How you present yourself and the tone you default to — modesty, rapport, formality, humor — two items per axis.',
+    questionIds: ['Q23', 'Q24', 'Q25', 'Q26', 'Q27', 'Q28', 'Q51', 'Q52', 'Q53', 'Q54', 'Q55', 'Q56'],
     band: 'profile',
     reportKey: 'honesty-tone',
   },

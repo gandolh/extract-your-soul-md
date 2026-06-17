@@ -42,6 +42,9 @@ export interface Question {
   reportKey?: ReportKey;
   // For big-five: the trait this item loads on. For mbti: the axis.
   traitKey?: 'O' | 'C' | 'E' | 'A' | 'N' | 'EI' | 'SN' | 'TF' | 'JP';
+  // For honesty-tone: which bipolar tone axis this item loads on. The scorer
+  // averages every item sharing a `toneAxis` (value "1"=left pole .. "5"=right).
+  toneAxis?: 'modesty' | 'rapport' | 'formality' | 'seriousness' | 'irreverence' | 'enthusiasm';
   // Reverse-key a scale item before averaging (TIPI items 2,4,6,8,10; some
   // OEJTS pairs whose poles are flipped relative to the axis direction).
   reverse?: boolean;
@@ -286,7 +289,7 @@ export const QUESTIONS: ReadonlyArray<Question> = [
     choiceMode: 'scale',
     left: 'Understate / let the work speak',
     right: 'Put my merits forward',
-    reportKey: 'honesty-tone', traitKey: undefined,
+    reportKey: 'honesty-tone', toneAxis: 'modesty',
     hint: 'No "right" answer — describe your actual lean.',
   },
   {
@@ -298,6 +301,7 @@ export const QUESTIONS: ReadonlyArray<Question> = [
     choiceMode: 'scale',
     left: 'Connect with the person',
     right: 'Inform them',
+    reportKey: 'honesty-tone', toneAxis: 'rapport',
   },
   {
     id: 'Q25',
@@ -308,6 +312,7 @@ export const QUESTIONS: ReadonlyArray<Question> = [
     choiceMode: 'scale',
     left: 'Casual',
     right: 'Formal',
+    reportKey: 'honesty-tone', toneAxis: 'formality',
   },
   {
     id: 'Q26',
@@ -318,6 +323,7 @@ export const QUESTIONS: ReadonlyArray<Question> = [
     choiceMode: 'scale',
     left: 'Playful / funny',
     right: 'Serious',
+    reportKey: 'honesty-tone', toneAxis: 'seriousness',
   },
   {
     id: 'Q27',
@@ -328,6 +334,7 @@ export const QUESTIONS: ReadonlyArray<Question> = [
     choiceMode: 'scale',
     left: 'Respectful',
     right: 'Irreverent',
+    reportKey: 'honesty-tone', toneAxis: 'irreverence',
   },
   {
     id: 'Q28',
@@ -338,6 +345,7 @@ export const QUESTIONS: ReadonlyArray<Question> = [
     choiceMode: 'scale',
     left: 'Matter-of-fact',
     right: 'Enthusiastic',
+    reportKey: 'honesty-tone', toneAxis: 'enthusiasm',
   },
 
   // --- PCM perceptual frame (Kahler; framework-inspired, single-select) -----
@@ -478,5 +486,202 @@ export const QUESTIONS: ReadonlyArray<Question> = [
     right: 'Improvise',
     // left = prepare (J), right = improvise (P) → 5 == P, no reverse.
     reportKey: 'mbti', traitKey: 'JP',
+  },
+
+  // ==========================================================================
+  // EXPANSION ITEMS (Q46+) — more items per axis for a steadier score.
+  //
+  // Two scale items beat one (a single Likert pick is noisy; averaging two
+  // independent phrasings of the same trait cancels item-specific quirks). The
+  // scorer already averages all items sharing a (reportKey, traitKey) for
+  // big-five, and honesty-tone now averages all items sharing an axis key.
+  // ==========================================================================
+
+  // --- Big Five — a third item per trait (BFI-style adjectives, distinct
+  // from the TIPI pair so we're not re-asking the same words). -------------
+  {
+    id: 'Q46',
+    slug: 'bfi-openness',
+    title: 'Imagination',
+    prompt: 'I see myself as imaginative, full of ideas.',
+    kind: 'choice',
+    choiceMode: 'scale',
+    left: 'Not at all',
+    right: 'Very much',
+    reportKey: 'big-five', traitKey: 'O',
+  },
+  {
+    id: 'Q47',
+    slug: 'bfi-conscientiousness',
+    title: 'Follow-through',
+    prompt: 'I see myself as someone who finishes what I start and tends to tasks right away.',
+    kind: 'choice',
+    choiceMode: 'scale',
+    left: 'Not at all',
+    right: 'Very much',
+    reportKey: 'big-five', traitKey: 'C',
+  },
+  {
+    id: 'Q48',
+    slug: 'bfi-extraversion',
+    title: 'Starting conversations',
+    prompt: 'I see myself as someone who starts conversations and feels at home around people.',
+    kind: 'choice',
+    choiceMode: 'scale',
+    left: 'Not at all',
+    right: 'Very much',
+    reportKey: 'big-five', traitKey: 'E',
+  },
+  {
+    id: 'Q49',
+    slug: 'bfi-agreeableness',
+    title: 'Considerate of others',
+    prompt: "I see myself as someone who takes time for others and feels their emotions.",
+    kind: 'choice',
+    choiceMode: 'scale',
+    left: 'Not at all',
+    right: 'Very much',
+    reportKey: 'big-five', traitKey: 'A',
+  },
+  {
+    id: 'Q50',
+    slug: 'bfi-neuroticism',
+    title: 'Worry',
+    prompt: 'I see myself as someone who worries about things and is easily stressed.',
+    kind: 'choice',
+    choiceMode: 'scale',
+    left: 'Not at all',
+    right: 'Very much',
+    reportKey: 'big-five', traitKey: 'N',
+  },
+
+  // A fourth Big Five item per trait, worded from the Mini-IPIP (Donnellan
+  // et al. 2006) — explicitly public domain (ipip.ori.org). Four items per
+  // trait is the practical floor for individual-level reliability; the biggest
+  // jump (Spearman-Brown) is from 2 → 4 items, so this is the high-leverage add.
+  {
+    id: 'Q57',
+    slug: 'ipip-openness',
+    title: 'Abstract ideas',
+    prompt: 'I enjoy thinking about abstract ideas.',
+    kind: 'choice',
+    choiceMode: 'scale',
+    left: 'Not at all',
+    right: 'Very much',
+    reportKey: 'big-five', traitKey: 'O',
+  },
+  {
+    id: 'Q58',
+    slug: 'ipip-conscientiousness',
+    title: 'Keeping order',
+    prompt: 'I like order and put things back in their place.',
+    kind: 'choice',
+    choiceMode: 'scale',
+    left: 'Not at all',
+    right: 'Very much',
+    reportKey: 'big-five', traitKey: 'C',
+  },
+  {
+    id: 'Q59',
+    slug: 'ipip-extraversion-r',
+    title: 'Keeping to myself',
+    prompt: 'I tend to keep in the background and stay quiet.',
+    kind: 'choice',
+    choiceMode: 'scale',
+    left: 'Not at all',
+    right: 'Very much',
+    reportKey: 'big-five', traitKey: 'E', reverse: true,
+  },
+  {
+    id: 'Q60',
+    slug: 'ipip-agreeableness-r',
+    title: 'Interest in others',
+    prompt: "I'm not all that interested in other people's problems.",
+    kind: 'choice',
+    choiceMode: 'scale',
+    left: 'Not at all',
+    right: 'Very much',
+    reportKey: 'big-five', traitKey: 'A', reverse: true,
+  },
+  {
+    id: 'Q61',
+    slug: 'ipip-neuroticism',
+    title: 'Mood swings',
+    prompt: 'I have frequent mood swings and get upset easily.',
+    kind: 'choice',
+    choiceMode: 'scale',
+    left: 'Not at all',
+    right: 'Very much',
+    reportKey: 'big-five', traitKey: 'N',
+  },
+
+  // --- Honesty-Humility + tone — a second item per axis. The scorer
+  // averages each axis across all items carrying its `toneAxis` key. ---------
+  {
+    id: 'Q51',
+    slug: 'tone-modesty-2',
+    title: 'Sharing wins',
+    prompt: 'When something goes well for me, I…',
+    kind: 'choice',
+    choiceMode: 'scale',
+    left: 'Keep it low-key',
+    right: 'Make sure people know',
+    reportKey: 'honesty-tone', toneAxis: 'modesty',
+    hint: 'No "right" answer — describe your actual lean.',
+  },
+  {
+    id: 'Q52',
+    slug: 'tone-rapport-2',
+    title: 'What a message is for',
+    prompt: 'A message I send is more about…',
+    kind: 'choice',
+    choiceMode: 'scale',
+    left: 'The relationship',
+    right: 'Getting the facts across',
+    reportKey: 'honesty-tone', toneAxis: 'rapport',
+  },
+  {
+    id: 'Q53',
+    slug: 'tone-formality-2',
+    title: 'Word choice',
+    prompt: 'My everyday word choice in writing leans…',
+    kind: 'choice',
+    choiceMode: 'scale',
+    left: 'Loose / slangy',
+    right: 'Careful / proper',
+    reportKey: 'honesty-tone', toneAxis: 'formality',
+  },
+  {
+    id: 'Q54',
+    slug: 'tone-seriousness-2',
+    title: 'Joking around',
+    prompt: 'How often a joke slips into my writing…',
+    kind: 'choice',
+    choiceMode: 'scale',
+    left: 'Constantly',
+    right: 'Rarely',
+    reportKey: 'honesty-tone', toneAxis: 'seriousness',
+  },
+  {
+    id: 'Q55',
+    slug: 'tone-irreverence-2',
+    title: 'Sacred cows',
+    prompt: 'Toward conventions and authority, I write more…',
+    kind: 'choice',
+    choiceMode: 'scale',
+    left: 'Deferential',
+    right: 'Cheeky',
+    reportKey: 'honesty-tone', toneAxis: 'irreverence',
+  },
+  {
+    id: 'Q56',
+    slug: 'tone-enthusiasm-2',
+    title: 'Punctuation energy',
+    prompt: 'My writing tends to run…',
+    kind: 'choice',
+    choiceMode: 'scale',
+    left: 'Understated',
+    right: 'Exclamation-marks-and-caps',
+    reportKey: 'honesty-tone', toneAxis: 'enthusiasm',
   },
 ];

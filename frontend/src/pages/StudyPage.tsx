@@ -167,7 +167,7 @@ export function StudyPage() {
         <p className="text-[14px] leading-[22px] text-text-secondary">{detail.study.description}</p>
         <div className="flex items-center gap-3">
           <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-faint">
-            {completed} / {detail.questions.length} answered
+            {completed} / {detail.questions.length} answered · ~{detail.study.estimateMinutes} min
           </span>
           <div className="max-w-[420px] flex-1">
             <Meter completed={completed} total={detail.questions.length} />

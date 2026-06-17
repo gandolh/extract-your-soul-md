@@ -54,6 +54,9 @@ function StudyCard({
         {s.title}
       </h3>
       <p className="mt-2 flex-1 text-[13px] leading-[18px] text-text-secondary">{s.description}</p>
+      <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.08em] text-text-faint">
+        {s.total} question{s.total === 1 ? '' : 's'} · ~{s.estimateMinutes} min
+      </p>
       <div className="mt-5 flex items-center gap-3">
         <div className="flex-1">
           <Meter completed={s.completed} total={s.total} />

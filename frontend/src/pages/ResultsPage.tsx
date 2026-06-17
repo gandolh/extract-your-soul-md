@@ -178,7 +178,7 @@ export function ResultsPage() {
             study
           </Link>{' '}
           or{' '}
-          <Link to="/import" className="underline">
+          <Link to="/conversations" className="underline">
             import a conversation
           </Link>{' '}
           first.

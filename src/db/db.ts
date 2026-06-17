@@ -25,11 +25,29 @@ function readSchema(): string {
   throw new Error(`schema.sql not found (looked in: ${candidates.join(', ')})`);
 }
 
+// `CREATE TABLE IF NOT EXISTS` never adds columns to a pre-existing table, so
+// columns added after a DB already exists need a guarded ALTER. SQLite has no
+// `ADD COLUMN IF NOT EXISTS`, so we read the current columns and add what's
+// missing. Idempotent: a no-op once the column exists. New columns must be
+// nullable or carry a DEFAULT (ALTER can't add a NOT NULL column without one).
+function migrate(conn: DatabaseSync): void {
+  const cols = (conn.prepare('PRAGMA table_info(conversations)').all() as Array<{ name: string }>).map(
+    (c) => c.name,
+  );
+  if (!cols.includes('provider')) {
+    conn.exec("ALTER TABLE conversations ADD COLUMN provider TEXT NOT NULL DEFAULT 'whatsapp'");
+  }
+  if (!cols.includes('names')) {
+    conn.exec('ALTER TABLE conversations ADD COLUMN names TEXT');
+  }
+}
+
 export function openDb(dbPath: string): DatabaseSync {
   const abs = path.resolve(dbPath);
   mkdirSync(path.dirname(abs), { recursive: true });
   const conn = new DatabaseSync(abs);
   conn.exec(readSchema());
+  migrate(conn);
   return conn;
 }
 

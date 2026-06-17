@@ -6,7 +6,8 @@ import { RegisterPage } from './pages/RegisterPage';
 import { IntroPage } from './pages/IntroPage';
 import { StudiesPage } from './pages/StudiesPage';
 import { StudyPage } from './pages/StudyPage';
-import { ImportPage } from './pages/ImportPage';
+import { ConversationsPage } from './pages/ConversationsPage';
+import { ConversationDetailPage } from './pages/ConversationDetailPage';
 import { ResultsPage } from './pages/ResultsPage';
 import { EvalPage } from './pages/EvalPage';
 import { type ReactNode } from 'react';
@@ -40,7 +41,10 @@ export default function App() {
         <Route path="/" element={<IntroPage />} />
         <Route path="/studies" element={<StudiesPage />} />
         <Route path="/studies/:studyId" element={<StudyPage />} />
-        <Route path="/import" element={<ImportPage />} />
+        <Route path="/conversations" element={<ConversationsPage />} />
+        <Route path="/conversations/:id" element={<ConversationDetailPage />} />
+        {/* Old route — keep links working after the Import → Conversations rename. */}
+        <Route path="/import" element={<Navigate to="/conversations" replace />} />
         <Route path="/results" element={<ResultsPage />} />
         <Route path="/eval" element={<EvalPage />} />
       </Route>

@@ -9,12 +9,12 @@ const NAV_LINK =
   'border-b-[1.5px] border-transparent pb-0.5 transition-colors hover:text-text-primary';
 
 // Nav label · route. Labels match each destination's page title so the same
-// surface reads the same in the nav and on the page (Conversations→Import was
-// the prior mismatch; Profile→soul.md stays "Profile" as the human-facing name).
+// surface reads the same in the nav and on the page (Profile→soul.md stays
+// "Profile" as the human-facing name).
 const NAV_ITEMS = [
   { to: '/', label: 'Overview', end: true },
   { to: '/studies', label: 'Studies', end: false },
-  { to: '/import', label: 'Import', end: false },
+  { to: '/conversations', label: 'Conversations', end: false },
   { to: '/results', label: 'Profile', end: false },
   { to: '/eval', label: 'Eval', end: false },
 ] as const;

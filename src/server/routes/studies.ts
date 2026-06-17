@@ -19,6 +19,14 @@ import {
 } from '../../scoring.js';
 import { requireAuth } from '../auth.js';
 
+// A rough completion-time estimate for a study: ~30 seconds per question,
+// rounded up to whole minutes (min 1). Surfaced in the UI so the user can budget
+// time before opening a form — the choice forms can run 12–20 questions now.
+const SECONDS_PER_QUESTION = 30;
+function estimateMinutes(questionCount: number): number {
+  return Math.max(1, Math.round((questionCount * SECONDS_PER_QUESTION) / 60));
+}
+
 // Rescore every report from the user's full answer set and upsert each. Cheap
 // (a handful of in-memory averages), so we just recompute all of them after any
 // profile-study save rather than tracking which report changed.
@@ -53,6 +61,9 @@ export async function studyRoutes(app: FastifyInstance): Promise<void> {
         reportKey: s.reportKey ?? null,
         total: s.questionIds.length,
         completed: s.questionIds.filter((qid) => answered.has(qid)).length,
+        // Rough "how long will this take" estimate at ~30s/question, so the
+        // user can budget time before opening a form (longer forms now exist).
+        estimateMinutes: estimateMinutes(s.questionIds.length),
       })),
     };
   });
@@ -69,6 +80,7 @@ export async function studyRoutes(app: FastifyInstance): Promise<void> {
         description: study.description,
         band: study.band ?? 'voice',
         reportKey: study.reportKey ?? null,
+        estimateMinutes: estimateMinutes(study.questionIds.length),
       },
       questions: studyQuestions(study).map((q) => ({
         id: q.id,

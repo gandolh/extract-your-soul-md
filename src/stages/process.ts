@@ -213,14 +213,24 @@ function cleanBody(body: string, cfg: Config): string {
   return s.replace(/\s+/g, " ").trim();
 }
 
-export function processAll(cfg: Config, myNames: Set<string>): ProcessStats {
+// The "you" names to match for a given file. Either a single set applied to
+// every file (legacy/global), or a resolver that returns the per-file names —
+// the work dir uses sanitized filenames, so the caller keys off the same
+// basename it wrote. The voice filter is load-bearing: a resolver returning an
+// empty set means "no messages from this file count as mine".
+export type NameResolver = Set<string> | ((filename: string) => Set<string>);
+
+export function processAll(cfg: Config, myNames: NameResolver): ProcessStats {
   const inDir = path.resolve(cfg.inputsFreeformDir);
   const outDir = path.resolve(cfg.inputsProcessedDir);
   mkdirSync(outDir, { recursive: true });
 
-  // Normalize the "you" names once so matching is caller-proof and consistent
+  // Resolve + normalize per file so matching is caller-proof and consistent
   // with how each sender is normalized at the compare site below.
-  const normalizedNames = new Set([...myNames].map(normalizeName));
+  const resolveNormalized = (filename: string): Set<string> => {
+    const set = typeof myNames === 'function' ? myNames(filename) : myNames;
+    return new Set([...set].map(normalizeName));
+  };
 
   const stats: ProcessStats = {
     filesProcessed: 0,
@@ -248,6 +258,8 @@ export function processAll(cfg: Config, myNames: Set<string>): ProcessStats {
 
     const raw = readFileSync(abs, "utf8");
     const lines = raw.split(/\r?\n/);
+
+    const normalizedNames = resolveNormalized(name);
 
     const kept: string[] = [];
     // Track continuation: WhatsApp messages can span lines (newline within message body).

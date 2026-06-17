@@ -53,11 +53,18 @@ CREATE TABLE IF NOT EXISTS conversations (
   user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   filename   TEXT NOT NULL,
   content    TEXT NOT NULL,                           -- raw WhatsApp export
+  -- The source the export came from. Only 'whatsapp' today; column exists so
+  -- adding a provider is data-only on the import path.
+  provider   TEXT NOT NULL DEFAULT 'whatsapp',
+  -- Per-conversation "you" names as a JSON string array. NULL means "fall back
+  -- to the user's global user_names". The voice filter matches these per file.
+  names      TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_conv_user ON conversations(user_id);
 
--- Replaces inputs/my-names.txt: the display names that mark "you" in exports.
+-- Global fallback for per-conversation names (and the legacy single name list):
+-- the display names that mark "you" in exports when a conversation has none set.
 CREATE TABLE IF NOT EXISTS user_names (
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   name    TEXT NOT NULL,

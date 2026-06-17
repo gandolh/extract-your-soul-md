@@ -11,6 +11,8 @@ import {
 import {
   api,
   type Conversation,
+  type ConversationDetail,
+  type ConversationProvider,
   type DetectedSender,
   type ReportKey,
   type ReportState,
@@ -25,6 +27,7 @@ export const queryKeys = {
   study: (id: string) => ['study', id] as const,
   reports: ['reports'] as const,
   conversations: ['conversations'] as const,
+  conversation: (id: number) => ['conversation', id] as const,
   senders: ['senders'] as const,
   names: ['names'] as const,
   results: ['results'] as const,
@@ -61,6 +64,15 @@ export function useConversations() {
   return useQuery({
     queryKey: queryKeys.conversations,
     queryFn: () => api.conversations().then((r) => r.conversations),
+  });
+}
+
+export function useConversation(id: number) {
+  return useQuery({
+    queryKey: queryKeys.conversation(id),
+    queryFn: () => api.conversation(id).then((r) => r.conversation),
+    enabled: Number.isInteger(id) && id > 0,
+    retry: false, // a 404 is a real "unknown conversation", not transient
   });
 }
 
@@ -120,8 +132,8 @@ export function useSetReportInclude() {
 export function useAddConversation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (vars: { filename: string; content: string }) =>
-      api.addConversation(vars.filename, vars.content),
+    mutationFn: (vars: { filename: string; content: string; provider?: ConversationProvider }) =>
+      api.addConversation(vars.filename, vars.content, vars.provider),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: queryKeys.conversations });
       void qc.invalidateQueries({ queryKey: queryKeys.senders });
@@ -134,6 +146,18 @@ export function useDeleteConversation() {
   return useMutation({
     mutationFn: (id: number) => api.deleteConversation(id),
     onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.conversations });
+      void qc.invalidateQueries({ queryKey: queryKeys.senders });
+    },
+  });
+}
+
+export function useSetConversationNames(id: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (names: string[] | null) => api.setConversationNames(id, names),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.conversation(id) });
       void qc.invalidateQueries({ queryKey: queryKeys.conversations });
       void qc.invalidateQueries({ queryKey: queryKeys.senders });
     },
@@ -161,4 +185,12 @@ export function useExtract() {
 }
 
 // Re-export the row types most consumers want alongside their hook.
-export type { Conversation, DetectedSender, ReportState, ResultsState, StudySummary };
+export type {
+  Conversation,
+  ConversationDetail,
+  ConversationProvider,
+  DetectedSender,
+  ReportState,
+  ResultsState,
+  StudySummary,
+};

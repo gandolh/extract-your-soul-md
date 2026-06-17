@@ -150,12 +150,14 @@ export async function runUserEval(
     if (convos.length === 0) {
       throw new NothingToEvalError('Import at least one conversation — the eval scores against your real messages.');
     }
+    const globalNames = getNames(userId);
+    const namesByFile = new Map<string, Set<string>>();
     for (const conv of convos) {
-      const safe = path.basename(conv.filename).replace(/[^\w.\- ]/g, '_');
+      const safe = `${conv.id}-${path.basename(conv.filename).replace(/[^\w.\- ]/g, '_')}`;
       writeFileSync(path.join(cfg.inputsFreeformDir, safe), conv.content, 'utf8');
+      namesByFile.set(safe, new Set(conv.names ?? globalNames));
     }
-    const myNames = new Set(getNames(userId));
-    processAll(cfg, myNames);
+    processAll(cfg, (filename) => namesByFile.get(filename) ?? new Set(globalNames));
 
     const messages = readProcessedMessages(cfg.inputsProcessedDir);
     const splittable = messages

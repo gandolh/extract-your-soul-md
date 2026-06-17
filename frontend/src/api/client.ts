@@ -61,6 +61,7 @@ export interface StudySummary {
   id: string; title: string; description: string;
   band: StudyBand; reportKey: ReportKey | null;
   total: number; completed: number;
+  estimateMinutes: number;
 }
 export interface ChoiceOption { value: string; label: string; }
 export interface StudyQuestion {
@@ -75,7 +76,7 @@ export interface StudyQuestion {
   choices: ChoiceOption[] | null;
 }
 export interface StudyDetail {
-  study: { id: string; title: string; description: string; band: StudyBand; reportKey: ReportKey | null };
+  study: { id: string; title: string; description: string; band: StudyBand; reportKey: ReportKey | null; estimateMinutes: number };
   questions: StudyQuestion[];
 }
 export interface ReportAxis { key: string; label: string; percent: number; readout: string; answered: number; }
@@ -84,8 +85,25 @@ export interface ReportPayload {
   summary: string; hasData: boolean; caveat: string;
 }
 export interface ReportState { key: ReportKey; payload: ReportPayload | null; includeInSoul: boolean; }
-export interface Conversation { id: number; filename: string; createdAt: string; }
+export type ConversationProvider = 'whatsapp';
+export interface Conversation {
+  id: number;
+  filename: string;
+  provider: ConversationProvider;
+  namesCount: number | null; // null = uses the global fallback names
+  createdAt: string;
+}
 export interface DetectedSender { name: string; normalized: string; count: number; }
+export interface ConversationDetail {
+  id: number;
+  filename: string;
+  provider: ConversationProvider;
+  content: string;
+  createdAt: string;
+  names: string[];
+  usesGlobal: boolean;
+  senders: DetectedSender[];
+}
 export interface SoulResult { soulMd: string; prevMd: string | null; extractor: string; createdAt: string | null; }
 export type JobStatus = 'enqueued' | 'running' | 'done' | 'failed';
 export interface JobProgress {
@@ -153,8 +171,16 @@ export const api = {
 
   // conversations + names
   conversations: () => request<{ conversations: Conversation[] }>('GET', '/conversations'),
-  addConversation: (filename: string, content: string) =>
-    request<{ conversation: { id: number; filename: string } }>('POST', '/conversations', { filename, content }),
+  conversation: (id: number) =>
+    request<{ conversation: ConversationDetail }>('GET', `/conversations/${id}`),
+  addConversation: (filename: string, content: string, provider: ConversationProvider = 'whatsapp') =>
+    request<{ conversation: { id: number; filename: string; provider: ConversationProvider } }>(
+      'POST',
+      '/conversations',
+      { filename, content, provider },
+    ),
+  setConversationNames: (id: number, names: string[] | null) =>
+    request<{ names: string[]; usesGlobal: boolean }>('PUT', `/conversations/${id}/names`, { names }),
   deleteConversation: (id: number) => request<void>('DELETE', `/conversations/${id}`),
   senders: () => request<{ senders: DetectedSender[] }>('GET', '/conversations/senders'),
   names: () => request<{ names: string[] }>('GET', '/names'),
