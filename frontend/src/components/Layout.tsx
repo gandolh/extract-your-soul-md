@@ -61,8 +61,8 @@ export function Layout() {
       </main>
 
       <footer className="border-t border-hairline px-gutter py-6 text-center font-mono text-[10px] tracking-[0.04em] text-text-faint">
-        Self-report data stays on this machine · profiles are generated locally · review before reuse
-        <span className="mx-2">·</span>Clinical Instrument v1.0.4
+        Your data stays on this machine · profiles are generated locally · review before reuse
+        <span className="mx-2">·</span>A personal research experiment · v1.0.4
       </footer>
     </div>
   );

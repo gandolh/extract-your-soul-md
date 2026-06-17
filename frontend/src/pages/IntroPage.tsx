@@ -44,14 +44,14 @@ export function IntroPage() {
 
       <section className="flex max-w-[64ch] flex-col gap-3 text-[14px] leading-[22px] text-text-secondary">
         <p className="text-text-primary">
-          This platform reinforces a written profile — a{' '}
+          This is a personal research experiment that builds a written profile — a{' '}
           <code className="rounded-sm bg-primary-wash px-1.5 py-0.5 font-mono text-[12px] text-primary">soul.md</code> —
-          from material you supply: short structured self-reports and your own past conversations.
+          from material you supply: a few short prompts and your own past conversations.
         </p>
         <p>
-          The premise borrows from narrative-identity and self-report research: how a person frames
-          frustration, what they find funny, the register they switch into for a stranger — these
-          recur. Read across enough samples, the regularities surface.
+          The premise borrows from narrative-identity research: how a person frames frustration, what
+          they find funny, the register they switch into for a stranger — these recur. Read across
+          enough samples, the regularities surface.
         </p>
         <p>
           Nothing is interpreted as you type. Capture is deliberately dumb — all synthesis happens
