@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { api, ApiError, type ReportState, type ReportKey } from '../api/client';
+import { ApiError, type ReportState, type ReportKey } from '../api/client';
+import { useSetReportInclude } from '../api/queries';
 import { useToast } from './Toaster';
 import { cardClass, cx } from './ui';
 
@@ -24,23 +24,25 @@ export function ReportSection({
   onToggle,
 }: {
   report: ReportState;
-  onToggle: (key: ReportKey, include: boolean) => void;
+  // Optional: the parent may observe the include change. The reports query is
+  // invalidated by the mutation regardless, so state stays correct without it.
+  onToggle?: (key: ReportKey, include: boolean) => void;
 }) {
   const toast = useToast();
-  const [busy, setBusy] = useState(false);
+  const setInclude = useSetReportInclude();
+  const busy = setInclude.isPending;
   const p = report.payload;
 
-  async function toggle() {
-    setBusy(true);
-    try {
-      const next = !report.includeInSoul;
-      await api.setReportInclude(report.key, next);
-      onToggle(report.key, next);
-    } catch (err) {
-      toast(err instanceof ApiError ? err.message : 'Could not update.', 'err');
-    } finally {
-      setBusy(false);
-    }
+  function toggle() {
+    const next = !report.includeInSoul;
+    setInclude.mutate(
+      { key: report.key, includeInSoul: next },
+      {
+        onSuccess: () => onToggle?.(report.key, next),
+        onError: (err) =>
+          toast(err instanceof ApiError ? err.message : 'Could not update.', 'err'),
+      },
+    );
   }
 
   if (!p || !p.hasData) {

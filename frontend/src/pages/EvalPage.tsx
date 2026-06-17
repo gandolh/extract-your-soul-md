@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import { api, ApiError, type EvalResult, type EvalCondition, type MetricBundle } from '../api/client';
 import { useToast } from '../components/Toaster';
 import { Button, Card, cardClass, Eyebrow, Headline, Notice, Tag } from '../components/ui';
@@ -24,21 +25,18 @@ function bestCondition(agg: Record<EvalCondition, MetricBundle>, key: keyof Metr
 
 export function EvalPage() {
   const toast = useToast();
-  const [result, setResult] = useState<EvalResult | null>(null);
-  const [running, setRunning] = useState(false);
   const [open, setOpen] = useState<number | null>(null);
 
-  async function run() {
-    setRunning(true);
-    try {
-      const r = await api.runEval();
-      setResult(r.result);
-      toast('Eval complete.', 'ok');
-    } catch (err) {
-      toast(err instanceof ApiError ? err.message : 'Eval failed.', 'err');
-    } finally {
-      setRunning(false);
-    }
+  const evalRun = useMutation({
+    mutationFn: () => api.runEval(),
+    onSuccess: () => toast('Eval complete.', 'ok'),
+    onError: (err) => toast(err instanceof ApiError ? err.message : 'Eval failed.', 'err'),
+  });
+  const running = evalRun.isPending;
+  const result: EvalResult | null = evalRun.data?.result ?? null;
+
+  function run() {
+    evalRun.mutate();
   }
 
   // Tally row-wins per condition as a quick headline read.

@@ -1,12 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import {
-  api,
-  ApiError,
-  type StudyDetail,
-  type StudyQuestion,
-  type ReportState,
-} from '../api/client';
+import { ApiError, type StudyQuestion, type ReportState } from '../api/client';
+import { useReports, useSaveStudy, useStudy } from '../api/queries';
 import { useToast } from '../components/Toaster';
 import { Meter } from '../components/Layout';
 import { STUDY_ORDER } from '../studyOrder';
@@ -19,14 +14,25 @@ export function StudyPage() {
   const { studyId = '' } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
-  const [detail, setDetail] = useState<StudyDetail | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [lang, setLang] = useLangPref();
   const [busy, setBusy] = useState(false);
-  const [notFound, setNotFound] = useState(false);
   const [active, setActive] = useState<string | null>(null);
   const [autosave, setAutosave] = useState<'idle' | 'saving' | 'saved'>('idle');
-  const [report, setReport] = useState<ReportState | null>(null);
+
+  const studyQuery = useStudy(studyId);
+  const detail = studyQuery.data ?? null;
+  const notFound =
+    studyQuery.error instanceof ApiError && studyQuery.error.status === 404;
+  const reportKey = detail?.study.reportKey ?? null;
+
+  // Profile studies have a scored report; pull it from the reports query and
+  // pick the one matching this study's reportKey.
+  const { data: reports } = useReports(reportKey != null);
+  const report: ReportState | null =
+    reportKey != null ? (reports?.find((r) => r.key === reportKey) ?? null) : null;
+
+  const saveStudy = useSaveStudy();
 
   // Snapshot of the last-persisted answers (JSON), so the autosave effect can
   // tell a real edit from the initial seed / a study switch and skip saving when
@@ -34,39 +40,26 @@ export function StudyPage() {
   const baseline = useRef<string>('');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Fetch the scored report for this study's reportKey (profile studies only).
-  const refreshReport = useCallback((reportKey: string | null) => {
-    if (!reportKey) {
-      setReport(null);
-      return;
-    }
-    api
-      .reports()
-      .then(({ reports }) => setReport(reports.find((r) => r.key === reportKey) ?? null))
-      .catch(() => setReport(null));
-  }, []);
-
+  // Non-404 load failures surface as a toast (404 → the "unknown study" view).
   useEffect(() => {
-    setDetail(null);
-    setNotFound(false);
+    if (studyQuery.error && !(studyQuery.error instanceof ApiError && studyQuery.error.status === 404)) {
+      toast('Could not load study.', 'err');
+    }
+  }, [studyQuery.error, toast]);
+
+  // Seed the editable answers from the loaded study (and re-seed on a study
+  // switch). The baseline snapshot guards the autosave effect against firing on
+  // this seed.
+  useEffect(() => {
+    setActive(null);
     setAutosave('idle');
-    setReport(null);
     if (timer.current) clearTimeout(timer.current);
-    api
-      .study(studyId)
-      .then((d) => {
-        setDetail(d);
-        const init: Record<string, string> = {};
-        for (const q of d.questions) init[q.id] = q.savedBody;
-        setAnswers(init);
-        baseline.current = JSON.stringify(init);
-        refreshReport(d.study.reportKey);
-      })
-      .catch((e) => {
-        if (e instanceof ApiError && e.status === 404) setNotFound(true);
-        else toast('Could not load study.', 'err');
-      });
-  }, [studyId, toast, refreshReport]);
+    if (!detail) return;
+    const init: Record<string, string> = {};
+    for (const q of detail.questions) init[q.id] = q.savedBody;
+    setAnswers(init);
+    baseline.current = JSON.stringify(init);
+  }, [detail]);
 
   const { idx, next, prev } = useMemo(() => {
     const i = STUDY_ORDER.indexOf(studyId);
@@ -84,16 +77,15 @@ export function StudyPage() {
   const persist = useCallback(async (): Promise<string | null> => {
     if (!detail) return null;
     const snapshot = JSON.stringify(answers);
-    await api.saveStudy(
-      detail.study.id,
-      detail.questions.map((q) => ({ id: q.id, body: answers[q.id] ?? '' })),
-    );
+    // The mutation invalidates the reports query on success, so profile studies
+    // refresh their scored result without a manual fetch.
+    await saveStudy.mutateAsync({
+      id: detail.study.id,
+      answers: detail.questions.map((q) => ({ id: q.id, body: answers[q.id] ?? '' })),
+    });
     baseline.current = snapshot;
-    // Profile studies produce a report; refresh it so the result section
-    // reflects the just-saved answers.
-    if (detail.study.reportKey) refreshReport(detail.study.reportKey);
     return snapshot;
-  }, [detail, answers, refreshReport]);
+  }, [detail, answers, saveStudy]);
 
   // Debounced autosave: ~1.5s after the last edit, if answers differ from the
   // last-persisted baseline. The baseline guard means the initial seed and a
@@ -104,9 +96,14 @@ export function StudyPage() {
     setAutosave('saving');
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => {
-      persist()
-        .then(() => setAutosave('saved'))
-        .catch(() => setAutosave('idle'));
+      (async () => {
+        try {
+          await persist();
+          setAutosave('saved');
+        } catch {
+          setAutosave('idle');
+        }
+      })();
     }, 1500);
     return () => {
       if (timer.current) clearTimeout(timer.current);
@@ -218,14 +215,7 @@ export function StudyPage() {
       </div>
 
       {/* Profile studies show their scored result + the soul.md toggle. */}
-      {detail.study.band === 'profile' && report && (
-        <ReportSection
-          report={report}
-          onToggle={(_, include) =>
-            setReport((r) => (r ? { ...r, includeInSoul: include } : r))
-          }
-        />
-      )}
+      {detail.study.band === 'profile' && report && <ReportSection report={report} />}
 
       <div className="flex flex-wrap items-center gap-3">
         {prev ? (

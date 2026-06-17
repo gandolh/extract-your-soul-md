@@ -1,5 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { api, ApiError, type Conversation, type DetectedSender } from '../api/client';
+import { useEffect, useRef, useState } from 'react';
+import { api, ApiError } from '../api/client';
+import {
+  useAddConversation,
+  useConversations,
+  useDeleteConversation,
+  useNames,
+  useSenders,
+  useSetNames,
+} from '../api/queries';
 import { useToast } from '../components/Toaster';
 import { Button, cardClass, Eyebrow, Headline, Notice, Tag, cx, FIELD_CLASS } from '../components/ui';
 import { normalizeName } from '../lib/normalizeName';
@@ -10,90 +18,81 @@ const MAX_BYTES = 5 * 1024 * 1024;
 
 export function ImportPage() {
   const toast = useToast();
-  const [convos, setConvos] = useState<Conversation[]>([]);
-  const [names, setNames] = useState<string[]>([]);
+  const { data: convos = [] } = useConversations();
+  const { data: senders = [] } = useSenders();
+  const { data: names = [] } = useNames();
   const [namesText, setNamesText] = useState('');
-  const [senders, setSenders] = useState<DetectedSender[]>([]);
   const [over, setOver] = useState(false);
   const [busy, setBusy] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  const reload = useCallback(() => {
-    api.conversations().then((r) => setConvos(r.conversations)).catch(() => {});
-    api.senders().then((r) => setSenders(r.senders)).catch(() => {});
-    api.names().then((r) => {
-      setNames(r.names);
-      setNamesText(r.names.join('\n'));
-    }).catch(() => {});
-  }, []);
+  const addConversation = useAddConversation();
+  const deleteConversation = useDeleteConversation();
+  const setNamesMutation = useSetNames();
 
-  useEffect(reload, [reload]);
+  // Seed the textarea from the persisted names once they load (and whenever a
+  // save replaces them). Local edits in between are the user's draft.
+  useEffect(() => {
+    setNamesText(names.join('\n'));
+  }, [names]);
 
-  const uploadFiles = useCallback(
-    async (files: FileList | File[]) => {
-      const list = Array.from(files).filter((f) => /\.(txt|md)$/i.test(f.name));
-      if (list.length === 0) return toast('Only .txt or .md exports are supported.', 'err');
+  async function uploadFiles(files: FileList | File[]) {
+    const list = Array.from(files).filter((f) => /\.(txt|md)$/i.test(f.name));
+    if (list.length === 0) return toast('Only .txt or .md exports are supported.', 'err');
 
-      // Client-side size preflight (server stays the source of truth at 5 MB).
-      // f.size (bytes) is a sound proxy for the server's UTF-8 byte length.
-      const oversized = list.filter((f) => f.size > MAX_BYTES);
-      const ok = list.filter((f) => f.size <= MAX_BYTES);
+    // Client-side size preflight (server stays the source of truth at 5 MB).
+    // f.size (bytes) is a sound proxy for the server's UTF-8 byte length.
+    const oversized = list.filter((f) => f.size > MAX_BYTES);
+    const ok = list.filter((f) => f.size <= MAX_BYTES);
 
-      setBusy(true);
-      // Per-file try/catch so one failure never aborts the rest of the batch.
-      let imported = 0;
-      const failed: string[] = [];
-      try {
-        for (const f of ok) {
-          try {
-            const content = await f.text();
-            await api.addConversation(f.name, content);
-            imported += 1;
-          } catch (err) {
-            failed.push(f.name + (err instanceof ApiError ? ` (${err.message})` : ''));
-          }
-        }
-      } finally {
-        setBusy(false);
-      }
-      if (imported > 0) reload();
-
-      // One summary toast covering imported / skipped-too-large / failed.
-      const parts: string[] = [];
-      if (imported > 0) parts.push(`Imported ${imported}`);
-      if (oversized.length > 0) parts.push(`skipped ${oversized.length} over 5 MB`);
-      if (failed.length > 0) parts.push(`${failed.length} failed`);
-      const tone = failed.length > 0 || (imported === 0 && oversized.length > 0) ? 'err' : 'ok';
-      toast(parts.length > 0 ? parts.join(', ') + '.' : 'Nothing to import.', tone);
-      if (oversized.length > 0) {
-        toast(
-          `Too large (5 MB max): ${oversized.map((f) => f.name).join(', ')}. Split the export and re-import.`,
-          'err',
-        );
-      }
-    },
-    [reload, toast],
-  );
-
-  async function remove(id: number) {
+    setBusy(true);
+    // Per-file try/catch so one failure never aborts the rest of the batch.
+    let imported = 0;
+    const failed: string[] = [];
     try {
-      await api.deleteConversation(id);
-      reload();
-    } catch {
-      toast('Could not delete.', 'err');
+      for (const f of ok) {
+        try {
+          const content = await f.text();
+          await addConversation.mutateAsync({ filename: f.name, content });
+          imported += 1;
+        } catch (err) {
+          failed.push(f.name + (err instanceof ApiError ? ` (${err.message})` : ''));
+        }
+      }
+    } finally {
+      setBusy(false);
+    }
+
+    // One summary toast covering imported / skipped-too-large / failed.
+    const parts: string[] = [];
+    if (imported > 0) parts.push(`Imported ${imported}`);
+    if (oversized.length > 0) parts.push(`skipped ${oversized.length} over 5 MB`);
+    if (failed.length > 0) parts.push(`${failed.length} failed`);
+    const tone = failed.length > 0 || (imported === 0 && oversized.length > 0) ? 'err' : 'ok';
+    toast(parts.length > 0 ? parts.join(', ') + '.' : 'Nothing to import.', tone);
+    if (oversized.length > 0) {
+      toast(
+        `Too large (5 MB max): ${oversized.map((f) => f.name).join(', ')}. Split the export and re-import.`,
+        'err',
+      );
     }
   }
 
-  async function saveNames() {
+  function remove(id: number) {
+    deleteConversation.mutate(id, {
+      onError: () => toast('Could not delete.', 'err'),
+    });
+  }
+
+  function saveNames() {
     const list = namesText.split('\n').map((s) => s.trim()).filter(Boolean);
-    try {
-      const r = await api.setNames(list);
-      setNames(r.names);
-      setNamesText(r.names.join('\n'));
-      toast('Names saved.', 'ok');
-    } catch {
-      toast('Could not save names.', 'err');
-    }
+    setNamesMutation.mutate(list, {
+      onSuccess: (r) => {
+        setNamesText(r.names.join('\n'));
+        toast('Names saved.', 'ok');
+      },
+      onError: () => toast('Could not save names.', 'err'),
+    });
   }
 
   // The set of normalized names currently in the textarea — drives both the

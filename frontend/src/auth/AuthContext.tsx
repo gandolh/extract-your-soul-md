@@ -16,14 +16,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api
-      .me()
-      .then((r) => setUser(r.user))
-      .catch((e) => {
+    (async () => {
+      try {
+        const r = await api.me();
+        setUser(r.user);
+      } catch (e) {
         if (!(e instanceof ApiError && e.status === 401)) console.error(e);
         setUser(null);
-      })
-      .finally(() => setLoading(false));
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
   const login = useCallback(async (u: string, p: string) => {

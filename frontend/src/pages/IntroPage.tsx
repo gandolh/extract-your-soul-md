@@ -1,15 +1,10 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api, type StudySummary } from '../api/client';
+import { useStudies } from '../api/queries';
 import { Meter } from '../components/Layout';
 import { Eyebrow, Headline, buttonClass, cardClass } from '../components/ui';
 
 export function IntroPage() {
-  const [studies, setStudies] = useState<StudySummary[]>([]);
-
-  useEffect(() => {
-    api.studies().then((r) => setStudies(r.studies)).catch(() => {});
-  }, []);
+  const { data: studies = [] } = useStudies();
 
   const total = studies.reduce((n, s) => n + s.total, 0);
   const done = studies.reduce((n, s) => n + s.completed, 0);

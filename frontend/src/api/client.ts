@@ -1,5 +1,7 @@
-// Thin fetch wrapper. Same-origin in dev (Vite proxies /api → Fastify) and in
-// prod (Fastify serves both), so cookies ride along with credentials:'include'.
+// Axios client. Same-origin in dev (Vite proxies /api → Fastify) and in prod
+// (Fastify serves both), so cookies ride along with withCredentials:true.
+
+import axios, { AxiosError } from 'axios';
 
 export class ApiError extends Error {
   status: number;
@@ -13,38 +15,43 @@ export class ApiError extends Error {
 // eval run is synchronous and can take minutes, so it opts out (timeoutMs: 0).
 const DEFAULT_TIMEOUT_MS = 30_000;
 
+const http = axios.create({
+  baseURL: '/api',
+  withCredentials: true,
+  timeout: DEFAULT_TIMEOUT_MS,
+});
+
+// Normalize every failure into an ApiError so callers keep the same contract
+// (status + the server's `error` string) regardless of axios internals.
+http.interceptors.response.use(
+  (res) => res,
+  (err: AxiosError<{ error?: string }>) => {
+    if (err.response) {
+      const status = err.response.status;
+      const message = err.response.data?.error ?? `Request failed (${status}).`;
+      return Promise.reject(new ApiError(status, message));
+    }
+    if (err.code === 'ECONNABORTED') {
+      return Promise.reject(new ApiError(0, 'The request timed out. Check your connection and try again.'));
+    }
+    return Promise.reject(new ApiError(0, 'Could not reach the server. Check your connection and try again.'));
+  },
+);
+
 async function request<T>(
   method: string,
   path: string,
   body?: unknown,
   timeoutMs: number = DEFAULT_TIMEOUT_MS,
 ): Promise<T> {
-  const controller = new AbortController();
-  const timer = timeoutMs > 0 ? setTimeout(() => controller.abort(), timeoutMs) : null;
-  let res: Response;
-  try {
-    res = await fetch(`/api${path}`, {
-      method,
-      credentials: 'include',
-      headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-      signal: controller.signal,
-    });
-  } catch (err) {
-    if (controller.signal.aborted) {
-      throw new ApiError(0, 'The request timed out. Check your connection and try again.');
-    }
-    throw new ApiError(0, 'Could not reach the server. Check your connection and try again.');
-  } finally {
-    if (timer) clearTimeout(timer);
-  }
-  if (res.status === 204) return undefined as T;
-  const text = await res.text();
-  const data = text ? JSON.parse(text) : {};
-  if (!res.ok) {
-    throw new ApiError(res.status, data?.error ?? `Request failed (${res.status}).`);
-  }
-  return data as T;
+  const res = await http.request<T>({
+    method,
+    url: path,
+    data: body,
+    // 0 means "no timeout" for both our callers and axios.
+    timeout: timeoutMs,
+  });
+  return res.data;
 }
 
 export interface User { id: number; username: string; }

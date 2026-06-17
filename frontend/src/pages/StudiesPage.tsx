@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api, type StudySummary } from '../api/client';
+import type { StudySummary } from '../api/client';
+import { useStudies } from '../api/queries';
 import { Meter } from '../components/Layout';
 import { cardClass, Eyebrow, Headline, Tag } from '../components/ui';
 
@@ -11,12 +11,7 @@ function status(s: StudySummary): { label: string; tone: 'neutral' | 'accent' | 
 }
 
 export function StudiesPage() {
-  const [studies, setStudies] = useState<StudySummary[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    api.studies().then((r) => setStudies(r.studies)).finally(() => setLoading(false));
-  }, []);
+  const { data: studies = [], isPending: loading } = useStudies();
 
   return (
     <div className="flex flex-col gap-section">

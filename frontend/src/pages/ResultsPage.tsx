@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { Link } from 'react-router-dom';
-import { api, ApiError, type ResultsState } from '../api/client';
+import { useQueryClient } from '@tanstack/react-query';
+import { api, ApiError } from '../api/client';
+import { queryKeys, useExtract, useResults } from '../api/queries';
 import { useToast } from '../components/Toaster';
 import { Markdown } from '../components/Markdown';
 import { Button, Card, cardClass, Eyebrow, Headline, Notice, Tag } from '../components/ui';
@@ -10,67 +12,72 @@ const POLL_MS = 2000;
 
 export function ResultsPage() {
   const toast = useToast();
-  const [state, setState] = useState<ResultsState | null>(null);
+  const qc = useQueryClient();
   const [showPrev, setShowPrev] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   // The id of the job we last saw running, so we can announce its terminal
   // outcome exactly once when polling observes it has cleared.
   const watchedJob = useRef<number | null>(null);
 
-  // Running state is driven entirely by the server's active-job flag — a reload
-  // mid-run picks the poll loop back up instead of re-enabling the button.
-  const running = state?.running ?? false;
+  // Local optimistic running flag so the poll starts the instant we enqueue,
+  // before the first refetch confirms it server-side.
+  const [optimisticRunning, setOptimisticRunning] = useState(false);
+
+  // Poll only while a job is live (server flag) or just-enqueued (optimistic);
+  // an idle page makes a single fetch. A reload mid-run resumes polling once
+  // the first fetch reports running.
+  const [serverRunningSeen, setServerRunningSeen] = useState(false);
+  const polling = serverRunningSeen || optimisticRunning;
+  const { data: state = null } = useResults(polling, POLL_MS);
+  const serverRunning = state?.running ?? false;
+  const running = serverRunning || optimisticRunning;
 
   useEffect(() => {
-    api.results().then(setState).catch(() => {});
-  }, []);
+    setServerRunningSeen(serverRunning);
+  }, [serverRunning]);
 
-  // Poll while a job is live; on the transition to no-live-job, fetch the
-  // terminal job detail to report done vs. failed.
+  const extract = useExtract();
+
+  // On the running→stopped transition, fetch the terminal job detail once and
+  // announce done vs. failed.
   useEffect(() => {
-    if (!running) return;
-    watchedJob.current = state?.job?.id ?? watchedJob.current;
-    const timer = setInterval(() => {
-      api
-        .results()
-        .then(async (fresh) => {
-          setState(fresh);
-          if (!fresh.running && watchedJob.current != null) {
-            const finishedId = watchedJob.current;
-            watchedJob.current = null;
-            try {
-              const detail = await api.job(finishedId);
-              if (detail.status === 'done') toast('Profile generated.', 'ok');
-              else toast(detail.error ?? 'Extraction failed.', 'err');
-            } catch {
-              /* job detail unavailable — the result table still updated */
-            }
-          }
-        })
-        .catch(() => {});
-    }, POLL_MS);
-    return () => clearInterval(timer);
-  }, [running, state?.job?.id, toast]);
-
-  async function runExtraction() {
-    setConfirmOpen(false);
-    try {
-      const r = await api.extract();
-      watchedJob.current = r.jobId;
-      // Optimistically flip to running so the poll effect starts immediately.
-      setState((s) =>
-        s
-          ? { ...s, running: true, job: { id: r.jobId, status: 'enqueued', stage: null, chunkDone: 0, chunkTotal: 0 } }
-          : s,
-      );
-    } catch (err) {
-      toast(err instanceof ApiError ? err.message : 'Extraction failed.', 'err');
+    if (serverRunning) {
+      watchedJob.current = state?.job?.id ?? watchedJob.current;
+      setOptimisticRunning(false); // server now confirms the run
+      return;
     }
+    if (watchedJob.current == null) return;
+    const finishedId = watchedJob.current;
+    watchedJob.current = null;
+    (async () => {
+      try {
+        const detail = await api.job(finishedId);
+        if (detail.status === 'done') toast('Profile generated.', 'ok');
+        else toast(detail.error ?? 'Extraction failed.', 'err');
+      } catch {
+        /* job detail unavailable — the result table still updated */
+      }
+    })();
+  }, [serverRunning, state?.job?.id, toast]);
+
+  function runExtraction() {
+    setConfirmOpen(false);
+    extract.mutate(undefined, {
+      onSuccess: (r) => {
+        watchedJob.current = r.jobId;
+        // Optimistically flip to running so the poll effect starts immediately;
+        // the invalidate inside useExtract refreshes the real state shortly.
+        setOptimisticRunning(true);
+        void qc.invalidateQueries({ queryKey: queryKeys.results });
+      },
+      onError: (err) =>
+        toast(err instanceof ApiError ? err.message : 'Extraction failed.', 'err'),
+    });
   }
 
   function onRunClick() {
     if (state?.result) setConfirmOpen(true);
-    else void runExtraction();
+    else runExtraction();
   }
 
   const result = state?.result ?? null;
@@ -239,7 +246,7 @@ export function ResultsPage() {
               generated one. This can take a few minutes.
             </Dialog.Description>
             <div className="mt-5 flex items-center gap-3">
-              <Button onClick={() => void runExtraction()}>Re-run</Button>
+              <Button onClick={runExtraction}>Re-run</Button>
               <Dialog.Close
                 render={
                   <Button variant="ghost">Cancel</Button>

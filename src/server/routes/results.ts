@@ -120,15 +120,14 @@ export async function resultRoutes(app: FastifyInstance, opts: ResultsRouteOpts)
       return reply.code(409).send({ error: 'Extraction already running.' });
     }
 
-    setImmediate(() => {
-      runUserExtraction(opts.cfg, userId, jobId)
-        .then(() => {
-          finishJob(jobId, 'done');
-        })
-        .catch((err: unknown) => {
-          request.log.error(err);
-          finishJob(jobId, 'failed', failureMessage(err));
-        });
+    setImmediate(async () => {
+      try {
+        await runUserExtraction(opts.cfg, userId, jobId);
+        finishJob(jobId, 'done');
+      } catch (err: unknown) {
+        request.log.error(err);
+        finishJob(jobId, 'failed', failureMessage(err));
+      }
     });
 
     return reply.code(202).send({ ok: true, jobId });
