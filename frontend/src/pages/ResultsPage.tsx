@@ -166,8 +166,8 @@ export function ResultsPage() {
       {result && (
         <p className="-mt-2 max-w-[64ch] font-mono text-[11px] text-text-faint">
           Review before sharing — soul.md is built from your private words. In a
-          long chat, re-paste the <span className="text-text-muted">Drift Anchor</span>{' '}
-          block every dozen-or-so turns to keep the voice from drifting back to generic.
+          long chat, re-paste the profile every dozen-or-so turns to keep the
+          model&rsquo;s voice from drifting back to generic.
         </p>
       )}
 
@@ -225,17 +225,31 @@ export function ResultsPage() {
           </div>
         </div>
       ) : (
-        !running && (
-          <Card className="text-[14px] text-text-faint">No profile generated yet.</Card>
+        !running &&
+        // Only show the teaching empty state once there's material to extract;
+        // otherwise the "Nothing to extract yet" Notice above already guides.
+        state?.canExtract && (
+          <Card className="flex flex-col items-start gap-3">
+            <p className="text-[14px] text-text-secondary">
+              No profile generated yet — your studies and conversations are ready to synthesize.
+            </p>
+            {state.ollamaReady ? (
+              <Button onClick={onRunClick}>Generate profile</Button>
+            ) : (
+              <p className="font-mono text-[12px] text-text-faint">
+                Start your local Ollama server, then generate.
+              </p>
+            )}
+          </Card>
         )
       )}
 
       <Dialog.Root open={confirmOpen} onOpenChange={setConfirmOpen}>
         <Dialog.Portal>
-          <Dialog.Backdrop className="fixed inset-0 z-40 bg-overlay" />
+          <Dialog.Backdrop className="fixed inset-0 z-modal-backdrop bg-overlay" />
           <Dialog.Popup
             className={cardClass(
-              'fixed left-1/2 top-1/2 z-[41] w-[calc(100%-32px)] max-w-[420px] -translate-x-1/2 -translate-y-1/2 p-6',
+              'fixed left-1/2 top-1/2 z-modal w-[calc(100%-32px)] max-w-[420px] -translate-x-1/2 -translate-y-1/2 p-6',
             )}
           >
             <Dialog.Title className="font-sans text-[20px] font-semibold tracking-[-0.01em] text-text-primary">

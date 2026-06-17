@@ -16,15 +16,19 @@ export function cx(...parts: Array<string | false | null | undefined>): string {
 }
 
 /* --- Eyebrow: monospace section marker ----------------------------- */
+// `as` lets a section eyebrow render as a heading (e.g. h2) so the document
+// outline stays gapless under a Headline (h1) without changing the look.
 export function Eyebrow({
   children,
   className,
+  as: Tag = 'p',
 }: {
   children: ReactNode;
   className?: string;
+  as?: 'p' | 'h2' | 'h3';
 }) {
   return (
-    <p
+    <Tag
       className={cx(
         'flex items-center gap-2 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-primary',
         className,
@@ -32,7 +36,7 @@ export function Eyebrow({
     >
       <span aria-hidden className="inline-block h-px w-5 bg-primary" />
       {children}
-    </p>
+    </Tag>
   );
 }
 

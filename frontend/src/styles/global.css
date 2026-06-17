@@ -26,7 +26,10 @@
   /* --- color: text tiers ----------------------------------------- */
   --color-text-primary: #1a1714;
   --color-text-secondary: #5a554e;
-  --color-text-faint: #8f8a82;
+  /* faint tier — darkened from #8f8a82 (≈3.3:1) to clear WCAG AA 4.5:1 against
+     the surfaces it lands on (white, #f9f9f9 canvas, #eeeeee containers).
+     Used for placeholders, hints, footer, neutral tags, status text. */
+  --color-text-faint: #6b665e;
   --color-on-surface: #1a1c1c;
   --color-on-surface-variant: #564241;
 
@@ -70,6 +73,12 @@
   /* --- layout ---------------------------------------------------- */
   --spacing-gutter: 16px;
   --spacing-section: 32px;
+
+  /* --- z-index: a small semantic stack --------------------------- */
+  --z-sticky: 10; /* sticky header */
+  --z-modal-backdrop: 40; /* dialog scrim */
+  --z-modal: 41; /* dialog popup */
+  --z-toast: 50; /* toasts, above modals */
 }
 
 /* The 960px clinical column — a named utility used by the shell. */

@@ -63,7 +63,7 @@ export function IntroPage() {
 
       <section className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <Eyebrow>How it works</Eyebrow>
+          <Eyebrow as="h2">How it works</Eyebrow>
           <div className="min-w-[180px]">
             <Meter completed={done} total={total} />
           </div>

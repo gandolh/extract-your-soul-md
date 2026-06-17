@@ -155,13 +155,16 @@ export function StudyPage() {
   if (!detail) return <p className="font-mono text-[12px] text-text-faint">Loading…</p>;
 
   return (
-    <div className="flex flex-col gap-section">
+    // A tighter reading column than the 960px shell: the studies are a form
+    // (one-line prompts + a ~440px scale), so a 680px measure keeps cards and
+    // their content in step instead of stranding answers in dead width.
+    <div className="mx-auto flex w-full max-w-[680px] flex-col gap-section">
       <header className="flex flex-col gap-3">
         <Eyebrow>
           Study {idx >= 0 ? `${String(idx + 1).padStart(2, '0')} / ${STUDY_ORDER.length}` : ''}
         </Eyebrow>
         <Headline>{detail.study.title}</Headline>
-        <p className="max-w-[64ch] text-[14px] leading-[22px] text-text-secondary">{detail.study.description}</p>
+        <p className="text-[14px] leading-[22px] text-text-secondary">{detail.study.description}</p>
         <div className="flex items-center gap-3">
           <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-faint">
             {completed} / {detail.questions.length} answered
@@ -343,8 +346,10 @@ function QuestionCard({
               <label
                 key={c.value}
                 className={cx(
-                  'flex cursor-pointer items-start gap-3 rounded-md border p-3 text-[14px] transition-colors',
-                  checked ? 'border-primary-strong bg-tertiary/30' : 'border-hairline hover:border-text-faint',
+                  'flex min-h-11 cursor-pointer items-center gap-3 rounded-md border p-3 text-[14px] transition-colors',
+                  checked
+                    ? 'border-primary-strong bg-primary-wash font-medium'
+                    : 'border-hairline hover:border-text-faint',
                 )}
               >
                 <input
@@ -353,7 +358,7 @@ function QuestionCard({
                   value={c.value}
                   checked={checked}
                   onChange={() => setSelected(c.value)}
-                  className="mt-0.5 accent-[var(--color-primary-strong,currentColor)]"
+                  className="h-4 w-4 accent-[var(--color-primary-strong,currentColor)]"
                 />
                 <span className="leading-[20px] text-text-primary">{label}</span>
               </label>
@@ -362,17 +367,42 @@ function QuestionCard({
         </div>
       )}
 
-      <textarea
-        className={cx(FIELD_CLASS, 'mt-3 min-h-[64px] resize-y leading-[1.5]')}
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-        placeholder="Optional — add a word or two if it doesn't quite fit."
-      />
+      <ChoiceNote note={note} onChange={setNote} />
     </div>
   );
 }
 
-// A 5-point bipolar Likert track with the two pole labels at the ends.
+// The optional free-text note on a choice question. Collapsed to a quiet
+// "+ add a note" affordance by default (an empty textarea on all 10 Big-Five
+// questions doubled the page height); expands on click, or when a note already
+// exists. The prose voice-sample is preserved without the always-on clutter.
+function ChoiceNote({ note, onChange }: { note: string; onChange: (n: string) => void }) {
+  const [open, setOpen] = useState(note.trim().length > 0);
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="mt-3 inline-flex min-h-9 items-center font-mono text-[11px] uppercase tracking-[0.06em] text-text-faint transition-colors hover:text-primary"
+      >
+        + Add a note
+      </button>
+    );
+  }
+  return (
+    <textarea
+      autoFocus={note.length === 0}
+      className={cx(FIELD_CLASS, 'mt-3 min-h-[44px] resize-y bg-surface-low leading-[1.5]')}
+      value={note}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder="Optional — add a word or two if it doesn't quite fit."
+    />
+  );
+}
+
+// A 5-point bipolar Likert scale laid out as stacked radio rows (Google
+// Forms style). The two pole labels sit beside the end rows; the middle rows
+// carry their number so every option is selectable and labeled.
 function ScaleField({
   name,
   left,
@@ -387,39 +417,42 @@ function ScaleField({
   onSelect: (v: string) => void;
 }) {
   return (
-    <div className="mt-4">
-      <div className="flex items-center justify-between gap-3" role="radiogroup" aria-label={`${left ?? ''} to ${right ?? ''}`}>
-        {[1, 2, 3, 4, 5].map((n) => {
-          const v = String(n);
-          const checked = value === v;
-          // Middle dot smaller, ends larger — a familiar Likert affordance.
-          const size = n === 3 ? 'h-5 w-5' : n === 1 || n === 5 ? 'h-7 w-7' : 'h-6 w-6';
-          return (
-            <label key={n} className="flex flex-1 cursor-pointer items-center justify-center">
-              <input
-                type="radio"
-                name={name}
-                value={v}
-                checked={checked}
-                onChange={() => onSelect(v)}
-                className="sr-only"
-                aria-label={`${n}`}
-              />
-              <span
-                className={cx(
-                  'grid place-items-center rounded-full border-2 transition-colors',
-                  size,
-                  checked ? 'border-primary-strong bg-primary-strong' : 'border-hairline hover:border-text-faint',
-                )}
-              />
-            </label>
-          );
-        })}
-      </div>
-      <div className="mt-1.5 flex items-center justify-between font-mono text-[11px] text-text-faint">
-        <span>{left}</span>
-        <span>{right}</span>
-      </div>
+    <div
+      className="mt-3 flex max-w-[440px] flex-col gap-1.5"
+      role="radiogroup"
+      aria-label={`${left ?? ''} to ${right ?? ''}`}
+    >
+      {[1, 2, 3, 4, 5].map((n) => {
+        const v = String(n);
+        const checked = value === v;
+        // End rows show the pole word; middle rows just the number.
+        const pole = n === 1 ? left : n === 5 ? right : null;
+        return (
+          <label
+            key={n}
+            className={cx(
+              'flex min-h-11 cursor-pointer items-center gap-3 rounded-md border px-3 py-2 text-[14px] transition-colors',
+              checked
+                ? 'border-primary-strong bg-primary-wash font-medium'
+                : 'border-hairline hover:border-text-faint',
+            )}
+          >
+            <input
+              type="radio"
+              name={name}
+              value={v}
+              checked={checked}
+              onChange={() => onSelect(v)}
+              className="h-4 w-4 accent-[var(--color-primary-strong,currentColor)]"
+              aria-label={pole ? `${n} — ${pole}` : `${n}`}
+            />
+            <span className="text-text-primary">
+              {n}
+              {pole && <span className="ml-2 text-text-secondary">{pole}</span>}
+            </span>
+          </label>
+        );
+      })}
     </div>
   );
 }

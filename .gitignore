@@ -150,3 +150,11 @@ out/
 # Web platform: SQLite database (source of truth) and per-user pipeline scratch
 data/
 .work/
+
+# Playwright MCP scratch (browser snapshots/console logs from UI review)
+.playwright-mcp/
+
+# Screenshots captured during UI review / critique (kept local, not committed)
+*-desktop.png
+*-mobile.png
+.impeccable/

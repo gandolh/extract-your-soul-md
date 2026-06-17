@@ -126,7 +126,7 @@ export function ImportPage() {
       </header>
 
       <section className="flex flex-col gap-4">
-        <Eyebrow>Step 1 — Your names</Eyebrow>
+        <Eyebrow as="h2">Step 1 — Your names</Eyebrow>
         <p className="max-w-[64ch] text-[14px] text-text-secondary">
           One display name per line — every name you show up as across these chats.
         </p>
@@ -134,7 +134,7 @@ export function ImportPage() {
           className={cx(FIELD_CLASS, 'max-w-[40ch] min-h-[90px] resize-y font-mono text-[13px]')}
           value={namesText}
           onChange={(e) => setNamesText(e.target.value)}
-          placeholder={'Cristian\nCristian G\n+40…'}
+          placeholder={'Your name\nYour nickname\n+1 555…'}
         />
         <div className="flex flex-wrap items-center gap-3">
           <Button variant="secondary" onClick={() => void saveNames()}>
@@ -196,7 +196,7 @@ export function ImportPage() {
       <hr className="border-0 border-t border-hairline" />
 
       <section className="flex flex-col gap-4">
-        <Eyebrow>Step 2 — Drop exports</Eyebrow>
+        <Eyebrow as="h2">Step 2 — Drop exports</Eyebrow>
         <div
           role="button"
           tabIndex={0}
