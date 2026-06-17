@@ -18,8 +18,10 @@ const UploadBody = z.object({
   content: z.string().min(1),
 });
 
+// Bound both the count and each name's length — setNames trims/dedupes, but an
+// unbounded array of multi-KB strings would still hit the DB before that runs.
 const NamesBody = z.object({
-  names: z.array(z.string()),
+  names: z.array(z.string().max(200)).max(200),
 });
 
 export async function conversationRoutes(app: FastifyInstance): Promise<void> {

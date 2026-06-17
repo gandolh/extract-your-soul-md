@@ -95,7 +95,18 @@ export async function runOllamaPipeline(
     );
     onProgress?.('map', i, total);
     const t0 = Date.now();
-    const out = await extractChunk(cfg, path.join(chunksDir, entry.file), cacheDir, entry.kind);
+    let out: string;
+    try {
+      out = await extractChunk(cfg, path.join(chunksDir, entry.file), cacheDir, entry.kind);
+    } catch (err) {
+      // Name the failing chunk so the job's error log isn't a context-free
+      // "fetch failed" — which of N chunks died matters when debugging.
+      process.stdout.write(color.dim('failed\n'));
+      throw new Error(
+        `Map phase failed on chunk ${i + 1}/${total} (${entry.file}, ${entry.kind})`,
+        { cause: err },
+      );
+    }
     process.stdout.write(color.dim(`${((Date.now() - t0) / 1000).toFixed(1)}s\n`));
     const sourceLabel =
       entry.kind === 'questionnaire'

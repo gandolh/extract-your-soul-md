@@ -107,9 +107,10 @@ database rows, which is deleted afterward. The result is written back to your
 account and shown on the Results page (the previous version is kept as a
 backup).
 
-Extraction is **synchronous** — a full Ollama run can take minutes,
-especially with a long chat history — and a local Ollama server must be
-running for it to work.
+Extraction runs as a **background job** — a full Ollama run can take minutes,
+especially with a long chat history, so `POST /api/extract` returns immediately
+with a job id and the Results page polls for progress (map/reduce stage + chunk
+count) until it finishes. A local Ollama server must be running for it to work.
 
 ### Why a questionnaire at all?
 
@@ -209,9 +210,10 @@ corpus/                    # LLM-maintained wiki + work tracker — see corpus/i
 
 - **Ollama-only.** A local Ollama server has to be running. Slower and weaker
   than a hosted model, but fully offline and free.
-- **Synchronous extraction.** `/api/extract` runs the whole pipeline inline,
-  so a request can hang for minutes on a large corpus. A job queue + polling
-  is the obvious next step.
+- **Single-process job runner.** `/api/extract` runs as a background job
+  (DB-backed, one live job per user, reclaimed on restart) via `setImmediate` —
+  not an external queue. That matches the local-Ollama single-box reality; it
+  would need a real queue to scale past one machine.
 - **`node:sqlite` is experimental.** It needs Node ≥ 24, and the server
   suppresses the experimental warning. Swapping to `better-sqlite3` later is
   mechanical (same API surface).

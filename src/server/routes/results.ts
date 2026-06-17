@@ -137,7 +137,9 @@ export async function resultRoutes(app: FastifyInstance, opts: ResultsRouteOpts)
   // Job detail for polling — terminal jobs carry the error reason.
   app.get('/api/extract/:jobId', async (request, reply) => {
     const { jobId } = request.params as { jobId: string };
-    const job = getJob(Number(jobId));
+    const id = Number(jobId);
+    if (!Number.isInteger(id)) return reply.code(400).send({ error: 'Bad job id.' });
+    const job = getJob(id);
     if (!job || job.user_id !== request.userId!) {
       return reply.code(404).send({ error: 'Job not found.' });
     }

@@ -6,9 +6,6 @@ Only the **genuinely unresolved**. The moment a question is answered or shipped,
 
 ## Engineering / product
 
-- **Does `/api/extract` need a job queue?** It's synchronous today; an Ollama run
-  can take minutes (Fastify `requestTimeout` is raised to cope). A queue +
-  polling is the obvious next step — not yet decided whether to build it.
 - **When to migrate `node:sqlite` → `better-sqlite3`?** Experimental warning is
   suppressed; migration is mechanical but unscheduled.
 

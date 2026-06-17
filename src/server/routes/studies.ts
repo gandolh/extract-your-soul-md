@@ -9,10 +9,13 @@ import {
 import type { RecordedAnswer } from '../../answers-file.js';
 import { requireAuth } from '../auth.js';
 
+// Bound the request so a single authenticated user can't bloat the DB with a
+// multi-MB answer body or a flood of answer rows. 50k chars is far past any
+// genuine study answer; a study has well under 100 questions.
 const SaveBody = z.object({
-  answers: z.array(
-    z.object({ id: z.string(), body: z.string() }),
-  ),
+  answers: z
+    .array(z.object({ id: z.string().max(64), body: z.string().max(50_000) }))
+    .max(100),
 });
 
 export async function studyRoutes(app: FastifyInstance): Promise<void> {

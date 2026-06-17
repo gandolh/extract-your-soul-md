@@ -9,13 +9,35 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const res = await fetch(`/api${path}`, {
-    method,
-    credentials: 'include',
-    headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+// Default per-request timeout so a hung server can't wedge the tab forever. The
+// eval run is synchronous and can take minutes, so it opts out (timeoutMs: 0).
+const DEFAULT_TIMEOUT_MS = 30_000;
+
+async function request<T>(
+  method: string,
+  path: string,
+  body?: unknown,
+  timeoutMs: number = DEFAULT_TIMEOUT_MS,
+): Promise<T> {
+  const controller = new AbortController();
+  const timer = timeoutMs > 0 ? setTimeout(() => controller.abort(), timeoutMs) : null;
+  let res: Response;
+  try {
+    res = await fetch(`/api${path}`, {
+      method,
+      credentials: 'include',
+      headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (controller.signal.aborted) {
+      throw new ApiError(0, 'The request timed out. Check your connection and try again.');
+    }
+    throw new ApiError(0, 'Could not reach the server. Check your connection and try again.');
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
   if (res.status === 204) return undefined as T;
   const text = await res.text();
   const data = text ? JSON.parse(text) : {};
@@ -116,5 +138,6 @@ export const api = {
   // eval
   evalStatus: () => request<{ running: boolean }>('GET', '/eval'),
   runEval: (params?: { n?: number; k?: number }) =>
-    request<{ ok: boolean; result: EvalResult }>('POST', '/eval', params ?? {}),
+    // Synchronous, multi-minute Ollama run — opt out of the request timeout.
+    request<{ ok: boolean; result: EvalResult }>('POST', '/eval', params ?? {}, 0),
 };

@@ -627,3 +627,32 @@ DEFERRED items, each gated on a trigger that hasn't fired: hierarchical-tree-red
 prevents silent loss) and the multi-platform adapter registry (a real
 second-format request — decisions.md locks WhatsApp-only). No work is ready to
 promote.
+
+## [2026-06-17] review | code hardening + doc-staleness sweep
+
+Full project review (backend routes/auth/pipeline/stages, frontend, corpus). Code
+was found well-engineered (scoped auth, no IDOR, sanitized errors, race-free job
+lock); a few of the surfaced "high" findings were false positives that didn't
+survive verification (chunk budget double-count — correct; work-dir leak on error
+— the finally handles it). Four real, narrow improvements shipped:
+
+1. Input bounds (DoS/storage): SaveBody answer body capped at 50k chars + array
+   .max(100) (routes/studies.ts); NamesBody each name .max(200) + array .max(200)
+   (routes/conversations.ts). Both were unbounded z.string()/z.array(z.string()).
+2. routes/results.ts GET /api/extract/:jobId now guards Number.isInteger(jobId)
+   → 400, mirroring the conversations delete guard (was NaN → silent 404).
+3. frontend/api/client.ts: 30s AbortController timeout on all requests with a
+   per-call override; runEval opts out (timeoutMs:0, multi-minute sync run).
+4. stages/extract.ts map loop wraps extractChunk in try/catch and re-throws with
+   chunk index + file + kind via { cause } — the job error log now names which of
+   N chunks died instead of a context-free "fetch failed".
+
+Verified: build:server + typecheck:web clean, 13 tests pass.
+
+Doc-staleness fixes (corpus audit flagged drift, no code-logic gaps): rewrote
+wiki/status.md (was pre-brief-04: claimed CLI / `/extract-soul` skill /
+interview.ts / `npm run start` still existed) to API+frontend-only, re-stamped
+2026-06-17. README "synchronous extraction" claim (×2: prose + Honest limitations)
+updated to the async background-job model (brief 14). Removed the now-shipped
+"does /api/extract need a job queue?" item from open-questions.md per its own
+delete-on-ship rule. Nothing committed.
