@@ -123,7 +123,7 @@ export async function runOllamaPipeline(
   // batch so the reduce step sees it alongside the observed-voice bullets.
   const profile = profileText?.trim();
   if (profile) {
-    bullets.push(`### Self-Reported Personality Profile (self-report — weakest evidence)\n${profile}`);
+    bullets.push(`### Self-Reported Personality Profile (validated trait questionnaires — a collaborator with the observed voice)\n${profile}`);
   }
 
   onProgress?.('map', total, total);

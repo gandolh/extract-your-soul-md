@@ -19,15 +19,29 @@ import { decodeChoiceBody, type RecordedAnswer } from './answers-file.js';
 const QUESTION_BY_ID = new Map(QUESTIONS.map((q) => [q.id, q]));
 
 export type ReportKeyAll = ReportKey;
-export const REPORT_KEYS: ReportKeyAll[] = ['big-five', 'honesty-tone', 'pcm', 'mbti'];
+export const REPORT_KEYS: ReportKeyAll[] = [
+  'big-five',
+  'honesty-tone',
+  'pcm',
+  'mbti',
+  'need-for-cognition',
+  'values',
+  'regulatory-focus',
+  'locus-of-control',
+];
 
-// Whether a report is included in soul.md by default. MBTI is off (its
-// psychometric validity is weak — see brief 37); the rest are on.
+// Whether a report is included in soul.md by default. Under the co-equal
+// premise (self-report collaborates with observed voice rather than being the
+// weakest evidence), every scored report is on by default — including MBTI.
 export const DEFAULT_INCLUDE: Record<ReportKeyAll, boolean> = {
   'big-five': true,
   'honesty-tone': true,
   pcm: true,
-  mbti: false,
+  mbti: true,
+  'need-for-cognition': true,
+  values: true,
+  'regulatory-focus': true,
+  'locus-of-control': true,
 };
 
 export interface AxisResult {
@@ -231,6 +245,113 @@ function scoreMbti(answers: Map<string, RecordedAnswer>): ReportPayload {
   };
 }
 
+// --- Need for Cognition (NCS-6) — one trait, mean of 6 items → 0..100. -----
+function scoreNeedForCognition(answers: Map<string, RecordedAnswer>): ReportPayload {
+  const items = QUESTIONS.filter((q) => q.reportKey === 'need-for-cognition');
+  const r = traitPercent(answers, items);
+  return {
+    key: 'need-for-cognition',
+    title: 'Need for Cognition',
+    axes: r
+      ? [{ key: 'nfc', label: 'Appetite for hard thinking', percent: r.percent, readout: `${level(r.percent)} (${r.percent}%)`, answered: r.answered }]
+      : [],
+    summary: '',
+    hasData: r !== null,
+    caveat: SELF_REPORT_CAVEAT,
+  };
+}
+
+// --- Schwartz Values (TIVI) — 10 single-item value portraits. Each is a
+// "like me" rating; we report each value's percent and rank them, since the
+// PROFILE is the relative priority ordering, not absolute levels. ------------
+const VALUE_LABELS: Array<{ key: NonNullable<Question['valueKey']>; label: string }> = [
+  { key: 'self-direction', label: 'Self-direction (autonomy, ideas)' },
+  { key: 'stimulation', label: 'Stimulation (novelty, adventure)' },
+  { key: 'hedonism', label: 'Hedonism (pleasure, enjoying life)' },
+  { key: 'achievement', label: 'Achievement (success, getting ahead)' },
+  { key: 'power', label: 'Power (influence, being in charge)' },
+  { key: 'security', label: 'Security (order, safety)' },
+  { key: 'conformity', label: 'Conformity (propriety, restraint)' },
+  { key: 'tradition', label: 'Tradition (custom, the time-honored)' },
+  { key: 'benevolence', label: 'Benevolence (caring for close others)' },
+  { key: 'universalism', label: 'Universalism (fairness for all)' },
+];
+
+function scoreValues(answers: Map<string, RecordedAnswer>): ReportPayload {
+  const scored: AxisResult[] = [];
+  for (const v of VALUE_LABELS) {
+    const items = QUESTIONS.filter((q) => q.reportKey === 'values' && q.valueKey === v.key);
+    const r = traitPercent(answers, items);
+    if (!r) continue;
+    scored.push({ key: v.key, label: v.label, percent: r.percent, readout: `${level(r.percent)} (${r.percent}%)`, answered: r.answered });
+  }
+  // Show highest-priority values first — the rank order is the signal.
+  scored.sort((a, b) => b.percent - a.percent);
+  // Summary: the top 2-3 endorsed values, for a quick headline.
+  const top = scored.filter((a) => a.percent >= 50).slice(0, 3).map((a) => a.label.split(' (')[0]);
+  return {
+    key: 'values',
+    title: 'Core Values',
+    axes: scored,
+    summary: top.join(', '),
+    hasData: scored.length > 0,
+    caveat: SELF_REPORT_CAVEAT,
+  };
+}
+
+// --- Regulatory Focus (RFQ) — two independent means (promotion, prevention),
+// each 0..100. Not a single bipolar axis: a person can be high or low on both.
+function scoreRegulatoryFocus(answers: Map<string, RecordedAnswer>): ReportPayload {
+  const axes: AxisResult[] = [];
+  for (const f of [
+    { key: 'promotion', label: 'Promotion (chasing gains & ideals)' },
+    { key: 'prevention', label: 'Prevention (avoiding loss, duty & safety)' },
+  ] as const) {
+    const items = QUESTIONS.filter((q) => q.reportKey === 'regulatory-focus' && q.focusKey === f.key);
+    const r = traitPercent(answers, items);
+    if (!r) continue;
+    axes.push({ key: f.key, label: f.label, percent: r.percent, readout: `${level(r.percent)} (${r.percent}%)`, answered: r.answered });
+  }
+  const prom = axes.find((a) => a.key === 'promotion');
+  const prev = axes.find((a) => a.key === 'prevention');
+  const summary =
+    prom && prev ? (prom.percent >= prev.percent ? 'Promotion-leaning' : 'Prevention-leaning') : '';
+  return {
+    key: 'regulatory-focus',
+    title: 'Regulatory Focus',
+    axes,
+    summary,
+    hasData: axes.length > 0,
+    caveat: SELF_REPORT_CAVEAT,
+  };
+}
+
+// --- Locus of Control (IE-4) — two independent 2-item means. --------------
+function scoreLocusOfControl(answers: Map<string, RecordedAnswer>): ReportPayload {
+  const axes: AxisResult[] = [];
+  for (const l of [
+    { key: 'internal', label: 'Internal (own effort drives outcomes)' },
+    { key: 'external', label: 'External (others & fate drive outcomes)' },
+  ] as const) {
+    const items = QUESTIONS.filter((q) => q.reportKey === 'locus-of-control' && q.locusKey === l.key);
+    const r = traitPercent(answers, items);
+    if (!r) continue;
+    axes.push({ key: l.key, label: l.label, percent: r.percent, readout: `${level(r.percent)} (${r.percent}%)`, answered: r.answered });
+  }
+  const intl = axes.find((a) => a.key === 'internal');
+  const extl = axes.find((a) => a.key === 'external');
+  const summary =
+    intl && extl ? (intl.percent >= extl.percent ? 'Internally driven' : 'Externally driven') : '';
+  return {
+    key: 'locus-of-control',
+    title: 'Locus of Control',
+    axes,
+    summary,
+    hasData: axes.length > 0,
+    caveat: SELF_REPORT_CAVEAT,
+  };
+}
+
 /** Score a single report from a user's answers map. */
 export function scoreReport(
   key: ReportKeyAll,
@@ -245,6 +366,14 @@ export function scoreReport(
       return scorePcm(answers);
     case 'mbti':
       return scoreMbti(answers);
+    case 'need-for-cognition':
+      return scoreNeedForCognition(answers);
+    case 'values':
+      return scoreValues(answers);
+    case 'regulatory-focus':
+      return scoreRegulatoryFocus(answers);
+    case 'locus-of-control':
+      return scoreLocusOfControl(answers);
   }
 }
 

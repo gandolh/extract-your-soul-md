@@ -106,30 +106,42 @@ const REDUCE_QA_CONFLICT_RULE = `
 const REDUCE_PROVENANCE_RULE = `
 - Some questionnaire bullets are prefixed \`in-prose:\` (a feature OBSERVED in how they actually wrote) or \`self-described:\` (something they CLAIM about themselves). Trust \`in-prose:\` over \`self-described:\` for any observable style judgment; treat \`self-described:\` as weaker self-report — fold it into values/aspiration, not into how-they-write, unless an \`in-prose:\` bullet corroborates it. Do NOT carry the \`in-prose:\` / \`self-described:\` prefixes into the final document.`;
 
-// A self-reported trait profile (Big Five / tone / PCM / MBTI) the user opted
-// into. It is the WEAKEST evidence in the corpus — self-report ↔ observed-voice
-// correlation is low (the research behind this project; |ρ|≈.08–.14). So the
-// reduce step is told to treat it as background colour for values/worldview and
-// to let observed voice win every style call. Gated on hasProfile.
+// A self-reported trait profile (Big Five / tone / values / regulatory focus /
+// locus of control / PCM / MBTI) the user opted into. The two sources COLLABORATE:
+// the trait profile says WHO the person is and WHAT they value; the observed
+// voice (chat logs + the prose of their answers) shows HOW they sound. Neither
+// is "the weak one" — they corroborate, and only genuine contradictions are
+// flagged rather than auto-resolved in voice's favor. Gated on hasProfile.
 const REDUCE_PROFILE_RULE = `
-- A "Self-Reported Personality Profile" block may appear among the batches. It is the user's own picked answers to short trait questionnaires (Big Five, tone, reaction frame, type indicator) — SELF-REPORT, the weakest evidence here. Use it only as soft background for Values & Worldview, Tone, and the "Personality Notes" section; let OBSERVED voice (chat logs, and the prose of any questionnaire answers) win every concrete style judgment. Never state a trait percentage or a 4-letter type as fact in the document; translate it into how-they-write language, hedged. If it conflicts with observed voice, the observed voice wins outright.`;
+- A "Self-Reported Personality Profile" block may appear among the batches: the user's own answers to short, validated trait questionnaires (Big Five, tone/stance, core values, regulatory focus, locus of control, reaction frame, type indicator). Treat it as a FULL collaborator with the observed voice, not a weak afterthought — the profile tells you who this person is and what they care about; the observed voice tells you how they sound. Let the profile drive Values & Worldview and the "Personality Notes" section directly, and let it inform Tone. For concrete surface mechanics (vocabulary, punctuation, sentence rhythm), the observed voice is the primary source — but use the profile to EXPLAIN and corroborate those mechanics, not to override them. When the profile and the observed voice genuinely conflict (e.g. self-reports as reserved but writes with exclamation-heavy warmth), NOTE the tension in one clause and describe both rather than silently dropping the self-report. Translate trait readings into plain how-they-come-across language; do not print raw percentages or a 4-letter type code as fact in the document.`;
 
-// When a profile is present, soul.md gets a short "Personality Notes" section
-// that turns the trait readout into DIRECTIONAL guidance for the imitator —
-// what each strong trait means for word choice, stance, and pacing — rather
-// than leaving the numbers as inert background. Still hedged, still subordinate
-// to observed voice. Gated on hasProfile.
+// When a profile is present, soul.md gets a "Personality Notes" section that
+// turns the trait readout into DIRECTIONAL guidance for the imitator — what each
+// strong reading means for stance, word choice, framing, and pacing. Under the
+// co-equal premise these are real directions, corroborated by (not subordinate
+// to) the observed voice. Gated on hasProfile.
 const REDUCE_PROFILE_SECTION = `
 ## Personality Notes
-(2-5 sentences, ONLY if a "Self-Reported Personality Profile" block is present.
-Translate the strongest, most lopsided trait readings into plain directions a
-writer could follow — e.g. "leans introverted, so keep openers low-key and don't
-manufacture enthusiasm"; "high openness — comfortable with tangents and abstract
-framing." Cover only the traits that are clearly high or low; skip anything near
-the midpoint. Frame as how-they-come-across guidance, not a clinical readout, and
-NEVER cite percentages or a type code. If observed voice already contradicts a
-self-reported trait, say so in one clause and defer to the observed voice. Omit
-the whole section if no trait is decisively high or low.)`;
+(3-6 sentences, ONLY if a "Self-Reported Personality Profile" block is present.
+Turn the clearest trait readings into concrete directions a writer could follow,
+drawing on every instrument that has data — for example:
+- Big Five / Need for Cognition: "high openness and need-for-cognition — at home
+  with tangents, abstraction, and qualified, elaborated sentences" or, if low,
+  "keeps it concrete and concise; few hedges."
+- Core Values: name the 2-3 top values and what they make the person write ABOUT
+  and argue for (e.g. "values self-direction and universalism — frames things
+  around autonomy and fairness").
+- Regulatory Focus: "promotion-leaning — frames around gains, growth, and
+  opportunity" vs "prevention-leaning — frames around risks, duties, and what to
+  avoid."
+- Locus of Control: "internally driven — narrates as the author of events, active
+  voice" vs "external — narrates circumstances, more passive/conditional."
+- Tone/stance and type indicator: fold in only where they're decisive.
+Cover only readings that are clearly high or low or a clear top value; skip
+anything near the midpoint. Frame as how-they-come-across guidance, never a
+clinical readout, and NEVER cite percentages or a type code. Where the observed
+voice corroborates a trait, you may say so; where it genuinely contradicts one,
+note the tension in a clause. Omit the section only if no reading is decisive.)`;
 
 /**
  * Build the reduce prompt. The three questionnaire-derived sections (and the

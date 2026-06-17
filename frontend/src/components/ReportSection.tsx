@@ -3,10 +3,12 @@ import { useSetReportInclude } from '../api/queries';
 import { useToast } from './Toaster';
 import { cardClass, cx } from './ui';
 
-// Renders a scored trait report (Big Five / Stance & Tone / First Reaction /
-// Type Indicator) as labeled percentage bars, plus the per-report
-// "include in soul.md" toggle. Percentages are shown verbatim so a 52% lean
-// never reads like a confident result.
+// Renders any scored trait report (Big Five, Stance & Tone, First Reaction,
+// Type Indicator, Need for Cognition, Core Values, Regulatory Focus, Locus of
+// Control) as labeled percentage bars, plus the per-report "include in soul.md"
+// toggle. The component is shape-agnostic — it maps over `payload.axes`, so a
+// new report type needs no change here. Percentages are shown verbatim so a 52%
+// lean never reads like a confident result.
 
 function Bar({ percent }: { percent: number }) {
   return (

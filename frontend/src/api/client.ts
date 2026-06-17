@@ -56,7 +56,15 @@ async function request<T>(
 
 export interface User { id: number; username: string; }
 export type StudyBand = 'voice' | 'profile';
-export type ReportKey = 'big-five' | 'honesty-tone' | 'pcm' | 'mbti';
+export type ReportKey =
+  | 'big-five'
+  | 'honesty-tone'
+  | 'pcm'
+  | 'mbti'
+  | 'need-for-cognition'
+  | 'values'
+  | 'regulatory-focus'
+  | 'locus-of-control';
 export interface StudySummary {
   id: string; title: string; description: string;
   band: StudyBand; reportKey: ReportKey | null;

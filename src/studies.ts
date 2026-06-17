@@ -87,13 +87,51 @@ export const STUDIES: ReadonlyArray<Study> = [
     id: 'mbti',
     title: 'Type Indicator',
     description:
-      'Sixteen word-pairs (open-source, MBTI-style) that estimate a four-letter type. Off by default — toggle it on in the report if you want it in your soul.md.',
+      'Sixteen word-pairs (open-source, MBTI-style) that estimate a four-letter type. A loose hint — types can flip on retake, so it sits alongside the other signals rather than overruling them.',
     questionIds: [
       'Q30', 'Q31', 'Q32', 'Q33', 'Q34', 'Q35', 'Q36', 'Q37',
       'Q38', 'Q39', 'Q40', 'Q41', 'Q42', 'Q43', 'Q44', 'Q45',
     ],
     band: 'profile',
     reportKey: 'mbti',
+  },
+  {
+    id: 'need-for-cognition',
+    title: 'How You Think',
+    description:
+      'Six quick ratings (NCS-6) on how much you enjoy effortful, analytical thinking — it shapes whether your writing elaborates and abstracts or stays concise and concrete.',
+    questionIds: ['Q62', 'Q63', 'Q64', 'Q65', 'Q66', 'Q67'],
+    band: 'profile',
+    reportKey: 'need-for-cognition',
+  },
+  {
+    id: 'values',
+    title: 'What You Value',
+    description:
+      'Ten short portraits (Schwartz values) — how much each is like you. Surfaces what you care about and the moral vocabulary you reach for.',
+    questionIds: [
+      'Q68', 'Q69', 'Q70', 'Q71', 'Q72', 'Q73', 'Q74', 'Q75', 'Q76', 'Q77',
+    ],
+    band: 'profile',
+    reportKey: 'values',
+  },
+  {
+    id: 'regulatory-focus',
+    title: 'How You Frame Things',
+    description:
+      'Eight ratings on whether you chase gains and ideals or guard against loss and meet your duties — it colors how you frame what you write.',
+    questionIds: ['Q78', 'Q79', 'Q80', 'Q81', 'Q82', 'Q83', 'Q84', 'Q85'],
+    band: 'profile',
+    reportKey: 'regulatory-focus',
+  },
+  {
+    id: 'locus-of-control',
+    title: 'Who Steers',
+    description:
+      'Four quick ratings on whether outcomes feel driven by your own effort or by others and fate — it shows up as active, agentive narration versus circumstance-driven.',
+    questionIds: ['Q86', 'Q87', 'Q88', 'Q89'],
+    band: 'profile',
+    reportKey: 'locus-of-control',
   },
 ];
 

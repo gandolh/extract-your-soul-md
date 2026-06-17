@@ -14,7 +14,15 @@ export interface Choice {
 
 // Which family of report a choice question feeds, so the scorer can group the
 // answers it needs without re-deriving the mapping from question ids.
-export type ReportKey = 'big-five' | 'honesty-tone' | 'pcm' | 'mbti';
+export type ReportKey =
+  | 'big-five'
+  | 'honesty-tone'
+  | 'pcm'
+  | 'mbti'
+  | 'need-for-cognition'
+  | 'values'
+  | 'regulatory-focus'
+  | 'locus-of-control';
 
 export interface Question {
   id: string;
@@ -45,6 +53,16 @@ export interface Question {
   // For honesty-tone: which bipolar tone axis this item loads on. The scorer
   // averages every item sharing a `toneAxis` (value "1"=left pole .. "5"=right).
   toneAxis?: 'modesty' | 'rapport' | 'formality' | 'seriousness' | 'irreverence' | 'enthusiasm';
+  // For values (Schwartz TIVI): which of the 10 basic values this portrait loads
+  // on. Scored as a higher-is-more-like-me agreement item (no reverse).
+  valueKey?:
+    | 'conformity' | 'tradition' | 'benevolence' | 'universalism' | 'self-direction'
+    | 'stimulation' | 'hedonism' | 'achievement' | 'power' | 'security';
+  // For regulatory-focus (RFQ): promotion (approach/gains) vs prevention
+  // (avoid/loss). Averaged per focus; `reverse` flips an item first.
+  focusKey?: 'promotion' | 'prevention';
+  // For locus-of-control (IE-4): internal (own effort) vs external (others/fate).
+  locusKey?: 'internal' | 'external';
   // Reverse-key a scale item before averaging (TIPI items 2,4,6,8,10; some
   // OEJTS pairs whose poles are flipped relative to the axis direction).
   reverse?: boolean;
@@ -683,5 +701,232 @@ export const QUESTIONS: ReadonlyArray<Question> = [
     left: 'Understated',
     right: 'Exclamation-marks-and-caps',
     reportKey: 'honesty-tone', toneAxis: 'enthusiasm',
+  },
+
+  // ==========================================================================
+  // NEED FOR COGNITION — NCS-6 (Coelho, Hanel & Wolf 2018; CC BY 4.0).
+  // How much someone enjoys effortful, analytical thinking. Predicts how they
+  // WRITE: high → elaboration, abstraction, qualification; low → concise and
+  // concrete. Scale 1 = very uncharacteristic .. 5 = very characteristic.
+  // ==========================================================================
+  {
+    id: 'Q62', slug: 'ncs-complex', title: 'Complex problems',
+    prompt: 'I would prefer complex problems to simple ones.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Very unlike me', right: 'Very like me',
+    reportKey: 'need-for-cognition',
+  },
+  {
+    id: 'Q63', slug: 'ncs-responsibility', title: 'Heavy thinking',
+    prompt: 'I like having the responsibility of handling a situation that needs a lot of thinking.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Very unlike me', right: 'Very like me',
+    reportKey: 'need-for-cognition',
+  },
+  {
+    id: 'Q64', slug: 'ncs-fun-r', title: 'Thinking for fun',
+    prompt: 'Thinking is not my idea of fun.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Very unlike me', right: 'Very like me',
+    reportKey: 'need-for-cognition', reverse: true,
+  },
+  {
+    id: 'Q65', slug: 'ncs-little-thought-r', title: 'Avoiding hard thought',
+    prompt: 'I would rather do something that needs little thought than something sure to challenge my thinking.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Very unlike me', right: 'Very like me',
+    reportKey: 'need-for-cognition', reverse: true,
+  },
+  {
+    id: 'Q66', slug: 'ncs-new-solutions', title: 'New solutions',
+    prompt: 'I really enjoy a task that involves coming up with new solutions to problems.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Very unlike me', right: 'Very like me',
+    reportKey: 'need-for-cognition',
+  },
+  {
+    id: 'Q67', slug: 'ncs-intellectual', title: 'Intellectual challenge',
+    prompt: 'I prefer a task that is intellectual and difficult to one that is easy but unimportant.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Very unlike me', right: 'Very like me',
+    reportKey: 'need-for-cognition',
+  },
+
+  // ==========================================================================
+  // SCHWARTZ VALUES — TIVI (Sandy/Gosling/Schwartz 2016; public domain).
+  // Ten "how much is this person like you?" portraits, one per basic value.
+  // The scorer ranks them — high values are what a person writes ABOUT and the
+  // moral vocabulary they reach for. Scale 1 = not like me .. 5 = very like me.
+  // (Original uses a 6-point scale; we keep the platform's 5-point track.)
+  // ==========================================================================
+  {
+    id: 'Q68', slug: 'tivi-self-direction', title: 'Curiosity & ideas',
+    prompt: 'Thinking up new ideas and being curious matter to them; they like to understand things their own way.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Not like me', right: 'Very like me',
+    reportKey: 'values', valueKey: 'self-direction',
+  },
+  {
+    id: 'Q69', slug: 'tivi-stimulation', title: 'Adventure',
+    prompt: 'They like to take risks and are always looking for adventures and new things to try.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Not like me', right: 'Very like me',
+    reportKey: 'values', valueKey: 'stimulation',
+  },
+  {
+    id: 'Q70', slug: 'tivi-hedonism', title: 'Enjoying life',
+    prompt: 'Having a good time and enjoying life’s pleasures is important to them.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Not like me', right: 'Very like me',
+    reportKey: 'values', valueKey: 'hedonism',
+  },
+  {
+    id: 'Q71', slug: 'tivi-achievement', title: 'Getting ahead',
+    prompt: 'Getting ahead and being successful matters to them; they strive to do better than others.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Not like me', right: 'Very like me',
+    reportKey: 'values', valueKey: 'achievement',
+  },
+  {
+    id: 'Q72', slug: 'tivi-power', title: 'Being in charge',
+    prompt: 'They want to be the one who decides and leads, and to have influence over others.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Not like me', right: 'Very like me',
+    reportKey: 'values', valueKey: 'power',
+  },
+  {
+    id: 'Q73', slug: 'tivi-security', title: 'Order & safety',
+    prompt: 'They want things organized and stable, and value safety and a predictable order.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Not like me', right: 'Very like me',
+    reportKey: 'values', valueKey: 'security',
+  },
+  {
+    id: 'Q74', slug: 'tivi-conformity', title: 'Behaving properly',
+    prompt: 'It matters to them to behave properly and avoid doing anything others would say is wrong.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Not like me', right: 'Very like me',
+    reportKey: 'values', valueKey: 'conformity',
+  },
+  {
+    id: 'Q75', slug: 'tivi-tradition', title: 'Tradition',
+    prompt: 'They value keeping customs and doing things in the traditional, time-honored way.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Not like me', right: 'Very like me',
+    reportKey: 'values', valueKey: 'tradition',
+  },
+  {
+    id: 'Q76', slug: 'tivi-benevolence', title: 'Caring for close others',
+    prompt: 'Helping the people around them and caring for their well-being is important to them.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Not like me', right: 'Very like me',
+    reportKey: 'values', valueKey: 'benevolence',
+  },
+  {
+    id: 'Q77', slug: 'tivi-universalism', title: 'Fairness for all',
+    prompt: 'They believe everyone in the world should be treated equally and live in harmony.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Not like me', right: 'Very like me',
+    reportKey: 'values', valueKey: 'universalism',
+  },
+
+  // ==========================================================================
+  // REGULATORY FOCUS — short RFQ (Higgins et al. 2001; freely distributed).
+  // Promotion (chasing gains, ideals, growth) vs prevention (avoiding loss,
+  // duties, safety) — shows up in how someone FRAMES things. We use the most
+  // face-valid items and drop the dated childhood-rule items. Averaged per
+  // focus; the two are scored independently (not a single bipolar axis).
+  // Scale 1 = never/seldom or false .. 5 = very often or true.
+  // ==========================================================================
+  {
+    id: 'Q78', slug: 'rfq-prom-psyched', title: 'Psyched to push harder',
+    prompt: 'I have often accomplished things that got me psyched to work even harder.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Almost never', right: 'Very often',
+    reportKey: 'regulatory-focus', focusKey: 'promotion',
+  },
+  {
+    id: 'Q79', slug: 'rfq-prom-well', title: 'Doing well at what I try',
+    prompt: 'I usually do well at the different things I try.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Almost never', right: 'Very often',
+    reportKey: 'regulatory-focus', focusKey: 'promotion',
+  },
+  {
+    id: 'Q80', slug: 'rfq-prom-progress', title: 'Progress toward success',
+    prompt: 'I feel I have made progress toward being successful in my life.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Certainly false', right: 'Certainly true',
+    reportKey: 'regulatory-focus', focusKey: 'promotion',
+  },
+  {
+    id: 'Q81', slug: 'rfq-prom-ideal-r', title: 'Falling short of the ideal',
+    prompt: "On things that matter to me, I don't perform as well as I'd ideally like to.",
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Certainly false', right: 'Certainly true',
+    reportKey: 'regulatory-focus', focusKey: 'promotion', reverse: true,
+  },
+  {
+    id: 'Q82', slug: 'rfq-prev-careful', title: 'Carefulness',
+    prompt: 'Not being careful enough has gotten me into trouble at times.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Almost never', right: 'Very often',
+    reportKey: 'regulatory-focus', focusKey: 'prevention', reverse: true,
+  },
+  {
+    id: 'Q83', slug: 'rfq-prev-rules', title: 'Following the rules',
+    prompt: 'I am the kind of person who follows rules and plays it safe.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Almost never', right: 'Very often',
+    reportKey: 'regulatory-focus', focusKey: 'prevention',
+  },
+  {
+    id: 'Q84', slug: 'rfq-prev-avoid-loss', title: 'Guarding against loss',
+    prompt: 'I often think about how to prevent bad things from happening to me.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Almost never', right: 'Very often',
+    reportKey: 'regulatory-focus', focusKey: 'prevention',
+  },
+  {
+    id: 'Q85', slug: 'rfq-prev-duty', title: 'Duties & obligations',
+    prompt: 'I am usually focused on the duties and responsibilities I have to meet.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Almost never', right: 'Very often',
+    reportKey: 'regulatory-focus', focusKey: 'prevention',
+  },
+
+  // ==========================================================================
+  // LOCUS OF CONTROL — IE-4 (Kovaleva et al.; open access). Internal (own
+  // effort drives outcomes) vs external (others/fate do). Surfaces as agentive,
+  // active narration vs passive, circumstance-driven narration. Two independent
+  // 2-item scores. Scale 1 = doesn't apply .. 5 = applies completely.
+  // ==========================================================================
+  {
+    id: 'Q86', slug: 'iec-own-boss', title: 'My own boss',
+    prompt: "I'm my own boss.",
+    kind: 'choice', choiceMode: 'scale',
+    left: "Doesn't apply", right: 'Applies fully',
+    reportKey: 'locus-of-control', locusKey: 'internal',
+  },
+  {
+    id: 'Q87', slug: 'iec-work-hard', title: 'Effort pays off',
+    prompt: 'If I work hard, I will succeed.',
+    kind: 'choice', choiceMode: 'scale',
+    left: "Doesn't apply", right: 'Applies fully',
+    reportKey: 'locus-of-control', locusKey: 'internal',
+  },
+  {
+    id: 'Q88', slug: 'iec-others-decide', title: 'Others decide for me',
+    prompt: 'What I do is mainly determined by other people.',
+    kind: 'choice', choiceMode: 'scale',
+    left: "Doesn't apply", right: 'Applies fully',
+    reportKey: 'locus-of-control', locusKey: 'external',
+  },
+  {
+    id: 'Q89', slug: 'iec-fate', title: 'Fate intervenes',
+    prompt: 'Fate often gets in the way of my plans.',
+    kind: 'choice', choiceMode: 'scale',
+    left: "Doesn't apply", right: 'Applies fully',
+    reportKey: 'locus-of-control', locusKey: 'external',
   },
 ];

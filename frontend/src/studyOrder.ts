@@ -10,4 +10,8 @@ export const STUDY_ORDER = [
   'honesty-tone',
   'reaction-frame',
   'mbti',
+  'need-for-cognition',
+  'values',
+  'regulatory-focus',
+  'locus-of-control',
 ];
