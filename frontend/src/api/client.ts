@@ -48,17 +48,35 @@ async function request<T>(
 }
 
 export interface User { id: number; username: string; }
-export interface StudySummary { id: string; title: string; description: string; total: number; completed: number; }
+export type StudyBand = 'voice' | 'profile';
+export type ReportKey = 'big-five' | 'honesty-tone' | 'pcm' | 'mbti';
+export interface StudySummary {
+  id: string; title: string; description: string;
+  band: StudyBand; reportKey: ReportKey | null;
+  total: number; completed: number;
+}
+export interface ChoiceOption { value: string; labelEn: string; labelRo: string; }
 export interface StudyQuestion {
   id: string; slug: string; title: string;
   promptEn: string; promptRo: string;
   hintEn: string | null; hintRo: string | null;
   optional: boolean; savedBody: string;
+  kind: 'text' | 'choice';
+  choiceMode: 'scale' | 'single' | null;
+  leftEn: string | null; leftRo: string | null;
+  rightEn: string | null; rightRo: string | null;
+  choices: ChoiceOption[] | null;
 }
 export interface StudyDetail {
-  study: { id: string; title: string; description: string };
+  study: { id: string; title: string; description: string; band: StudyBand; reportKey: ReportKey | null };
   questions: StudyQuestion[];
 }
+export interface ReportAxis { key: string; label: string; percent: number; readout: string; answered: number; }
+export interface ReportPayload {
+  key: ReportKey; title: string; axes: ReportAxis[];
+  summary: string; hasData: boolean; caveat: string;
+}
+export interface ReportState { key: ReportKey; payload: ReportPayload | null; includeInSoul: boolean; }
 export interface Conversation { id: number; filename: string; createdAt: string; }
 export interface DetectedSender { name: string; normalized: string; count: number; }
 export interface SoulResult { soulMd: string; prevMd: string | null; extractor: string; createdAt: string | null; }
@@ -120,6 +138,11 @@ export const api = {
       `/studies/${id}/answers`,
       { answers },
     ),
+
+  // reports
+  reports: () => request<{ reports: ReportState[] }>('GET', '/reports'),
+  setReportInclude: (key: ReportKey, includeInSoul: boolean) =>
+    request<{ ok: boolean }>('POST', `/reports/${key}/include`, { includeInSoul }),
 
   // conversations + names
   conversations: () => request<{ conversations: Conversation[] }>('GET', '/conversations'),

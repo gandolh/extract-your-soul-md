@@ -3,11 +3,31 @@ import { z } from 'zod';
 import { STUDIES, findStudy, studyQuestions } from '../../studies.js';
 import {
   answeredQuestionIds,
+  getAnswersForUser,
+  getReports,
   getStudyAnswers,
+  setReportInclude,
+  upsertReport,
   upsertStudyAnswers,
 } from '../../db/repos.js';
 import type { RecordedAnswer } from '../../answers-file.js';
+import {
+  DEFAULT_INCLUDE,
+  REPORT_KEYS,
+  scoreAllReports,
+  type ReportKeyAll,
+} from '../../scoring.js';
 import { requireAuth } from '../auth.js';
+
+// Rescore every report from the user's full answer set and upsert each. Cheap
+// (a handful of in-memory averages), so we just recompute all of them after any
+// profile-study save rather than tracking which report changed.
+function rescoreReports(userId: number): void {
+  const reports = scoreAllReports(getAnswersForUser(userId));
+  for (const r of reports) {
+    upsertReport(userId, r.key, JSON.stringify(r), DEFAULT_INCLUDE[r.key]);
+  }
+}
 
 // Bound the request so a single authenticated user can't bloat the DB with a
 // multi-MB answer body or a flood of answer rows. 50k chars is far past any
@@ -29,6 +49,8 @@ export async function studyRoutes(app: FastifyInstance): Promise<void> {
         id: s.id,
         title: s.title,
         description: s.description,
+        band: s.band ?? 'voice',
+        reportKey: s.reportKey ?? null,
         total: s.questionIds.length,
         completed: s.questionIds.filter((qid) => answered.has(qid)).length,
       })),
@@ -41,7 +63,13 @@ export async function studyRoutes(app: FastifyInstance): Promise<void> {
     if (!study) return reply.code(404).send({ error: 'Unknown study.' });
     const saved = getStudyAnswers(request.userId!, study.id);
     return {
-      study: { id: study.id, title: study.title, description: study.description },
+      study: {
+        id: study.id,
+        title: study.title,
+        description: study.description,
+        band: study.band ?? 'voice',
+        reportKey: study.reportKey ?? null,
+      },
       questions: studyQuestions(study).map((q) => ({
         id: q.id,
         slug: q.slug,
@@ -51,6 +79,19 @@ export async function studyRoutes(app: FastifyInstance): Promise<void> {
         hintEn: q.hintEn ?? null,
         hintRo: q.hintRo ?? null,
         optional: Boolean(q.optional),
+        kind: q.kind ?? 'text',
+        choiceMode: q.choiceMode ?? null,
+        // Pole labels for a scale; null for text/single questions.
+        leftEn: q.leftEn ?? null,
+        leftRo: q.leftRo ?? null,
+        rightEn: q.rightEn ?? null,
+        rightRo: q.rightRo ?? null,
+        choices:
+          q.choices?.map((c) => ({
+            value: c.value,
+            labelEn: c.labelEn,
+            labelRo: c.labelRo,
+          })) ?? null,
         savedBody: saved.get(q.id)?.body ?? '',
       })),
     };
@@ -80,8 +121,50 @@ export async function studyRoutes(app: FastifyInstance): Promise<void> {
       void byId; // questions are the authority for which ids we persist
 
       upsertStudyAnswers(request.userId!, study.id, answers);
+      // Profile studies feed a scored report — recompute it on save so the UI
+      // and extraction see fresh numbers. Voice studies have no report.
+      if ((study.band ?? 'voice') === 'profile') rescoreReports(request.userId!);
       const answered = answers.filter((a) => a.body.length > 0).length;
       return reply.send({ ok: true, answered, total: questions.length });
+    },
+  );
+
+  // All scored reports for the user, parsed payloads + include flag.
+  app.get('/api/reports', async (request) => {
+    const stored = new Map(getReports(request.userId!).map((r) => [r.report_key, r]));
+    return {
+      reports: REPORT_KEYS.map((key) => {
+        const row = stored.get(key);
+        return {
+          key,
+          // payload is already a ReportPayload JSON; pass through verbatim.
+          payload: row ? JSON.parse(row.payload) : null,
+          includeInSoul: row
+            ? row.include_in_soul === 1
+            : DEFAULT_INCLUDE[key as ReportKeyAll],
+        };
+      }),
+    };
+  });
+
+  // Toggle whether a report is folded into soul.md.
+  const ToggleBody = z.object({ includeInSoul: z.boolean() });
+  app.post<{ Params: { reportKey: string } }>(
+    '/api/reports/:reportKey/include',
+    async (request, reply) => {
+      const key = request.params.reportKey;
+      if (!REPORT_KEYS.includes(key as ReportKeyAll)) {
+        return reply.code(404).send({ error: 'Unknown report.' });
+      }
+      const parsed = ToggleBody.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.code(400).send({ error: 'Expected { includeInSoul: boolean }.' });
+      }
+      // Ensure a row exists (a user may toggle before the report was scored).
+      const stored = new Map(getReports(request.userId!).map((r) => [r.report_key, r]));
+      if (!stored.has(key)) rescoreReports(request.userId!);
+      setReportInclude(request.userId!, key, parsed.data.includeInSoul);
+      return reply.send({ ok: true });
     },
   );
 }

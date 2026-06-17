@@ -33,6 +33,21 @@ CREATE TABLE IF NOT EXISTS study_answers (
 );
 CREATE INDEX IF NOT EXISTS idx_answers_study ON study_answers(user_id, study_id);
 
+-- One row per (user, report_key) — a scored trait report derived from the
+-- user's choice answers. Recomputed and upserted whenever a profile study is
+-- saved. `payload` is JSON (axis percentages + labels) the UI renders directly.
+-- `include_in_soul` gates whether the report is folded into soul.md at
+-- extraction time (MBTI defaults 0; the other reports default 1 — the default
+-- is applied in code at upsert time, not here, since it varies by report_key).
+CREATE TABLE IF NOT EXISTS reports (
+  user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  report_key      TEXT NOT NULL,                        -- big-five|honesty-tone|pcm|mbti
+  payload         TEXT NOT NULL,                         -- JSON
+  include_in_soul INTEGER NOT NULL DEFAULT 1,
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (user_id, report_key)
+);
+
 CREATE TABLE IF NOT EXISTS conversations (
   id         INTEGER PRIMARY KEY,
   user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

@@ -80,6 +80,10 @@ export async function runOllamaPipeline(
   cfg: Config,
   manifest: Manifest,
   onProgress?: ProgressFn,
+  // Pre-rendered self-reported trait profile (the included reports). Appended
+  // as a final batch and weighted DOWN by the reduce prompt — see prompts.ts.
+  // Empty/undefined → no profile block, prompt unchanged.
+  profileText?: string,
 ): Promise<string> {
   const chunksDir = path.resolve(cfg.chunksDir);
   const cacheDir = path.resolve('.cache', 'bullets');
@@ -115,12 +119,20 @@ export async function runOllamaPipeline(
     bullets.push(`### Batch ${i + 1} (from ${sourceLabel})\n${out.trim()}`);
   }
 
+  // The opted-in self-reported trait profile goes in as a final, clearly-labeled
+  // batch so the reduce step sees it alongside the observed-voice bullets.
+  const profile = profileText?.trim();
+  if (profile) {
+    bullets.push(`### Self-Reported Personality Profile (self-report — weakest evidence)\n${profile}`);
+  }
+
   onProgress?.('map', total, total);
   process.stdout.write(`  ${color.magenta('reduce')}... `);
   onProgress?.('reduce', 0, 1);
   const t0 = Date.now();
   const hasQuestionnaire = manifest.chunks.some((c) => c.kind === 'questionnaire');
-  const reducePrompt = buildReducePrompt(hasQuestionnaire) + bullets.join('\n\n');
+  const reducePrompt =
+    buildReducePrompt(hasQuestionnaire, Boolean(profile)) + bullets.join('\n\n');
   assertFitsContext('reduce', reducePrompt, cfg.ollamaNumCtx);
   const soul = await generate(
     {

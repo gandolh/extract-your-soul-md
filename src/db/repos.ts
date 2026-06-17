@@ -147,6 +147,56 @@ export function answeredQuestionIds(userId: number): Set<string> {
   return new Set(list.map((r) => r.question_id));
 }
 
+// ---- reports -------------------------------------------------------------
+
+export interface ReportRow {
+  report_key: string;
+  payload: string; // JSON
+  include_in_soul: number; // 0 | 1
+  updated_at: string;
+}
+
+export function getReports(userId: number): ReportRow[] {
+  return rows<ReportRow>(
+    getDb()
+      .prepare(
+        'SELECT report_key, payload, include_in_soul, updated_at FROM reports WHERE user_id = ?',
+      )
+      .all(userId) as Row[],
+  );
+}
+
+/**
+ * Upsert a scored report. `defaultInclude` is applied only on first insert;
+ * a later rescore preserves the user's toggle choice (we don't clobber
+ * include_in_soul on conflict).
+ */
+export function upsertReport(
+  userId: number,
+  reportKey: string,
+  payloadJson: string,
+  defaultInclude: boolean,
+): void {
+  getDb()
+    .prepare(
+      `INSERT INTO reports (user_id, report_key, payload, include_in_soul, updated_at)
+       VALUES (?, ?, ?, ?, datetime('now'))
+       ON CONFLICT(user_id, report_key) DO UPDATE SET
+         payload = excluded.payload,
+         updated_at = datetime('now')`,
+    )
+    .run(userId, reportKey, payloadJson, defaultInclude ? 1 : 0);
+}
+
+/** Flip a report's include-in-soul toggle. */
+export function setReportInclude(userId: number, reportKey: string, include: boolean): void {
+  getDb()
+    .prepare(
+      "UPDATE reports SET include_in_soul = ?, updated_at = datetime('now') WHERE user_id = ? AND report_key = ?",
+    )
+    .run(include ? 1 : 0, userId, reportKey);
+}
+
 // ---- conversations -------------------------------------------------------
 
 export function addConversation(

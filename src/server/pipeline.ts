@@ -16,12 +16,30 @@ import {
   getConversationContents,
   getLatestResult,
   getNames,
+  getReports,
   hasConversations,
   saveResult,
   startJob,
   updateJobProgress,
 } from '../db/repos.js';
+import { renderReportForPrompt, type ReportPayload } from '../scoring.js';
 import { readFileSync } from 'node:fs';
+
+/** Render the user's opted-in (include_in_soul) reports into the profile block
+ *  the reduce prompt weights down. Returns '' if none are included or scored. */
+function buildProfileText(userId: number): string {
+  const included = getReports(userId).filter((r) => r.include_in_soul === 1);
+  const blocks = included
+    .map((r) => {
+      try {
+        return renderReportForPrompt(JSON.parse(r.payload) as ReportPayload);
+      } catch {
+        return '';
+      }
+    })
+    .filter((b) => b.length > 0);
+  return blocks.join('\n\n');
+}
 
 export class NothingToExtractError extends Error {}
 // A conversation parsed fine but none of its senders matched the user's "you"
@@ -135,8 +153,12 @@ export async function runUserExtraction(
     }
 
     const manifest = chunkAll(cfg);
-    const outPath = await runOllamaPipeline(cfg, manifest, (stage, done, total) =>
-      updateJobProgress(jobId, stage, done, total),
+    const profileText = buildProfileText(userId);
+    const outPath = await runOllamaPipeline(
+      cfg,
+      manifest,
+      (stage, done, total) => updateJobProgress(jobId, stage, done, total),
+      profileText,
     );
     const soulMd = readFileSync(outPath, 'utf8');
 

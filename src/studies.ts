@@ -10,31 +10,86 @@
 
 import { QUESTIONS, type Question } from './questions.js';
 
+// Studies fall in two bands:
+//   'voice'   — free-text questions; each answer doubles as a writing sample.
+//   'profile' — choice questions grounded in real instruments; they produce a
+//               scored report (see src/scoring.ts) shown in the UI and,
+//               opt-in, folded into soul.md.
+// `reportKey` on a profile study links it to the report it produces, so the UI
+// can render that study's result section next to it.
+export type StudyBand = 'voice' | 'profile';
+
 export interface Study {
   id: string;
   title: string;
   description: string;
   questionIds: string[];
+  band?: StudyBand; // defaults to 'voice'
+  reportKey?: string; // set on profile studies
 }
 
 export const STUDIES: ReadonlyArray<Study> = [
+  // --- Voice band (free-text; the "completion" category) -------------------
   {
     id: 'inner-world',
     title: 'Inner World',
     description: 'Frustrations, passions, and the beliefs you hold quietly.',
     questionIds: ['Q1', 'Q2', 'Q3'],
+    band: 'voice',
   },
   {
     id: 'how-you-tell-it',
     title: 'How You Tell It',
     description: 'Narrative, register, and the texture of your humor.',
     questionIds: ['Q4', 'Q12', 'Q5', 'Q6', 'Q7'],
+    band: 'voice',
   },
   {
     id: 'how-you-see-yourself',
     title: 'How You See Yourself',
     description: 'Self-perception, core wants and fears, and what you aspire to.',
     questionIds: ['Q8', 'Q9', 'Q10', 'Q11'],
+    band: 'voice',
+  },
+
+  // --- Profile band (choice; trait reports) --------------------------------
+  {
+    id: 'big-five',
+    title: 'The Big Five',
+    description:
+      'Ten quick self-ratings (TIPI) across the five core personality traits. Add a note to any if you want.',
+    questionIds: ['Q13', 'Q14', 'Q15', 'Q16', 'Q17', 'Q18', 'Q19', 'Q20', 'Q21', 'Q22'],
+    band: 'profile',
+    reportKey: 'big-five',
+  },
+  {
+    id: 'honesty-tone',
+    title: 'Stance & Tone',
+    description:
+      'How you present yourself and the tone you default to — modesty, rapport, formality, humor.',
+    questionIds: ['Q23', 'Q24', 'Q25', 'Q26', 'Q27', 'Q28'],
+    band: 'profile',
+    reportKey: 'honesty-tone',
+  },
+  {
+    id: 'reaction-frame',
+    title: 'First Reaction',
+    description: 'When something happens, what filters it first — a single pick.',
+    questionIds: ['Q29'],
+    band: 'profile',
+    reportKey: 'pcm',
+  },
+  {
+    id: 'mbti',
+    title: 'Type Indicator',
+    description:
+      'Sixteen word-pairs (open-source, MBTI-style) that estimate a four-letter type. Off by default — toggle it on in the report if you want it in your soul.md.',
+    questionIds: [
+      'Q30', 'Q31', 'Q32', 'Q33', 'Q34', 'Q35', 'Q36', 'Q37',
+      'Q38', 'Q39', 'Q40', 'Q41', 'Q42', 'Q43', 'Q44', 'Q45',
+    ],
+    band: 'profile',
+    reportKey: 'mbti',
   },
 ];
 

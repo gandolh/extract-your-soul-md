@@ -1,20 +1,22 @@
 export const MAP_PROMPT_HEADER = `You are analyzing a batch of messages written by ONE person (the user) in private chats.
-Your task: extract concise observations that another LLM could USE to MECHANICALLY IMITATE this person's writing — a style card, not a personality report. Favor concrete, reproducible features over abstract traits.
+This is the richest source of their SPEECH PATTERNS — how they actually write in the wild. Your task: extract concise observations that another LLM could USE to MECHANICALLY IMITATE this person's writing — a style card, not a personality report. Favor concrete, reproducible patterns of speech over abstract traits.
 
-Emit only well-supported observations — fewer is better. If the chunk is thin, return few bullets; do NOT pad to a count. Cover, when evident:
-- Tone & register (formal / casual / sarcastic / warm / blunt)
+Emit only well-supported observations — fewer is better. If the chunk is thin, return few bullets; do NOT pad to a count. Lead with SPEECH PATTERNS, covering when evident:
+- Tone & register (formal / casual / sarcastic / warm / blunt) and how it shifts by addressee
 - Function-word habits: pronoun and article density, lowercase "i", contractions vs. full forms
-- Typical message length in words (short fragments vs. long paragraphs)
+- Typical message length in words (short fragments vs. long paragraphs); whether they burst many short messages or send one long one
+- Sentence structure: run-ons vs. clipped fragments, how they chain or break clauses, question vs. statement rate
 - Capitalization quirks (all-lowercase, sentence case, ALL CAPS for emphasis)
-- Emoji rate per message and WHICH emoji recur; same for punctuation marks
+- Emoji rate per message and WHICH emoji recur; same for punctuation marks (ellipses, multiple "!!!", trailing nothing)
 - Signature openers, closers, interjections, and catchphrases (quote these short tokens exactly — see rules)
-- Recurring vocabulary, slang, filler words
-- Languages used and code-switching habits (what triggers a switch)
+- Recurring vocabulary, slang, filler words, verbal tics
+- Languages used and code-switching habits (what triggers a switch, mid-sentence vs. mid-conversation)
+- Hedging / softening habits and how they handle disagreement, apology, affection
 - Humor style (dry, self-deprecating, absurd, none)
 - Recurring topics, hobbies, professional context
 - Opinions/enthusiasms only as directly stated
-- How they handle disagreement, apology, affection
-- Sentence-length and punctuation habits (note if they use the em-dash "—": record it as a fact, but it is a common AI tell — do NOT recommend leaning into it)
+- Whether they tend to write to CONNECT or to INFORM, message to message
+- Note the em-dash "—" if present: record it as a fact, but it is a common AI tell — do NOT recommend leaning into it
 
 Rules:
 - ONLY use what is supported by the messages below. Do NOT speculate.
@@ -104,13 +106,22 @@ const REDUCE_QA_CONFLICT_RULE = `
 const REDUCE_PROVENANCE_RULE = `
 - Some questionnaire bullets are prefixed \`in-prose:\` (a feature OBSERVED in how they actually wrote) or \`self-described:\` (something they CLAIM about themselves). Trust \`in-prose:\` over \`self-described:\` for any observable style judgment; treat \`self-described:\` as weaker self-report — fold it into values/aspiration, not into how-they-write, unless an \`in-prose:\` bullet corroborates it. Do NOT carry the \`in-prose:\` / \`self-described:\` prefixes into the final document.`;
 
+// A self-reported trait profile (Big Five / tone / PCM / MBTI) the user opted
+// into. It is the WEAKEST evidence in the corpus — self-report ↔ observed-voice
+// correlation is low (the research behind this project; |ρ|≈.08–.14). So the
+// reduce step is told to treat it as background colour for values/worldview and
+// to let observed voice win every style call. Gated on hasProfile.
+const REDUCE_PROFILE_RULE = `
+- A "Self-Reported Personality Profile" block may appear among the batches. It is the user's own picked answers to short trait questionnaires (Big Five, tone, reaction frame, type indicator) — SELF-REPORT, the weakest evidence here. Use it only as soft background for Values & Worldview and Tone; let OBSERVED voice (chat logs, and the prose of any questionnaire answers) win every concrete style judgment. Never state a trait percentage or a 4-letter type as fact in the document; translate it into how-they-write language, hedged. If it conflicts with observed voice, the observed voice wins outright.`;
+
 /**
  * Build the reduce prompt. The three questionnaire-derived sections (and the
  * questionnaire-vs-chat conflict rule) are included ONLY when the corpus
  * actually contains questionnaire chunks — a machine decision from the
  * manifest's `kind` field, not a prose label the model is asked to honor.
+ * `hasProfile` separately gates the self-report-profile weighting rule.
  */
-export function buildReducePrompt(hasQuestionnaire: boolean): string {
+export function buildReducePrompt(hasQuestionnaire: boolean, hasProfile = false): string {
   return `You are synthesizing a personality / voice profile from many batches of observations.
 Each batch below was extracted from a different slice of the same person — either
 chat logs (chat-fragment style) or a personality questionnaire (Q&A style).
@@ -168,7 +179,7 @@ highest-signal, most distinctive signature vocabulary/punctuation/cadence alread
 named above, plus the one-line imitation directive. Self-contained and terse.
 
 Rules:
-- Reconcile contradictions across batches by noting context (e.g. "more formal with strangers, blunt with close friends") rather than picking one.${hasQuestionnaire ? REDUCE_QA_CONFLICT_RULE : ''}${hasQuestionnaire ? REDUCE_PROVENANCE_RULE : ''}
+- Reconcile contradictions across batches by noting context (e.g. "more formal with strangers, blunt with close friends") rather than picking one.${hasQuestionnaire ? REDUCE_QA_CONFLICT_RULE : ''}${hasQuestionnaire ? REDUCE_PROVENANCE_RULE : ''}${hasProfile ? REDUCE_PROFILE_RULE : ''}
 - Privacy vs. voice: do NOT reproduce whole private sentences or named facts/entities from the source — but DO keep the short, high-frequency, non-private stylistic tokens (greetings, sign-offs, fillers, catchphrases) verbatim, since they are the imitable core of the voice.
 - Prefer specific over vague. Drop any descriptor that would apply to most people. Keep distinctive/rare/surprising features over common ones. Never pad a section to fit the template — omit it.
 - Output ONLY the markdown document. No preamble.

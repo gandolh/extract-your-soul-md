@@ -1,11 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { api, ApiError, type StudyDetail } from '../api/client';
+import {
+  api,
+  ApiError,
+  type StudyDetail,
+  type StudyQuestion,
+  type ReportState,
+} from '../api/client';
 import { useToast } from '../components/Toaster';
 import { Meter } from '../components/Layout';
 import { STUDY_ORDER } from '../studyOrder';
-import { useLangPref } from '../lang';
+import { useLangPref, type Lang } from '../lang';
 import { Button, cardClass, Eyebrow, Headline, buttonClass, cx, FIELD_CLASS } from '../components/ui';
+import { decodeChoiceBody, encodeChoiceBody } from '../choiceBody';
+import { ReportSection } from '../components/ReportSection';
 
 export function StudyPage() {
   const { studyId = '' } = useParams();
@@ -18,6 +26,7 @@ export function StudyPage() {
   const [notFound, setNotFound] = useState(false);
   const [active, setActive] = useState<string | null>(null);
   const [autosave, setAutosave] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [report, setReport] = useState<ReportState | null>(null);
 
   // Snapshot of the last-persisted answers (JSON), so the autosave effect can
   // tell a real edit from the initial seed / a study switch and skip saving when
@@ -25,10 +34,23 @@ export function StudyPage() {
   const baseline = useRef<string>('');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Fetch the scored report for this study's reportKey (profile studies only).
+  const refreshReport = useCallback((reportKey: string | null) => {
+    if (!reportKey) {
+      setReport(null);
+      return;
+    }
+    api
+      .reports()
+      .then(({ reports }) => setReport(reports.find((r) => r.key === reportKey) ?? null))
+      .catch(() => setReport(null));
+  }, []);
+
   useEffect(() => {
     setDetail(null);
     setNotFound(false);
     setAutosave('idle');
+    setReport(null);
     if (timer.current) clearTimeout(timer.current);
     api
       .study(studyId)
@@ -38,12 +60,13 @@ export function StudyPage() {
         for (const q of d.questions) init[q.id] = q.savedBody;
         setAnswers(init);
         baseline.current = JSON.stringify(init);
+        refreshReport(d.study.reportKey);
       })
       .catch((e) => {
         if (e instanceof ApiError && e.status === 404) setNotFound(true);
         else toast('Could not load study.', 'err');
       });
-  }, [studyId, toast]);
+  }, [studyId, toast, refreshReport]);
 
   const { idx, next, prev } = useMemo(() => {
     const i = STUDY_ORDER.indexOf(studyId);
@@ -66,8 +89,11 @@ export function StudyPage() {
       detail.questions.map((q) => ({ id: q.id, body: answers[q.id] ?? '' })),
     );
     baseline.current = snapshot;
+    // Profile studies produce a report; refresh it so the result section
+    // reflects the just-saved answers.
+    if (detail.study.reportKey) refreshReport(detail.study.reportKey);
     return snapshot;
-  }, [detail, answers]);
+  }, [detail, answers, refreshReport]);
 
   // Debounced autosave: ~1.5s after the last edit, if answers differ from the
   // last-persisted baseline. The baseline guard means the initial seed and a
@@ -176,71 +202,30 @@ export function StudyPage() {
       </header>
 
       <div className="flex flex-col gap-4">
-        {detail.questions.map((q, i) => {
-          const prompt = lang === 'en' ? q.promptEn : q.promptRo;
-          const hint = lang === 'en' ? q.hintEn : q.hintRo;
-          const answered = (answers[q.id] ?? '').trim().length > 0;
-          const isActive = active === q.id;
-          return (
-            <div
-              key={q.id}
-              className={cardClass(
-                cx('p-6 transition-colors', isActive && 'border-primary-strong'),
-              )}
-            >
-              <div className="mb-3 flex items-center justify-between">
-                <span className={cx(
-                  'flex items-center gap-2 font-mono text-[11px] font-semibold uppercase tracking-[0.08em]',
-                  isActive ? 'text-primary' : 'text-text-faint',
-                )}>
-                  {isActive && <span className="inline-block h-1.5 w-1.5 rounded-sm bg-primary-strong" />}
-                  Question {i + 1}{q.optional ? ' · optional' : ''}
-                </span>
-                {answered && (
-                  <span
-                    aria-label="answered"
-                    className="grid h-5 w-5 place-items-center rounded-full bg-tertiary text-[11px] text-on-tertiary"
-                  >
-                    ✓
-                  </span>
-                )}
-              </div>
-              <label htmlFor={q.id} className="block text-[14px] font-medium leading-[20px] text-text-primary">
-                {prompt}
-              </label>
-              {hint && <p className="mt-1 text-[13px] italic text-text-faint">{hint}</p>}
-              <textarea
-                id={q.id}
-                className={cx(FIELD_CLASS, 'mt-3 min-h-[150px] resize-y leading-[1.5]')}
-                value={answers[q.id] ?? ''}
-                onFocus={() => setActive(q.id)}
-                onBlur={() => setActive((a) => (a === q.id ? null : a))}
-                onChange={(e) => setAnswers((a) => ({ ...a, [q.id]: e.target.value }))}
-                placeholder={
-                  q.optional
-                    ? 'Optional — leave blank to skip.'
-                    : 'Take your time — a few sentences carry more of you than one line.'
-                }
-              />
-              {(() => {
-                const words = (answers[q.id] ?? '').trim().split(/\s+/).filter(Boolean).length;
-                // Non-blocking depth cue: the research stance is "as much or as
-                // little as you want", so we never gate the checkmark — just a
-                // gentle nudge when a non-optional answer is thin (< ~25 words).
-                const thin = !q.optional && words > 0 && words < 25;
-                return (
-                  <div className="mt-1.5 flex items-center justify-between font-mono text-[11px] text-text-faint">
-                    <span className={cx(thin && 'text-primary')}>
-                      {thin ? 'a few more sentences would help' : ' '}
-                    </span>
-                    <span>{words === 0 ? '' : `${words} word${words === 1 ? '' : 's'}`}</span>
-                  </div>
-                );
-              })()}
-            </div>
-          );
-        })}
+        {detail.questions.map((q, i) => (
+          <QuestionCard
+            key={q.id}
+            q={q}
+            index={i}
+            lang={lang}
+            body={answers[q.id] ?? ''}
+            isActive={active === q.id}
+            onActivate={() => setActive(q.id)}
+            onDeactivate={() => setActive((a) => (a === q.id ? null : a))}
+            onChange={(body) => setAnswers((a) => ({ ...a, [q.id]: body }))}
+          />
+        ))}
       </div>
+
+      {/* Profile studies show their scored result + the soul.md toggle. */}
+      {detail.study.band === 'profile' && report && (
+        <ReportSection
+          report={report}
+          onToggle={(_, include) =>
+            setReport((r) => (r ? { ...r, includeInSoul: include } : r))
+          }
+        />
+      )}
 
       <div className="flex flex-wrap items-center gap-3">
         {prev ? (
@@ -264,6 +249,207 @@ export function StudyPage() {
             </Button>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// One question card. Free-text questions keep the original textarea; choice
+// questions render a scale or radio group, with an optional "say more" textarea
+// underneath so the prose voice-sample benefit is never lost. The persisted
+// `body` is always a string: raw text for text questions, an encoded
+// choice-body for choice questions (see choiceBody.ts).
+function QuestionCard({
+  q,
+  index,
+  lang,
+  body,
+  isActive,
+  onActivate,
+  onDeactivate,
+  onChange,
+}: {
+  q: StudyQuestion;
+  index: number;
+  lang: Lang;
+  body: string;
+  isActive: boolean;
+  onActivate: () => void;
+  onDeactivate: () => void;
+  onChange: (body: string) => void;
+}) {
+  const prompt = lang === 'en' ? q.promptEn : q.promptRo;
+  const hint = lang === 'en' ? q.hintEn : q.hintRo;
+  const answered = body.trim().length > 0;
+
+  const cardCx = cardClass(cx('p-6 transition-colors', isActive && 'border-primary-strong'));
+  const header = (
+    <div className="mb-3 flex items-center justify-between">
+      <span
+        className={cx(
+          'flex items-center gap-2 font-mono text-[11px] font-semibold uppercase tracking-[0.08em]',
+          isActive ? 'text-primary' : 'text-text-faint',
+        )}
+      >
+        {isActive && <span className="inline-block h-1.5 w-1.5 rounded-sm bg-primary-strong" />}
+        Question {index + 1}
+        {q.optional ? ' · optional' : ''}
+      </span>
+      {answered && (
+        <span
+          aria-label="answered"
+          className="grid h-5 w-5 place-items-center rounded-full bg-tertiary text-[11px] text-on-tertiary"
+        >
+          ✓
+        </span>
+      )}
+    </div>
+  );
+  const promptLabel = (
+    <>
+      <p className="block text-[14px] font-medium leading-[20px] text-text-primary">{prompt}</p>
+      {hint && <p className="mt-1 text-[13px] italic text-text-faint">{hint}</p>}
+    </>
+  );
+
+  // --- Free-text question (unchanged behavior) -----------------------------
+  if (q.kind !== 'choice') {
+    const words = body.trim().split(/\s+/).filter(Boolean).length;
+    const thin = !q.optional && words > 0 && words < 25;
+    return (
+      <div className={cardCx}>
+        {header}
+        <label htmlFor={q.id} className="contents">
+          {promptLabel}
+        </label>
+        <textarea
+          id={q.id}
+          className={cx(FIELD_CLASS, 'mt-3 min-h-[150px] resize-y leading-[1.5]')}
+          value={body}
+          onFocus={onActivate}
+          onBlur={onDeactivate}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={
+            q.optional
+              ? 'Optional — leave blank to skip.'
+              : 'Take your time — a few sentences carry more of you than one line.'
+          }
+        />
+        <div className="mt-1.5 flex items-center justify-between font-mono text-[11px] text-text-faint">
+          <span className={cx(thin && 'text-primary')}>
+            {thin ? 'a few more sentences would help' : ' '}
+          </span>
+          <span>{words === 0 ? '' : `${words} word${words === 1 ? '' : 's'}`}</span>
+        </div>
+      </div>
+    );
+  }
+
+  // --- Choice question -----------------------------------------------------
+  const decoded = decodeChoiceBody(body);
+  const selected = decoded.values[0] ?? '';
+  const note = decoded.note;
+  const setSelected = (value: string) => onChange(encodeChoiceBody([value], note));
+  const setNote = (n: string) => onChange(encodeChoiceBody(selected ? [selected] : [], n));
+
+  return (
+    <div className={cardCx} onFocus={onActivate} onBlur={onDeactivate}>
+      {header}
+      {promptLabel}
+
+      {q.choiceMode === 'scale' ? (
+        <ScaleField
+          name={q.id}
+          left={lang === 'en' ? q.leftEn : q.leftRo}
+          right={lang === 'en' ? q.rightEn : q.rightRo}
+          value={selected}
+          onSelect={setSelected}
+        />
+      ) : (
+        <div className="mt-3 flex flex-col gap-2" role="radiogroup" aria-label={prompt}>
+          {(q.choices ?? []).map((c) => {
+            const label = lang === 'en' ? c.labelEn : c.labelRo;
+            const checked = selected === c.value;
+            return (
+              <label
+                key={c.value}
+                className={cx(
+                  'flex cursor-pointer items-start gap-3 rounded-md border p-3 text-[14px] transition-colors',
+                  checked ? 'border-primary-strong bg-tertiary/30' : 'border-hairline hover:border-text-faint',
+                )}
+              >
+                <input
+                  type="radio"
+                  name={q.id}
+                  value={c.value}
+                  checked={checked}
+                  onChange={() => setSelected(c.value)}
+                  className="mt-0.5 accent-[var(--color-primary-strong,currentColor)]"
+                />
+                <span className="leading-[20px] text-text-primary">{label}</span>
+              </label>
+            );
+          })}
+        </div>
+      )}
+
+      <textarea
+        className={cx(FIELD_CLASS, 'mt-3 min-h-[64px] resize-y leading-[1.5]')}
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        placeholder="Optional — add a word or two if it doesn't quite fit."
+      />
+    </div>
+  );
+}
+
+// A 5-point bipolar Likert track with the two pole labels at the ends.
+function ScaleField({
+  name,
+  left,
+  right,
+  value,
+  onSelect,
+}: {
+  name: string;
+  left: string | null;
+  right: string | null;
+  value: string;
+  onSelect: (v: string) => void;
+}) {
+  return (
+    <div className="mt-4">
+      <div className="flex items-center justify-between gap-3" role="radiogroup" aria-label={`${left ?? ''} to ${right ?? ''}`}>
+        {[1, 2, 3, 4, 5].map((n) => {
+          const v = String(n);
+          const checked = value === v;
+          // Middle dot smaller, ends larger — a familiar Likert affordance.
+          const size = n === 3 ? 'h-5 w-5' : n === 1 || n === 5 ? 'h-7 w-7' : 'h-6 w-6';
+          return (
+            <label key={n} className="flex flex-1 cursor-pointer items-center justify-center">
+              <input
+                type="radio"
+                name={name}
+                value={v}
+                checked={checked}
+                onChange={() => onSelect(v)}
+                className="sr-only"
+                aria-label={`${n}`}
+              />
+              <span
+                className={cx(
+                  'grid place-items-center rounded-full border-2 transition-colors',
+                  size,
+                  checked ? 'border-primary-strong bg-primary-strong' : 'border-hairline hover:border-text-faint',
+                )}
+              />
+            </label>
+          );
+        })}
+      </div>
+      <div className="mt-1.5 flex items-center justify-between font-mono text-[11px] text-text-faint">
+        <span>{left}</span>
+        <span>{right}</span>
       </div>
     </div>
   );

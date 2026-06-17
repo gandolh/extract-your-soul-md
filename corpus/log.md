@@ -656,3 +656,36 @@ interview.ts / `npm run start` still existed) to API+frontend-only, re-stamped
 updated to the async background-job model (brief 14). Removed the now-shipped
 "does /api/extract need a job queue?" item from open-questions.md per its own
 delete-on-ship rule. Nothing committed.
+
+## [2026-06-17] done | brief 37 — choice trait studies + per-test reports
+
+Added choice-based trait questionnaires alongside the free-text voice studies,
+each producing a scored report folded (opt-in) into soul.md.
+
+New question kind `choice` (scale | single) in questions.ts (Q13-Q45), grounded
+in license-clean instruments: TIPI (Big Five), IPIP-HEXACO modesty + NN/g tone +
+Tannen rapport/report, Kahler PCM frame, OEJTS (open-source MBTI — NOT
+trademarked items). studies.ts gains a `band` ('voice'|'profile') + `reportKey`.
+
+Choice answers persist in the UNCHANGED study_answers {id,title,body} contract:
+answers-file.ts owns encode/decodeChoiceBody (`choice: N` + optional `note:`),
+so answers.md / process.ts are untouched. New `reports` table (payload JSON +
+include_in_soul) recomputed on each profile-study save. New scoring.ts is pure:
+percentages (honest about midpoint flips), reverse-keying, MBTI 5==second-letter.
+
+Routes: /api/studies exposes kind/choices/scale labels + band; /api/reports (GET)
+and /api/reports/:key/include (POST toggle). Frontend: QuestionCard branches on
+kind (scale track / radio list + optional say-more), ReportSection renders bars +
+the include toggle. pipeline.ts renders included reports into a final reduce batch;
+prompts.ts gains `hasProfile` rule weighting self-report BELOW observed voice
+(honors the locked |ρ|≈.08 "no Likert for voice" finding). Freeform MAP prompt
+sharpened toward speech patterns so conversations own voice, questionnaires own
+traits.
+
+MBTI reconciliation with the locked "do not score MBTI" decision: it scores and
+shows a type, but include_in_soul defaults OFF — so by default it never reaches
+soul.md (decision holds); the user opts in consciously, and its report carries a
+retest-flip caveat.
+
+Verified: build (server+web) clean, 22 node:test pass (9 new in scoring.test.ts).
+Nothing committed.
