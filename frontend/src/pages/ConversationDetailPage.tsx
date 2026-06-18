@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { ConversationProvider } from '../api/queries';
 import { useConversation, useSetConversationNames } from '../api/queries';
-import { useToast } from '../components/Toaster';
+import { useToast } from '../components/app/Toaster';
 import {
   Button,
   cardClass,
@@ -13,7 +13,7 @@ import {
   Notice,
   Tag,
 } from '../components/ui';
-import { normalizeName } from '../lib/normalizeName';
+import { normalizeName } from '../shared/normalizeName';
 
 const PROVIDER_LABEL: Record<ConversationProvider, string> = {
   whatsapp: 'WhatsApp',

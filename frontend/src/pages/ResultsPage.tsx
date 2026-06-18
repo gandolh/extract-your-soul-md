@@ -4,8 +4,8 @@ import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../api/client';
 import { queryKeys, useExtract, useResults } from '../api/queries';
-import { useToast } from '../components/Toaster';
-import { Markdown } from '../components/Markdown';
+import { useToast } from '../components/app/Toaster';
+import { Markdown } from '../components/app/Markdown';
 import { Button, Card, cardClass, Eyebrow, Headline, Notice, Tag } from '../components/ui';
 
 const POLL_MS = 2000;

@@ -7,7 +7,7 @@ import {
   useConversations,
   useDeleteConversation,
 } from '../api/queries';
-import { useToast } from '../components/Toaster';
+import { useToast } from '../components/app/Toaster';
 import {
   Button,
   cardClass,

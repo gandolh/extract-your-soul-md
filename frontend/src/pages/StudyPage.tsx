@@ -2,12 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ApiError, type StudyQuestion, type ReportState } from '../api/client';
 import { useReports, useSaveStudy, useStudy } from '../api/queries';
-import { useToast } from '../components/Toaster';
-import { Meter } from '../components/Layout';
-import { STUDY_ORDER } from '../studyOrder';
+import { useToast } from '../components/app/Toaster';
+import { Meter } from '../components/app/Layout';
+import { STUDY_ORDER } from '../shared/studyOrder';
 import { Button, cardClass, Eyebrow, Headline, buttonClass, cx, FIELD_CLASS } from '../components/ui';
-import { decodeChoiceBody, encodeChoiceBody } from '../choiceBody';
-import { ReportSection } from '../components/ReportSection';
+import { decodeChoiceBody, encodeChoiceBody } from '../shared/choiceBody';
+import { ReportSection } from '../components/studies/ReportSection';
 
 export function StudyPage() {
   const { studyId = '' } = useParams();

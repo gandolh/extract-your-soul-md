@@ -4,7 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
 import { AuthProvider } from './auth/AuthContext';
-import { ToastProvider } from './components/Toaster';
+import { ToastProvider } from './components/app/Toaster';
 import './styles/global.css';
 
 const queryClient = new QueryClient({

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { api, ApiError, type EvalResult, type EvalCondition, type MetricBundle } from '../api/client';
-import { useToast } from '../components/Toaster';
+import { useToast } from '../components/app/Toaster';
 import { Button, Card, cardClass, Eyebrow, Headline, Notice, Tag } from '../components/ui';
 
 const CONDITIONS: EvalCondition[] = ['A', 'B', 'C'];

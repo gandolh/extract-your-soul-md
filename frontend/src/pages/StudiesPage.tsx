@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom';
 import type { StudySummary } from '../api/client';
 import { useStudies } from '../api/queries';
-import { Meter } from '../components/Layout';
-import { STUDY_ORDER } from '../studyOrder';
+import { Meter } from '../components/app/Layout';
+import { STUDY_ORDER } from '../shared/studyOrder';
 import { cardClass, cx, Eyebrow, Headline, Tag } from '../components/ui';
 
 // Global 1-based number for a study, matching StudyPage's "Study NN / total"

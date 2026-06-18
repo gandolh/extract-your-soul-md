@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useStudies } from '../api/queries';
-import { Meter } from '../components/Layout';
+import { Meter } from '../components/app/Layout';
 import { Eyebrow, Headline, buttonClass, cardClass } from '../components/ui';
 
 export function IntroPage() {

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { useAuth } from '../auth/AuthContext';
+import { useAuth } from '../../auth/AuthContext';
 import { useToast } from './Toaster';
-import { cx } from './ui';
+import { cx } from '../ui';
 
 const NAV_LINK =
   'font-mono text-[12px] font-medium uppercase tracking-[0.05em] text-text-secondary ' +
