@@ -6,10 +6,8 @@ import { RegisterPage } from './pages/RegisterPage';
 import { IntroPage } from './pages/IntroPage';
 import { StudiesPage } from './pages/StudiesPage';
 import { StudyPage } from './pages/StudyPage';
-import { ConversationsPage } from './pages/ConversationsPage';
-import { ConversationDetailPage } from './pages/ConversationDetailPage';
+import { SwipePage } from './pages/SwipePage';
 import { ResultsPage } from './pages/ResultsPage';
-import { EvalPage } from './pages/EvalPage';
 import { type ReactNode } from 'react';
 
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -41,12 +39,13 @@ export default function App() {
         <Route path="/" element={<IntroPage />} />
         <Route path="/studies" element={<StudiesPage />} />
         <Route path="/studies/:studyId" element={<StudyPage />} />
-        <Route path="/conversations" element={<ConversationsPage />} />
-        <Route path="/conversations/:id" element={<ConversationDetailPage />} />
-        {/* Old route — keep links working after the Import → Conversations rename. */}
-        <Route path="/import" element={<Navigate to="/conversations" replace />} />
+        <Route path="/swipe" element={<SwipePage />} />
+        {/* Old routes — redirect away after the conversations/eval removal. */}
+        <Route path="/conversations" element={<Navigate to="/swipe" replace />} />
+        <Route path="/conversations/:id" element={<Navigate to="/swipe" replace />} />
+        <Route path="/import" element={<Navigate to="/swipe" replace />} />
+        <Route path="/eval" element={<Navigate to="/results" replace />} />
         <Route path="/results" element={<ResultsPage />} />
-        <Route path="/eval" element={<EvalPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

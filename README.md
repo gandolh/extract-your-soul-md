@@ -1,7 +1,8 @@
 # extract-your-soul-md
 
-> Turn your own private conversations into a static `my-soul.md` profile that
-> teaches an LLM to write like _you_ — not like a generic AI.
+> Turn a short self-study — a few open-ended prompts plus a yes/no card pass —
+> into a static `my-soul.md` profile that teaches an LLM to write like _you_,
+> not like a generic AI.
 
 ## The idea
 
@@ -13,11 +14,11 @@ like.
 
 This project builds that reference.
 
-You feed it raw inputs (WhatsApp exports for now, more formats later) and it
-produces a single markdown file — `soul.md` — that describes your voice in
-the way another LLM can actually use: tone, vocabulary, signature phrases,
-humor style, recurring topics, values, and an explicit "how to imitate me"
-section.
+You answer a set of themed prompts about yourself, then swipe through a deck
+of generated "does this sound like you?" statements, and it produces a single
+markdown file — `soul.md` — that describes your voice in the way another LLM
+can actually use: tone, vocabulary, signature phrases, humor style, recurring
+topics, values, and an explicit "how to imitate me" section.
 
 That file can then be consumed by any downstream tool that needs a stable
 voice reference — typically by inlining the markdown into an LLM prompt.
@@ -26,9 +27,10 @@ voice reference — typically by inlining the markdown into an LLM prompt.
 
 A small **web platform**: a React SPA + a Fastify API + SQLite. It's a
 psychological-study-style app — you register an account, answer a few themed
-**studies** (open-ended self-report prompts), import your past conversations,
-and generate your `soul.md`, all in the browser. It's multi-user, with a
-local SQLite database as the source of truth.
+**studies** (open-ended self-report prompts + short trait scales), swipe a
+generated **card deck** to confirm what sounds like you, and generate your
+`soul.md`, all in the browser. It's multi-user, with a local SQLite database
+as the source of truth.
 
 ```bash
 npm install                 # needs Node >= 24
@@ -60,16 +62,15 @@ npm run build && npm run serve:prod   # http://localhost:4317
    how you'd _like_ to write, the story you tell about yourself — and each
    free-text answer doubles as a voice sample in your own writing. You don't
    have to finish them all in one sitting; answers are saved as you go.
-4. **Import your conversations.** Upload WhatsApp exports (`.txt` / `.md`) and
-   set the display names that mark **you** across those chats. You appear
-   under different names in different chats (whoever saved you under what
-   nickname) — list them all. These names live in SQLite, per user.
+4. **Swipe the cards.** On the Cards page, generate a deck of first-person
+   statements built from your own answers (this calls Ollama), then swipe each
+   one — right if it sounds like you, left if it doesn't. The statements you
+   confirm are folded into your profile as endorsed self-descriptions; it's an
+   active-learning loop that sharpens the read. This step is optional — studies
+   alone are enough to generate a profile.
 5. **Generate your soul.** From the Results page, kick off extraction (this
    calls `POST /api/extract`). The result is stored for your account and
    rendered on the Results page.
-
-Either source is enough on its own — studies alone, conversations alone, or
-both combined.
 
 ## Why a separate tool?
 
@@ -87,19 +88,16 @@ _consume_ the profile. Keeping extraction in its own tool means:
 When you hit extract, the server runs a **pure data-prep pipeline** over
 _your_ data, then a map/reduce pass against Ollama:
 
-1. **Process** — parses your imported WhatsApp exports and filters to **your
-   messages only** (matched against the display names you set). Other people's
-   words aren't your voice and shouldn't pollute the profile. It also drops
-   noise (short reactions like `ok` / `lol` / `👍`, URLs, `<Media omitted>`
-   placeholders, exact duplicates) and folds in your study answers.
-2. **Chunk** — packs the cleaned messages and answers into token-budgeted
-   chunks, each labeled with its source and `kind` (`freeform` or
-   `questionnaire`). The study answers always get their own chunk so they
-   aren't cross-contaminated with chat fragments.
+1. **Process** — writes your study answers to a single `answers.md`, appends
+   the swipe statements you confirmed as one reserved section, and parses the
+   whole thing into a clean questionnaire file. Skipped answers are dropped.
+2. **Chunk** — packs the questionnaire into token-budgeted chunks, each
+   labeled with its source and `kind`. (The chunker is general first-fit
+   packing; today it only sees the questionnaire file.)
 3. **Extract** — a map/reduce flow against your local Ollama server. Each
-   chunk is compressed to a handful of voice bullets (the questionnaire chunk
-   uses a different map prompt that pulls out propositional content — beliefs,
-   motivations, narrative arcs), then a single reduce call synthesizes all the
+   chunk is compressed to a handful of voice bullets (the Q&A map prompt pulls
+   out propositional content — beliefs, motivations, narrative arcs — alongside
+   voice features in the prose), then a single reduce call synthesizes all the
    bullets into your `soul.md`.
 
 This all happens in a throwaway per-user work directory built from your
@@ -107,22 +105,24 @@ database rows, which is deleted afterward. The result is written back to your
 account and shown on the Results page (the previous version is kept as a
 backup).
 
-Extraction runs as a **background job** — a full Ollama run can take minutes,
-especially with a long chat history, so `POST /api/extract` returns immediately
-with a job id and the Results page polls for progress (map/reduce stage + chunk
-count) until it finishes. A local Ollama server must be running for it to work.
+Extraction runs as a **background job** — a full Ollama run can take a couple
+of minutes, so `POST /api/extract` returns immediately with a job id and the
+Results page polls for progress (map/reduce stage + chunk count) until it
+finishes. A local Ollama server must be running for it to work.
 
-### Why a questionnaire at all?
+### Why a questionnaire (and a card deck)?
 
-Chat logs capture observable style — vocabulary, punctuation, sentence
-rhythm, humor that comes up in conversation. They miss:
+A few well-chosen prompts surface things that are otherwise hard to pin down:
 
-- Values and beliefs you don't argue about in chats.
-- Topics of deep interest you have no one to message about.
+- Values and beliefs, and the moral vocabulary you reach for.
+- Topics of deep interest and recurring frustrations.
 - Aspirational register — how you'd _like_ to write vs. how you actually do.
 - Narrative-identity arc — the shape of the story you tell about yourself.
 
-The themed studies fill those gaps. The research foundation for the question
+Each free-text answer also doubles as a voice sample in your own writing. The
+swipe deck then closes the loop: it turns your answers into concrete first-person
+statements you confirm or reject, so the profile is built from claims you've
+actively endorsed rather than only inferred. The research foundation for the question
 set lives in the project **corpus** ([corpus/](corpus/)) — see
 [corpus/wiki/sources-raw/02-questionnaire-design.md](corpus/wiki/sources-raw/02-questionnaire-design.md)
 for per-question rationale and
@@ -134,19 +134,12 @@ also compiled into an interlinked **LLM Wiki** at
 
 ## Token-optimization strategy
 
-Local Ollama doesn't charge per token, but it does charge in seconds — an 8B
-model can be 10–60s per call. With a year of WhatsApp history you might have
-500k–2M tokens. The pipeline applies four compounding optimizations before
-anything hits the LLM:
-
-1. **Filter to your messages only** — typically halves the input.
-2. **Drop noise** — short messages, URLs, media placeholders. Another 20–40%
-   off on real WhatsApp data.
-3. **Deduplicate** — exact-match dedup. Cuts another 10–30% on chatty corpora
-   full of "ok"s and "lol"s.
-4. **Map-reduce with aggressive compression** — each ~30k-token chunk gets
-   compressed to ~200 tokens of bullets, then a single synthesis call merges
-   the bullets. ~100:1 compression at the map step.
+Local Ollama doesn't charge per token, but it does charge in seconds. The
+questionnaire is already compact, so the main lever is the map/reduce step:
+each token-budgeted chunk is compressed to ~200 tokens of voice bullets, then a
+single reduce call merges the bullets into `soul.md`. Chunk sizes are derived
+from `OLLAMA_NUM_CTX` so they always fit the model's context window (Ollama
+silently truncates anything past it).
 
 ## Privacy
 
@@ -172,14 +165,14 @@ src/
   config.ts                # env loader, zod-validated
   tokens.ts                # cheap token estimator
   ollama.ts                # raw-fetch Ollama client
-  prompts.ts               # MAP, MAP_QA, and REDUCE prompt headers
-  questions.ts             # the canonical questionnaire questions (RO + EN)
+  prompts.ts               # MAP, MAP_QA, REDUCE, and SWIPE_CARD prompt headers
+  questions.ts             # the canonical questionnaire questions
   studies.ts               # themed grouping of questions into studies
-  answers-file.ts          # shared answers.md reader/writer
+  answers-file.ts          # shared answers.md reader/writer (+ confirmed statements)
   color.ts                 # tiny ANSI helper (util.styleText, no deps)
   stages/
-    process.ts             # WhatsApp parse → filter → dedup + Q&A parser
-    chunk.ts               # file-bounded first-fit packing; isolates Q&A chunk
+    process.ts             # questionnaire (answers.md) parser
+    chunk.ts               # file-bounded first-fit packing
     extract.ts             # Ollama map/reduce
   db/
     schema.sql             # tables, applied idempotently on boot
@@ -190,7 +183,9 @@ src/
     serve.ts               # listens
     auth.ts                # scrypt hashing + cookie sessions + requireAuth
     pipeline.ts            # per-user extraction (process → chunk → Ollama)
-    routes/                # auth, studies, conversations, results
+    swipe.ts               # generates the swipe-card deck from the user's material
+    ollama-ready.ts        # shared TTL-cached readiness ping
+    routes/                # auth, studies, swipe, results
 
 frontend/
   index.html
@@ -201,7 +196,7 @@ frontend/
     auth/AuthContext.tsx
     api/client.ts
     components/            # Layout, Markdown, Toaster, ui
-    pages/                 # Login, Register, Intro, Studies, Study, Import, Results
+    pages/                 # Login, Register, Intro, Studies, Study, Swipe, Results
 
 corpus/                    # LLM-maintained wiki + work tracker — see corpus/index.md
 ```
@@ -221,18 +216,17 @@ corpus/                    # LLM-maintained wiki + work tracker — see corpus/i
   sessions. Set a real `SESSION_SECRET` and run behind TLS for anything
   non-local.
 - **Not reproducible.** LLM stochasticity means two runs over the same data
-  produce two different souls. That's inherent, not a bug.
-- **WhatsApp-only on day one.** Adding new input formats means adding new
-  parsers in `src/stages/process.ts`.
-- **Romanian/English friendly** by default (chunking uses a ~4 chars/token
-  heuristic that's accurate for both). Other languages may need a different
-  estimator.
+  produce two different souls. That's inherent, not a bug. (The swipe deck also
+  uses a higher temperature + random seed on purpose, so it varies per
+  regeneration.)
+- **Questionnaire-only input.** The studies + swipe cards are the only source;
+  there's no conversation/chat import. The chunker uses a ~4 bytes/token
+  estimator that's accurate for English/Latin-script text.
 
 ## Future work
 
-- A job queue + polling so extraction isn't a blocking HTTP request.
-- Incremental mode — only reprocess changed source data.
-- More input formats: Telegram, journal entries, social-media post dumps.
-- Optional stratified sampling for very large corpora.
 - More themed studies (data-only: add questions to `src/questions.ts` and a
   `Study` entry to `src/studies.ts`).
+- Smarter card generation — dedupe against prior decks, balance the kinds of
+  statements, let the user request "more like this".
+- Optional stratified sampling for very large answer sets.

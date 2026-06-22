@@ -23,24 +23,6 @@ export interface UserRow {
   created_at: string;
 }
 
-export interface ConversationRow {
-  id: number;
-  filename: string;
-  provider: string;
-  // JSON-decoded per-conversation "you" names; null = fall back to global names.
-  names: string[] | null;
-  created_at: string;
-}
-
-export interface ConversationContent {
-  id: number;
-  filename: string;
-  content: string;
-  provider: string;
-  names: string[] | null;
-  created_at: string;
-}
-
 export interface ResultRow {
   id: number;
   soul_md: string;
@@ -209,113 +191,78 @@ export function setReportInclude(userId: number, reportKey: string, include: boo
     .run(include ? 1 : 0, userId, reportKey);
 }
 
-// ---- conversations -------------------------------------------------------
+// ---- swipe cards ---------------------------------------------------------
 
-// Decode the stored JSON names column into a string[] | null. A malformed or
-// non-array value degrades to null (fall back to global names) rather than
-// throwing — the voice filter is load-bearing, so never hard-fail a read.
-function decodeNames(raw: unknown): string[] | null {
-  if (typeof raw !== 'string' || raw.length === 0) return null;
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (Array.isArray(parsed)) return parsed.filter((n): n is string => typeof n === 'string');
-    return null;
-  } catch {
-    return null;
-  }
+export type SwipeVerdict = 'yes' | 'no';
+
+export interface SwipeCardRow {
+  id: number;
+  statement: string;
+  verdict: SwipeVerdict | null; // null = not yet swiped
+  created_at: string;
 }
 
-export function addConversation(
-  userId: number,
-  filename: string,
-  content: string,
-  provider = 'whatsapp',
-): { id: number } {
-  const info = getDb()
-    .prepare('INSERT INTO conversations (user_id, filename, content, provider) VALUES (?, ?, ?, ?)')
-    .run(userId, filename, content, provider);
-  return { id: Number(info.lastInsertRowid) };
-}
-
-export function listConversations(userId: number): ConversationRow[] {
-  const raw = rows<{ id: number; filename: string; provider: string; names: string | null; created_at: string }>(
-    getDb()
-      .prepare('SELECT id, filename, provider, names, created_at FROM conversations WHERE user_id = ? ORDER BY created_at DESC')
-      .all(userId) as Row[],
-  );
-  return raw.map((r) => ({ ...r, names: decodeNames(r.names) }));
-}
-
-export function getConversation(userId: number, id: number): ConversationContent | undefined {
-  const r = row<{ id: number; filename: string; content: string; provider: string; names: string | null; created_at: string }>(
-    getDb()
-      .prepare('SELECT id, filename, content, provider, names, created_at FROM conversations WHERE user_id = ? AND id = ?')
-      .get(userId, id) as Row | undefined,
-  );
-  if (!r) return undefined;
-  return { ...r, names: decodeNames(r.names) };
-}
-
-export function getConversationContents(userId: number): ConversationContent[] {
-  const raw = rows<{ id: number; filename: string; content: string; provider: string; names: string | null; created_at: string }>(
-    getDb()
-      .prepare('SELECT id, filename, content, provider, names, created_at FROM conversations WHERE user_id = ?')
-      .all(userId) as Row[],
-  );
-  return raw.map((r) => ({ ...r, names: decodeNames(r.names) }));
-}
-
-// Set (or clear) the per-conversation "you" names. An empty array stores '[]'
-// (explicitly "no names for this chat"); pass null to clear back to the global
-// fallback. Trims/dedupes like setNames does for the global list.
-export function setConversationNames(userId: number, id: number, names: string[] | null): boolean {
-  const encoded =
-    names === null
-      ? null
-      : JSON.stringify([...new Set(names.map((n) => n.trim()).filter((n) => n.length > 0))]);
-  const info = getDb()
-    .prepare('UPDATE conversations SET names = ? WHERE user_id = ? AND id = ?')
-    .run(encoded, userId, id);
-  return info.changes > 0;
-}
-
-export function deleteConversation(userId: number, id: number): void {
-  getDb()
-    .prepare('DELETE FROM conversations WHERE user_id = ? AND id = ?')
-    .run(userId, id);
-}
-
-export function hasConversations(userId: number): boolean {
-  const row = getDb()
-    .prepare('SELECT 1 FROM conversations WHERE user_id = ? LIMIT 1')
+/** True if the user has any non-empty study answer — the material a card
+ *  deck is generated from (and the gate for "can generate"). */
+export function hasAnswers(userId: number): boolean {
+  const found = getDb()
+    .prepare("SELECT 1 FROM study_answers WHERE user_id = ? AND body <> '' LIMIT 1")
     .get(userId);
-  return row !== undefined;
+  return found !== undefined;
 }
 
-// ---- names ---------------------------------------------------------------
-
-export function getNames(userId: number): string[] {
-  const list = rows<{ name: string }>(
+/** All of a user's cards, oldest first (stable deck order). */
+export function listSwipeCards(userId: number): SwipeCardRow[] {
+  return rows<SwipeCardRow>(
     getDb()
-      .prepare('SELECT name FROM user_names WHERE user_id = ? ORDER BY name')
+      .prepare('SELECT id, statement, verdict, created_at FROM swipe_cards WHERE user_id = ? ORDER BY id')
       .all(userId) as Row[],
   );
-  return list.map((r) => r.name);
 }
 
-export function setNames(userId: number, names: string[]): void {
+/**
+ * Insert a batch of generated statements. UNIQUE(user_id, statement) makes a
+ * repeated statement a no-op (DO NOTHING), so regenerating never duplicates a
+ * card the user has already swiped. Returns the count actually inserted.
+ */
+export function insertSwipeCards(userId: number, statements: ReadonlyArray<string>): number {
   const conn = getDb();
-  const clean = [...new Set(names.map((n) => n.trim()).filter((n) => n.length > 0))];
+  const stmt = conn.prepare(
+    'INSERT INTO swipe_cards (user_id, statement) VALUES (?, ?) ON CONFLICT(user_id, statement) DO NOTHING',
+  );
+  let inserted = 0;
   conn.exec('BEGIN');
   try {
-    conn.prepare('DELETE FROM user_names WHERE user_id = ?').run(userId);
-    const stmt = conn.prepare('INSERT INTO user_names (user_id, name) VALUES (?, ?)');
-    for (const name of clean) stmt.run(userId, name);
+    for (const s of statements) {
+      const text = s.trim();
+      if (text.length === 0) continue;
+      inserted += Number(stmt.run(userId, text).changes);
+    }
     conn.exec('COMMIT');
   } catch (err) {
     conn.exec('ROLLBACK');
     throw err;
   }
+  return inserted;
+}
+
+/** Set (or clear, with null) a card's verdict. Returns false if no such card. */
+export function setSwipeVerdict(userId: number, cardId: number, verdict: SwipeVerdict | null): boolean {
+  const info = getDb()
+    .prepare('UPDATE swipe_cards SET verdict = ? WHERE user_id = ? AND id = ?')
+    .run(verdict, userId, cardId);
+  return info.changes > 0;
+}
+
+/** The statements the user confirmed ('yes') sound like them — folded into
+ *  soul.md at extraction time as endorsed self-descriptions. */
+export function getConfirmedStatements(userId: number): string[] {
+  const list = rows<{ statement: string }>(
+    getDb()
+      .prepare("SELECT statement FROM swipe_cards WHERE user_id = ? AND verdict = 'yes' ORDER BY id")
+      .all(userId) as Row[],
+  );
+  return list.map((r) => r.statement);
 }
 
 // ---- results -------------------------------------------------------------

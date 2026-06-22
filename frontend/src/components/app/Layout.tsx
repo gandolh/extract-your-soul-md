@@ -14,9 +14,8 @@ const NAV_LINK =
 const NAV_ITEMS = [
   { to: '/', label: 'Overview', end: true },
   { to: '/studies', label: 'Studies', end: false },
-  { to: '/conversations', label: 'Conversations', end: false },
+  { to: '/swipe', label: 'Cards', end: false },
   { to: '/results', label: 'Profile', end: false },
-  { to: '/eval', label: 'Eval', end: false },
 ] as const;
 
 export function Layout() {

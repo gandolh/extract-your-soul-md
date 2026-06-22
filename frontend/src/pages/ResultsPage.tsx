@@ -127,8 +127,8 @@ export function ResultsPage() {
             soul<span className="text-primary">.</span>md
           </Headline>
           <p className="mt-3 max-w-[64ch] text-[14px] leading-[22px] text-text-secondary">
-            The synthesized voice profile, generated locally from your studies and conversations via
-            Ollama. Re-run as you add material.
+            The synthesized voice profile, generated locally from your studies and the cards you
+            confirmed, via Ollama. Re-run as you add material.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -177,11 +177,11 @@ export function ResultsPage() {
           <Link to="/studies" className="underline">
             study
           </Link>{' '}
-          or{' '}
-          <Link to="/conversations" className="underline">
-            import a conversation
-          </Link>{' '}
-          first.
+          first, then optionally{' '}
+          <Link to="/swipe" className="underline">
+            swipe some cards
+          </Link>
+          .
         </Notice>
       )}
 
@@ -231,7 +231,7 @@ export function ResultsPage() {
         state?.canExtract && (
           <Card className="flex flex-col items-start gap-3">
             <p className="text-[14px] text-text-secondary">
-              No profile generated yet — your studies and conversations are ready to synthesize.
+              No profile generated yet — your studies and confirmed cards are ready to synthesize.
             </p>
             {state.ollamaReady ? (
               <Button onClick={onRunClick}>Generate profile</Button>

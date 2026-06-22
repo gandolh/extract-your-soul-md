@@ -25,7 +25,6 @@ const intFromEnv = z
   });
 
 const EnvSchema = z.object({
-  INPUTS_FREEFORM_DIR: z.string().min(1).default('inputs/freeform'),
   INPUTS_PROCESSED_DIR: z.string().min(1).default('inputs/processed'),
   CHUNKS_DIR: z.string().min(1).default('chunks'),
   OUT_DIR: z.string().min(1).default('out'),
@@ -43,9 +42,6 @@ const EnvSchema = z.object({
     .default(DEV_SESSION_SECRET),
 
   CHUNK_TARGET_TOKENS: intFromEnv.pipe(z.number().int().positive().default(30_000)),
-  MIN_MESSAGE_LENGTH: intFromEnv.pipe(z.number().int().nonnegative().default(3)),
-  DROP_URLS: boolFromEnv.pipe(z.boolean().default(true)),
-  DROP_MEDIA_PLACEHOLDERS: boolFromEnv.pipe(z.boolean().default(true)),
 
   OLLAMA_HOST: z.string().url().default('https://ollama.com'),
   OLLAMA_MODEL: z.string().min(1).default('gpt-oss:120b-cloud'),
@@ -57,13 +53,9 @@ const EnvSchema = z.object({
   // would otherwise block up to Fastify's 15-min ceiling. 10 min default covers a
   // slow cloud reduce; transient blips are retried (see ollama.ts).
   OLLAMA_TIMEOUT_MS: intFromEnv.pipe(z.number().int().positive().default(600_000)),
-
-  EVAL_HOLDOUT_N: intFromEnv.pipe(z.number().int().positive().default(8)),
-  EVAL_RAW_K: intFromEnv.pipe(z.number().int().positive().default(5)),
 });
 
 export type Config = {
-  inputsFreeformDir: string;
   inputsProcessedDir: string;
   chunksDir: string;
   outDir: string;
@@ -74,17 +66,12 @@ export type Config = {
   serverPort: number;
   sessionSecret: string;
   chunkTargetTokens: number;
-  minMessageLength: number;
-  dropUrls: boolean;
-  dropMediaPlaceholders: boolean;
   ollamaHost: string;
   ollamaModel: string;
   ollamaApiKey: string;
   ollamaNumCtx: number;
   ollamaTemperature: number;
   ollamaTimeoutMs: number;
-  evalHoldoutN: number;
-  evalRawK: number;
 };
 
 export function loadConfig(): Config {
@@ -97,7 +84,6 @@ export function loadConfig(): Config {
   }
   const e = parsed.data;
   return Object.freeze({
-    inputsFreeformDir: e.INPUTS_FREEFORM_DIR,
     inputsProcessedDir: e.INPUTS_PROCESSED_DIR,
     chunksDir: e.CHUNKS_DIR,
     outDir: e.OUT_DIR,
@@ -108,16 +94,11 @@ export function loadConfig(): Config {
     serverPort: e.SERVER_PORT,
     sessionSecret: e.SESSION_SECRET,
     chunkTargetTokens: e.CHUNK_TARGET_TOKENS,
-    minMessageLength: e.MIN_MESSAGE_LENGTH,
-    dropUrls: e.DROP_URLS,
-    dropMediaPlaceholders: e.DROP_MEDIA_PLACEHOLDERS,
     ollamaHost: e.OLLAMA_HOST,
     ollamaModel: e.OLLAMA_MODEL,
     ollamaApiKey: e.OLLAMA_API_KEY,
     ollamaNumCtx: e.OLLAMA_NUM_CTX,
     ollamaTemperature: e.OLLAMA_TEMPERATURE,
     ollamaTimeoutMs: e.OLLAMA_TIMEOUT_MS,
-    evalHoldoutN: e.EVAL_HOLDOUT_N,
-    evalRawK: e.EVAL_RAW_K,
   });
 }

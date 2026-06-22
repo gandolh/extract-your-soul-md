@@ -13,9 +13,8 @@ import { reclaimStaleJobs } from '../db/repos.js';
 import { sweepExpiredSessions } from '../db/maintenance.js';
 import { authRoutes } from './routes/auth.js';
 import { studyRoutes } from './routes/studies.js';
-import { conversationRoutes } from './routes/conversations.js';
+import { swipeRoutes } from './routes/swipe.js';
 import { resultRoutes } from './routes/results.js';
-import { evalRoutes } from './routes/eval.js';
 
 export interface BuildOptions {
   isProd: boolean;
@@ -72,13 +71,14 @@ export async function buildServer(cfg: Config, opts: BuildOptions): Promise<Fast
     logger: opts.isProd ? true : { transport: undefined, level: 'warn' },
     // Ollama extraction is slow; don't let the platform default (~5 min) cut it off.
     requestTimeout: 15 * 60 * 1000,
-    bodyLimit: 8 * 1024 * 1024, // accommodate ~5 MB conversation uploads
+    bodyLimit: 8 * 1024 * 1024, // accommodate large study-answer save batches
   });
 
   // Tolerate a JSON content-type with an empty body: bodyless POSTs like
-  // /api/extract and /api/eval are valid, but a client (or proxy) that still
-  // sends `Content-Type: application/json` would otherwise get FST_ERR_CTP_EMPTY_JSON_BODY.
-  // Treat empty/whitespace bodies as {} so routes see a well-formed object.
+  // /api/extract and /api/swipe/generate are valid, but a client (or proxy) that
+  // still sends `Content-Type: application/json` would otherwise get
+  // FST_ERR_CTP_EMPTY_JSON_BODY. Treat empty/whitespace bodies as {} so routes
+  // see a well-formed object.
   app.addContentTypeParser(
     'application/json',
     { parseAs: 'string' },
@@ -98,9 +98,8 @@ export async function buildServer(cfg: Config, opts: BuildOptions): Promise<Fast
 
   await app.register(authRoutes, { isProd: opts.isProd });
   await app.register(studyRoutes);
-  await app.register(conversationRoutes);
+  await app.register(swipeRoutes, { cfg });
   await app.register(resultRoutes, { cfg });
-  await app.register(evalRoutes, { cfg });
 
   app.get('/api/health', async () => ({ ok: true }));
 
