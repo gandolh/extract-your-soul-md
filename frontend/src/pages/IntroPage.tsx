@@ -19,10 +19,10 @@ export function IntroPage() {
     },
     {
       index: '02',
-      to: '/conversations',
-      eyebrow: 'Conversations',
-      title: 'Import conversations',
-      desc: 'Drop in WhatsApp exports. Only the lines you wrote are kept; everything else is filtered out.',
+      to: '/swipe',
+      eyebrow: 'Cards',
+      title: 'Swipe the cards',
+      desc: 'We turn your answers into first-person statements. Swipe each one “sounds like me” or not — the yes’s sharpen your profile.',
     },
     {
       index: '03',
@@ -46,7 +46,7 @@ export function IntroPage() {
         <p className="text-text-primary">
           This is a personal research experiment that builds a written profile — a{' '}
           <code className="rounded-sm bg-primary-wash px-1.5 py-0.5 font-mono text-[12px] text-primary">soul.md</code> —
-          from material you supply: a few short prompts and your own past conversations.
+          from material you supply: a few short prompts, then a quick yes/no pass over statements drawn from your own answers.
         </p>
         <p>
           The premise borrows from narrative-identity research: how a person frames frustration, what

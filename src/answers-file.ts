@@ -5,11 +5,18 @@
 // place. The downstream parser in src/stages/process.ts keys off the
 // `## Qn — Title` headers and the `[skipped]` marker — keep those stable.
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { QUESTIONS, type Question } from './questions.js';
 
 export const SKIPPED_MARKER = '[skipped]';
+
+// Reserved synthetic question id for the swipe-card statements the user
+// confirmed ("sounds like me"). Sits far above the real question ids (Q1..),
+// and the downstream `Q\d+` parser accepts it, so confirmed statements ride the
+// same questionnaire chunk as the studies answers with no new format surface.
+export const CONFIRMED_STATEMENTS_ID = 'Q900';
+export const CONFIRMED_STATEMENTS_TITLE = 'Statements the user confirmed describe them';
 
 export interface RecordedAnswer {
   id: string;
@@ -52,6 +59,27 @@ export function writeAnswersFile(
     if (a) out += renderSection(q, a.body);
   }
   writeFileSync(filePath, out, 'utf8');
+}
+
+/**
+ * Append the swipe-card statements the user endorsed as "sounds like me" to an
+ * existing answers.md, as one reserved `## Q900 — …` section with the statements
+ * as a bullet list. No-op when there are none. Called after writeAnswersFile so
+ * the block lands at the end of the same file the questionnaire processor reads.
+ */
+export function appendConfirmedStatements(
+  filePath: string,
+  statements: ReadonlyArray<string>,
+): void {
+  const clean = statements.map((s) => s.trim()).filter((s) => s.length > 0);
+  if (clean.length === 0) return;
+  const body = clean.map((s) => `- ${s}`).join('\n');
+  const section =
+    `## ${CONFIRMED_STATEMENTS_ID} — ${CONFIRMED_STATEMENTS_TITLE}\n\n` +
+    `These are first-person statements the user actively confirmed sound like them ` +
+    `(endorsed in a yes/no card review). Treat them as high-confidence self-descriptions.\n\n` +
+    `${body}\n\n`;
+  appendFileSync(filePath, section, 'utf8');
 }
 
 // --- Choice-answer body encoding -------------------------------------------

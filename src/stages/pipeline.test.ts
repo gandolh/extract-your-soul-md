@@ -6,16 +6,17 @@ import path from 'node:path';
 import type { Config } from '../config.js';
 import { processAll, QUESTIONNAIRE_PROCESSED_FILENAME } from './process.js';
 import { chunkAll } from './chunk.js';
+import { appendConfirmedStatements, CONFIRMED_STATEMENTS_ID } from '../answers-file.js';
 
-// fs-coupled tests for the no-LLM data-prep core: the voice filter (only the
-// user's own messages survive), noise/dedup, questionnaire isolation, and that
-// the chunk manifest's token sums match what was written.
+// fs-coupled tests for the no-LLM data-prep core: the questionnaire is the only
+// input source now (study answers + confirmed swipe statements, both written
+// into answers.md upstream). Cover: questionnaire parsing/isolation, the
+// confirmed-statements block riding the same file, and chunk-budget honesty.
 
 // A throwaway Config rooted at a temp dir. Only the fields the data-prep stages
 // read are meaningful; the rest are filled with harmless defaults.
 function testConfig(root: string): Config {
   return {
-    inputsFreeformDir: path.join(root, 'freeform'),
     inputsProcessedDir: path.join(root, 'processed'),
     chunksDir: path.join(root, 'chunks'),
     outDir: path.join(root, 'out'),
@@ -26,17 +27,12 @@ function testConfig(root: string): Config {
     serverPort: 0,
     sessionSecret: 'x'.repeat(16),
     chunkTargetTokens: 30_000,
-    minMessageLength: 3,
-    dropUrls: true,
-    dropMediaPlaceholders: true,
     ollamaHost: 'http://localhost:11434',
     ollamaModel: 'test',
     ollamaApiKey: '',
     ollamaNumCtx: 8192,
     ollamaTemperature: 0,
     ollamaTimeoutMs: 1000,
-    evalHoldoutN: 8,
-    evalRawK: 5,
   };
 }
 
@@ -49,98 +45,75 @@ function withTempDir(fn: (dir: string) => void): void {
   }
 }
 
-const WA = (sender: string, body: string) => `[15/03/24, 21:42:11] ${sender}: ${body}`;
+function writeAnswers(cfg: Config, body: string): string {
+  mkdirSync(cfg.questionnaireDir, { recursive: true });
+  const p = path.join(cfg.questionnaireDir, cfg.questionnaireFile);
+  writeFileSync(p, body, 'utf8');
+  return p;
+}
 
-test('processAll keeps only the user’s own messages and drops noise/dups', () => {
+test('processAll parses answers into the questionnaire file and drops skipped sections', () => {
   withTempDir((root) => {
     const cfg = testConfig(root);
-    mkdirSync(cfg.inputsFreeformDir, { recursive: true });
-    const chat = [
-      WA('Gandolh', 'this is my real message'),
-      WA('Alice', 'this is someone else and must be dropped'),
-      WA('Gandolh', 'http://example.com'), // URL-only → noise after URL strip
-      WA('Gandolh', '<Media omitted>'), // media placeholder → noise
-      WA('Gandolh', 'ok'), // below minMessageLength (3) → noise
-      WA('Gandolh', 'this is my real message'), // exact dup → dropped
-      WA('Gandolh', 'a second distinct message'),
-    ].join('\n');
-    writeFileSync(path.join(cfg.inputsFreeformDir, 'chat.txt'), chat, 'utf8');
+    writeAnswers(
+      cfg,
+      '## Q1 — Recurring frustration\n\nMy frustration prose answer.\n\n' +
+        '## Q2 — Hidden passion\n\n[skipped]\n',
+    );
 
-    const stats = processAll(cfg, new Set(['Gandolh']));
+    const stats = processAll(cfg);
+    const out = readFileSync(path.join(cfg.inputsProcessedDir, QUESTIONNAIRE_PROCESSED_FILENAME), 'utf8');
 
-    const out = readFileSync(path.join(cfg.inputsProcessedDir, 'chat.txt'), 'utf8');
-    const kept = out.trim().split('\n');
-    assert.deepEqual(kept, ['this is my real message', 'a second distinct message']);
-    assert.equal(stats.linesOut, 2);
-    assert.equal(stats.duplicatesDropped, 1);
-    assert.ok(!out.includes('someone else'));
+    assert.equal(stats.questionnaireAnswers, 1, 'only the answered question counts');
+    assert.ok(out.includes('My frustration prose answer.'));
+    assert.ok(!out.includes('Hidden passion'), 'skipped section is dropped');
   });
 });
 
-test('a non-WhatsApp file yields zero parsed senders (the zero-recognized guard signal)', () => {
-  // The pipeline-layer NoRecognizedMessagesError guard keys on every source
-  // having parsedSenders.length === 0. Pin that ProcessStats contract here so a
-  // parser change can't silently defeat the guard.
+test('processAll throws when there is nothing to process', () => {
   withTempDir((root) => {
     const cfg = testConfig(root);
-    mkdirSync(cfg.inputsFreeformDir, { recursive: true });
-    // Looks nothing like a WhatsApp export (e.g. a Telegram JSON dump or prose).
-    writeFileSync(
-      path.join(cfg.inputsFreeformDir, 'telegram.json'),
-      '{"messages":[{"from":"Gandolh","text":"hi"}]}\njust some prose with no chat format\n',
-      'utf8',
-    );
-    // .json isn't even an accepted extension, so add a .txt with non-chat text too.
-    writeFileSync(path.join(cfg.inputsFreeformDir, 'notes.txt'), 'a plain note\nanother line\n', 'utf8');
-
-    const stats = processAll(cfg, new Set(['Gandolh']));
-    assert.ok(stats.perSource.length > 0, 'a source was processed');
-    assert.ok(
-      stats.perSource.every((s) => s.parsedSenders.length === 0),
-      'no WhatsApp senders recognized in any source',
-    );
-    assert.equal(stats.myLinesIn, 0);
-    assert.equal(stats.questionnaireAnswers, 0);
+    // No answers.md at all.
+    assert.throws(() => processAll(cfg), /No questionnaire answers/);
   });
 });
 
-test('processAll merges continuation lines into the previous own-message', () => {
+test('confirmed swipe statements ride the questionnaire file into processed output', () => {
   withTempDir((root) => {
     const cfg = testConfig(root);
-    mkdirSync(cfg.inputsFreeformDir, { recursive: true });
-    const chat = [WA('Gandolh', 'first part'), 'continued on next line'].join('\n');
-    writeFileSync(path.join(cfg.inputsFreeformDir, 'chat.txt'), chat, 'utf8');
+    const answersPath = writeAnswers(cfg, '## Q1 — Recurring frustration\n\nA real answer.\n');
+    appendConfirmedStatements(answersPath, ['I overthink small decisions.', 'I write in short bursts.']);
 
-    processAll(cfg, new Set(['Gandolh']));
-    const out = readFileSync(path.join(cfg.inputsProcessedDir, 'chat.txt'), 'utf8');
-    assert.equal(out.trim(), 'first part continued on next line');
+    processAll(cfg);
+    const out = readFileSync(path.join(cfg.inputsProcessedDir, QUESTIONNAIRE_PROCESSED_FILENAME), 'utf8');
+
+    // The reserved Q900 section and both confirmed statements survive parsing.
+    assert.ok(out.includes(CONFIRMED_STATEMENTS_ID), 'reserved confirmed-statements section present');
+    assert.ok(out.includes('I overthink small decisions.'));
+    assert.ok(out.includes('I write in short bursts.'));
   });
 });
 
-test('chunkAll isolates the questionnaire into its own questionnaire-kind chunk', () => {
+test('appendConfirmedStatements is a no-op with no confirmed statements', () => {
   withTempDir((root) => {
     const cfg = testConfig(root);
-    mkdirSync(cfg.inputsFreeformDir, { recursive: true });
-    mkdirSync(cfg.questionnaireDir, { recursive: true });
-    writeFileSync(
-      path.join(cfg.inputsFreeformDir, 'chat.txt'),
-      [WA('Gandolh', 'a chat message that survives the filter')].join('\n'),
-      'utf8',
-    );
-    writeFileSync(
-      path.join(cfg.questionnaireDir, 'answers.md'),
-      '## Q1 — Recurring frustration\n\nMy frustration prose answer.\n',
-      'utf8',
-    );
+    const answersPath = writeAnswers(cfg, '## Q1 — Recurring frustration\n\nA real answer.\n');
+    appendConfirmedStatements(answersPath, []);
+    const after = readFileSync(answersPath, 'utf8');
+    assert.ok(!after.includes(CONFIRMED_STATEMENTS_ID), 'no section added when nothing confirmed');
+  });
+});
 
-    processAll(cfg, new Set(['Gandolh']));
+test('chunkAll produces a single questionnaire-kind chunk for the answers', () => {
+  withTempDir((root) => {
+    const cfg = testConfig(root);
+    writeAnswers(cfg, '## Q1 — Recurring frustration\n\nMy frustration prose answer.\n');
+
+    processAll(cfg);
     const manifest = chunkAll(cfg);
 
     const qChunks = manifest.chunks.filter((c) => c.kind === 'questionnaire');
-    const freeChunks = manifest.chunks.filter((c) => c.kind === 'freeform');
     assert.equal(qChunks.length, 1, 'exactly one questionnaire chunk');
-    assert.ok(freeChunks.length >= 1, 'at least one freeform chunk');
-    // No questionnaire chunk is mixed with freeform source files.
     assert.ok(qChunks[0].sourceFiles.every((f) => f.includes(QUESTIONNAIRE_PROCESSED_FILENAME)));
   });
 });
@@ -148,16 +121,19 @@ test('chunkAll isolates the questionnaire into its own questionnaire-kind chunk'
 test('chunkAll: written chunk byte size stays under the num_ctx-derived budget', () => {
   withTempDir((root) => {
     const cfg = testConfig(root);
-    mkdirSync(cfg.inputsFreeformDir, { recursive: true });
-    // Many distinct messages to force real packing.
-    const lines = Array.from({ length: 400 }, (_, i) => WA('Gandolh', `distinct message number ${i} with some body text`));
-    writeFileSync(path.join(cfg.inputsFreeformDir, 'big.txt'), lines.join('\n'), 'utf8');
+    // A large multi-question answers file to force real packing/splitting of the
+    // questionnaire bucket against the small (8192) test num_ctx.
+    const sections = Array.from(
+      { length: 60 },
+      (_, i) =>
+        `## Q${i + 1} — Section ${i}\n\n` +
+        `This is a reasonably long free-text answer number ${i} with enough words to add up across many sections and force the chunker to split the questionnaire into multiple parts.\n`,
+    );
+    writeAnswers(cfg, sections.join('\n'));
 
-    processAll(cfg, new Set(['Gandolh']));
+    processAll(cfg);
     const manifest = chunkAll(cfg);
 
-    // The framing-honest budget guarantees the WHOLE written file (header +
-    // separators + body), in estimateTokens terms, fits the manifest's budget.
     const budget = manifest.chunkTargetTokens;
     for (const c of manifest.chunks) {
       const bytes = readFileSync(path.join(cfg.chunksDir, c.file), 'utf8');
@@ -167,10 +143,8 @@ test('chunkAll: written chunk byte size stays under the num_ctx-derived budget',
         `${c.file}: whole-file ${wholeFileTokens} tok exceeds budget ${budget}`,
       );
     }
-    // manifest totals match the per-chunk sums.
     const sum = manifest.chunks.reduce((s, c) => s + c.estimatedTokens, 0);
     assert.equal(manifest.totalEstimatedTokens, sum);
-    // sanity: we actually produced chunk files
     assert.ok(readdirSync(cfg.chunksDir).some((f) => /^chunk-\d+\.txt$/.test(f)));
   });
 });

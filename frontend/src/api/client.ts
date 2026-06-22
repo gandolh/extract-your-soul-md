@@ -93,24 +93,13 @@ export interface ReportPayload {
   summary: string; hasData: boolean; caveat: string;
 }
 export interface ReportState { key: ReportKey; payload: ReportPayload | null; includeInSoul: boolean; }
-export type ConversationProvider = 'whatsapp';
-export interface Conversation {
-  id: number;
-  filename: string;
-  provider: ConversationProvider;
-  namesCount: number | null; // null = uses the global fallback names
-  createdAt: string;
-}
-export interface DetectedSender { name: string; normalized: string; count: number; }
-export interface ConversationDetail {
-  id: number;
-  filename: string;
-  provider: ConversationProvider;
-  content: string;
-  createdAt: string;
-  names: string[];
-  usesGlobal: boolean;
-  senders: DetectedSender[];
+export type SwipeVerdict = 'yes' | 'no';
+export interface SwipeCard { id: number; statement: string; verdict: SwipeVerdict | null; }
+export interface SwipeState {
+  cards: SwipeCard[];
+  canGenerate: boolean; // has at least one study answer to build cards from
+  ollamaReady: boolean;
+  ollamaReason: string | null;
 }
 export interface SoulResult { soulMd: string; prevMd: string | null; extractor: string; createdAt: string | null; }
 export type JobStatus = 'enqueued' | 'running' | 'done' | 'failed';
@@ -129,28 +118,6 @@ export interface ResultsState {
   running: boolean;
   job: JobProgress | null;
   result: SoulResult | null;
-}
-
-export type EvalCondition = 'A' | 'B' | 'C';
-export interface MetricBundle {
-  burstinessDelta: number;
-  sentenceLengthVarianceDelta: number;
-  typeTokenRatioDelta: number;
-  functionWordDistance: number;
-  charDistributionDistance: number;
-}
-export interface EvalSample {
-  prefix: string;
-  realContinuation: string;
-  generated: Record<EvalCondition, string>;
-  scores: Record<EvalCondition, MetricBundle>;
-}
-export interface EvalResult {
-  n: number;
-  k: number;
-  conditionLabels: Record<EvalCondition, string>;
-  aggregate: Record<EvalCondition, MetricBundle>;
-  samples: EvalSample[];
 }
 
 export const api = {
@@ -177,31 +144,16 @@ export const api = {
   setReportInclude: (key: ReportKey, includeInSoul: boolean) =>
     request<{ ok: boolean }>('POST', `/reports/${key}/include`, { includeInSoul }),
 
-  // conversations + names
-  conversations: () => request<{ conversations: Conversation[] }>('GET', '/conversations'),
-  conversation: (id: number) =>
-    request<{ conversation: ConversationDetail }>('GET', `/conversations/${id}`),
-  addConversation: (filename: string, content: string, provider: ConversationProvider = 'whatsapp') =>
-    request<{ conversation: { id: number; filename: string; provider: ConversationProvider } }>(
-      'POST',
-      '/conversations',
-      { filename, content, provider },
-    ),
-  setConversationNames: (id: number, names: string[] | null) =>
-    request<{ names: string[]; usesGlobal: boolean }>('PUT', `/conversations/${id}/names`, { names }),
-  deleteConversation: (id: number) => request<void>('DELETE', `/conversations/${id}`),
-  senders: () => request<{ senders: DetectedSender[] }>('GET', '/conversations/senders'),
-  names: () => request<{ names: string[] }>('GET', '/names'),
-  setNames: (names: string[]) => request<{ names: string[] }>('PUT', '/names', { names }),
+  // swipe cards ("does this sound like you?")
+  swipe: () => request<SwipeState>('GET', '/swipe'),
+  generateCards: () =>
+    // Synchronous Ollama generation — can take a while; opt out of the timeout.
+    request<{ cards: SwipeCard[] }>('POST', '/swipe/generate', {}, 0),
+  setVerdict: (id: number, verdict: SwipeVerdict | null) =>
+    request<{ ok: boolean }>('POST', `/swipe/${id}/verdict`, { verdict }),
 
   // results
   results: () => request<ResultsState>('GET', '/results'),
   extract: () => request<{ ok: boolean; jobId: number }>('POST', '/extract'),
   job: (jobId: number) => request<JobDetail>('GET', `/extract/${jobId}`),
-
-  // eval
-  evalStatus: () => request<{ running: boolean }>('GET', '/eval'),
-  runEval: (params?: { n?: number; k?: number }) =>
-    // Synchronous, multi-minute Ollama run — opt out of the request timeout.
-    request<{ ok: boolean; result: EvalResult }>('POST', '/eval', params ?? {}, 0),
 };

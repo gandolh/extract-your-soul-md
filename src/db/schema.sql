@@ -48,28 +48,21 @@ CREATE TABLE IF NOT EXISTS reports (
   PRIMARY KEY (user_id, report_key)
 );
 
-CREATE TABLE IF NOT EXISTS conversations (
+-- Tinder-style "does this sound like you?" cards. Each card is a first-person
+-- statement an LLM generated from the user's own study answers (+ prior soul.md);
+-- the user swipes it yes ("sounds like me") or no. Confirmed ('yes') statements
+-- are folded into soul.md at extraction time as endorsed self-descriptions.
+-- verdict: NULL = not yet swiped, 'yes' | 'no'. UNIQUE(user_id, statement) so a
+-- regeneration that repeats a statement is a no-op rather than a duplicate card.
+CREATE TABLE IF NOT EXISTS swipe_cards (
   id         INTEGER PRIMARY KEY,
   user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  filename   TEXT NOT NULL,
-  content    TEXT NOT NULL,                           -- raw WhatsApp export
-  -- The source the export came from. Only 'whatsapp' today; column exists so
-  -- adding a provider is data-only on the import path.
-  provider   TEXT NOT NULL DEFAULT 'whatsapp',
-  -- Per-conversation "you" names as a JSON string array. NULL means "fall back
-  -- to the user's global user_names". The voice filter matches these per file.
-  names      TEXT,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  statement  TEXT NOT NULL,
+  verdict    TEXT,                                    -- NULL | 'yes' | 'no'
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (user_id, statement)
 );
-CREATE INDEX IF NOT EXISTS idx_conv_user ON conversations(user_id);
-
--- Global fallback for per-conversation names (and the legacy single name list):
--- the display names that mark "you" in exports when a conversation has none set.
-CREATE TABLE IF NOT EXISTS user_names (
-  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  name    TEXT NOT NULL,
-  PRIMARY KEY (user_id, name)
-);
+CREATE INDEX IF NOT EXISTS idx_swipe_user ON swipe_cards(user_id, id);
 
 CREATE TABLE IF NOT EXISTS results (
   id         INTEGER PRIMARY KEY,

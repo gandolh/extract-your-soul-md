@@ -10,15 +10,14 @@ import {
 } from '@tanstack/react-query';
 import {
   api,
-  type Conversation,
-  type ConversationDetail,
-  type ConversationProvider,
-  type DetectedSender,
   type ReportKey,
   type ReportState,
   type ResultsState,
   type StudyDetail,
   type StudySummary,
+  type SwipeCard,
+  type SwipeState,
+  type SwipeVerdict,
 } from './client';
 
 export const queryKeys = {
@@ -26,10 +25,7 @@ export const queryKeys = {
   studies: ['studies'] as const,
   study: (id: string) => ['study', id] as const,
   reports: ['reports'] as const,
-  conversations: ['conversations'] as const,
-  conversation: (id: number) => ['conversation', id] as const,
-  senders: ['senders'] as const,
-  names: ['names'] as const,
+  swipe: ['swipe'] as const,
   results: ['results'] as const,
 };
 
@@ -60,33 +56,10 @@ export function useReports(enabled = true) {
   });
 }
 
-export function useConversations() {
+export function useSwipe() {
   return useQuery({
-    queryKey: queryKeys.conversations,
-    queryFn: () => api.conversations().then((r) => r.conversations),
-  });
-}
-
-export function useConversation(id: number) {
-  return useQuery({
-    queryKey: queryKeys.conversation(id),
-    queryFn: () => api.conversation(id).then((r) => r.conversation),
-    enabled: Number.isInteger(id) && id > 0,
-    retry: false, // a 404 is a real "unknown conversation", not transient
-  });
-}
-
-export function useSenders() {
-  return useQuery({
-    queryKey: queryKeys.senders,
-    queryFn: () => api.senders().then((r) => r.senders),
-  });
-}
-
-export function useNames() {
-  return useQuery({
-    queryKey: queryKeys.names,
-    queryFn: () => api.names().then((r) => r.names),
+    queryKey: queryKeys.swipe,
+    queryFn: () => api.swipe(),
   });
 }
 
@@ -129,47 +102,38 @@ export function useSetReportInclude() {
   });
 }
 
-export function useAddConversation() {
+// Generate a fresh batch of cards (one slow Ollama call). On success we seed the
+// swipe query with the returned deck so the page shows new cards immediately.
+export function useGenerateCards() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (vars: { filename: string; content: string; provider?: ConversationProvider }) =>
-      api.addConversation(vars.filename, vars.content, vars.provider),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: queryKeys.conversations });
-      void qc.invalidateQueries({ queryKey: queryKeys.senders });
-    },
-  });
-}
-
-export function useDeleteConversation() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: number) => api.deleteConversation(id),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: queryKeys.conversations });
-      void qc.invalidateQueries({ queryKey: queryKeys.senders });
-    },
-  });
-}
-
-export function useSetConversationNames(id: number) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (names: string[] | null) => api.setConversationNames(id, names),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: queryKeys.conversation(id) });
-      void qc.invalidateQueries({ queryKey: queryKeys.conversations });
-      void qc.invalidateQueries({ queryKey: queryKeys.senders });
-    },
-  });
-}
-
-export function useSetNames() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (names: string[]) => api.setNames(names),
+    mutationFn: () => api.generateCards(),
     onSuccess: (r) => {
-      qc.setQueryData(queryKeys.names, r.names);
+      qc.setQueryData<SwipeState>(queryKeys.swipe, (prev) =>
+        prev ? { ...prev, cards: r.cards } : prev,
+      );
+    },
+  });
+}
+
+// Record a swipe. We optimistically patch the cached deck so the card advances
+// instantly, then reconcile from the server on settle.
+export function useSetVerdict() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { id: number; verdict: SwipeVerdict | null }) =>
+      api.setVerdict(vars.id, vars.verdict),
+    onMutate: (vars) => {
+      qc.setQueryData<SwipeState>(queryKeys.swipe, (prev) =>
+        prev
+          ? {
+              ...prev,
+              cards: prev.cards.map((c: SwipeCard) =>
+                c.id === vars.id ? { ...c, verdict: vars.verdict } : c,
+              ),
+            }
+          : prev,
+      );
     },
   });
 }
@@ -186,11 +150,10 @@ export function useExtract() {
 
 // Re-export the row types most consumers want alongside their hook.
 export type {
-  Conversation,
-  ConversationDetail,
-  ConversationProvider,
-  DetectedSender,
   ReportState,
   ResultsState,
   StudySummary,
+  SwipeCard,
+  SwipeState,
+  SwipeVerdict,
 };

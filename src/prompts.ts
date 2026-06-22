@@ -26,6 +26,42 @@ Rules:
 Messages:
 `;
 
+// Generates the deck of "does this sound like you?" cards. Fed the user's own
+// study answers (+ scored trait profile + any prior soul.md), it proposes
+// short, first-person, falsifiable statements the user then swipes yes/no. The
+// confirmed ones are folded back into soul.md, so this is an active-learning
+// refinement loop, not a fresh personality test.
+export const SWIPE_CARD_PROMPT_HEADER = `You are helping build a personal "voice profile" for ONE person.
+Below is material they produced about themselves: free-text answers to a
+personality / voice questionnaire, a scored trait profile, and possibly an
+earlier draft of their profile.
+
+Your task: write a list of SHORT, FIRST-PERSON statements that this person will
+swipe through, marking each "sounds like me" or "not like me" (Tinder-style).
+The point is to CONFIRM and SHARPEN the profile, so the statements must be
+falsifiable — a real person should be able to disagree with some of them.
+
+Cover a mix across these kinds:
+- Writing voice & style ("I write in short, clipped sentences", "I overuse parentheses")
+- Tone & humor ("My humor is dry and self-deprecating", "I rarely joke in writing")
+- Beliefs & values ("I think most rules are worth questioning")
+- Motivations & fears ("I most want to be seen as competent, not likeable")
+- Self-perception ("I come across as more confident than I feel")
+- Habits & temperament ("I overthink small decisions", "I'd rather text than call")
+
+Rules:
+- Ground EVERY statement in the material below — infer from what they actually
+  wrote and how they wrote it. Do NOT invent traits with no support.
+- Keep each statement under ~15 words, concrete, and in plain first person ("I …").
+- Make them DISTINCT — no two near-duplicates. Vary the kinds above.
+- Include several you are LESS sure about (plausible but unconfirmed) so the
+  yes/no answer is informative — but never absurd or insulting.
+- Output ONLY the statements, one per line. No numbering, no bullets, no quotes,
+  no preamble, no blank lines, no headers.
+
+Material:
+`;
+
 export const MAP_PROMPT_HEADER_QA = `You are analyzing answers to an open-ended personality / voice questionnaire.
 The person being profiled wrote these answers themselves. Each \`## Qn — Title\`
 block is one question and the user's free-text response. Skipped questions

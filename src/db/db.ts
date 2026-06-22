@@ -25,21 +25,13 @@ function readSchema(): string {
   throw new Error(`schema.sql not found (looked in: ${candidates.join(', ')})`);
 }
 
-// `CREATE TABLE IF NOT EXISTS` never adds columns to a pre-existing table, so
-// columns added after a DB already exists need a guarded ALTER. SQLite has no
-// `ADD COLUMN IF NOT EXISTS`, so we read the current columns and add what's
-// missing. Idempotent: a no-op once the column exists. New columns must be
-// nullable or carry a DEFAULT (ALTER can't add a NOT NULL column without one).
-function migrate(conn: DatabaseSync): void {
-  const cols = (conn.prepare('PRAGMA table_info(conversations)').all() as Array<{ name: string }>).map(
-    (c) => c.name,
-  );
-  if (!cols.includes('provider')) {
-    conn.exec("ALTER TABLE conversations ADD COLUMN provider TEXT NOT NULL DEFAULT 'whatsapp'");
-  }
-  if (!cols.includes('names')) {
-    conn.exec('ALTER TABLE conversations ADD COLUMN names TEXT');
-  }
+// `CREATE TABLE IF NOT EXISTS` never adds columns to a pre-existing table, so a
+// column added after a DB already exists needs a guarded ALTER (SQLite has no
+// `ADD COLUMN IF NOT EXISTS` — read PRAGMA table_info first, add what's missing,
+// keep it idempotent; new columns must be nullable or carry a DEFAULT). There
+// are no such migrations right now — every live table is created by schema.sql.
+function migrate(_conn: DatabaseSync): void {
+  // intentionally empty — see note above
 }
 
 export function openDb(dbPath: string): DatabaseSync {

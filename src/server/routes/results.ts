@@ -3,24 +3,19 @@ import type { Config } from '../../config.js';
 import { createJob, finishJob, getActiveJob, getJob, getLatestResult } from '../../db/repos.js';
 import { requireAuth } from '../auth.js';
 import {
-  NamesMismatchError,
-  NoRecognizedMessagesError,
   NothingToExtractError,
   hasExtractableInput,
   runUserExtraction,
 } from '../pipeline.js';
-import { OllamaRequestError, OllamaUnavailableError, pingOllama, type PingResult } from '../../ollama.js';
+import { OllamaRequestError, OllamaUnavailableError } from '../../ollama.js';
+import { getOllamaReady } from '../ollama-ready.js';
 
 /** Map an extraction failure to a safe, user-facing message. The raw error
  *  (Ollama HTTP bodies, `fetch failed`, work-dir filesystem paths) stays in the
  *  server log via request.log.error — only these curated strings reach the user. */
 function failureMessage(err: unknown): string {
   // Already-friendly, actionable domain errors — pass through.
-  if (
-    err instanceof NothingToExtractError ||
-    err instanceof NamesMismatchError ||
-    err instanceof NoRecognizedMessagesError
-  ) {
+  if (err instanceof NothingToExtractError) {
     return err.message;
   }
   if (err instanceof OllamaUnavailableError) {
@@ -39,28 +34,6 @@ function failureMessage(err: unknown): string {
 
 interface ResultsRouteOpts {
   cfg: Config;
-}
-
-// Readiness ping is process-global (host/model are server-wide, not per-user) and
-// TTL-cached so a hung Ollama can't slow every page load and concurrent loads
-// share one in-flight ping. 30s is short enough to reflect "I just started it".
-const READY_TTL_MS = 30_000;
-let readyCache: { at: number; result: PingResult } | null = null;
-let readyInflight: Promise<PingResult> | null = null;
-
-async function getOllamaReady(cfg: Config): Promise<PingResult> {
-  const now = Date.now();
-  if (readyCache && now - readyCache.at < READY_TTL_MS) return readyCache.result;
-  if (readyInflight) return readyInflight;
-  readyInflight = pingOllama({ host: cfg.ollamaHost, model: cfg.ollamaModel, apiKey: cfg.ollamaApiKey })
-    .then((result) => {
-      readyCache = { at: Date.now(), result };
-      return result;
-    })
-    .finally(() => {
-      readyInflight = null;
-    });
-  return readyInflight;
 }
 
 export async function resultRoutes(app: FastifyInstance, opts: ResultsRouteOpts): Promise<void> {
@@ -104,9 +77,7 @@ export async function resultRoutes(app: FastifyInstance, opts: ResultsRouteOpts)
     const userId = request.userId!;
 
     if (!hasExtractableInput(userId)) {
-      return reply
-        .code(400)
-        .send({ error: 'Fill in at least one study answer or import a conversation first.' });
+      return reply.code(400).send({ error: 'Answer at least one study first.' });
     }
     if (getActiveJob(userId)) {
       return reply.code(409).send({ error: 'Extraction already running.' });
