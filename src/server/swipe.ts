@@ -23,6 +23,30 @@ const MAX_CARDS = 30;
 const MIN_STATEMENT_LEN = 6;
 const MAX_STATEMENT_LEN = 200;
 
+// Each generation nudges the model toward a different facet so regenerations
+// surface genuinely new cards rather than rephrasing the same few. One is
+// chosen at random per call (alongside the random seed + shuffled material).
+const FOCI = [
+  'their writing voice and sentence-level style',
+  'their humor and how playful or dry they are',
+  'their beliefs, values, and what they argue about',
+  'their core motivations and what they fear being seen as',
+  'self-perception gaps — how they think they come across vs. how they do',
+  'habits, temperament, and day-to-day preferences',
+  'statements you are LESS sure about — plausible but unconfirmed, so the yes/no is informative',
+];
+
+/** Fisher–Yates shuffle (returns a new array). Server-side randomness is fine
+ *  here — variety across regenerations is the whole point. */
+function shuffled<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 /** Assemble the user's self-material for the generation prompt: free-text study
  *  answers (and any free-text notes on choice questions), their scored trait
  *  profile, and the most recent soul.md if one exists. */
@@ -39,7 +63,9 @@ function buildMaterial(userId: number): string {
     if (text.length > 0) answerBlocks.push(`## ${a.title}\n\n${text}`);
   }
   if (answerBlocks.length > 0) {
-    parts.push('# Questionnaire answers\n\n' + answerBlocks.join('\n\n'));
+    // Shuffle the answer order each call so a regeneration weights different
+    // material first — input variety on top of the seed + temperature.
+    parts.push('# Questionnaire answers\n\n' + shuffled(answerBlocks).join('\n\n'));
   }
 
   const profile = buildProfileText(userId);
@@ -89,7 +115,13 @@ export async function generateSwipeCards(cfg: Config, userId: number): Promise<S
   }
 
   const material = buildMaterial(userId);
-  const prompt = SWIPE_CARD_PROMPT_HEADER + material;
+  // A random focus this batch, so regenerations explore different facets rather
+  // than rephrasing the same handful of statements.
+  const focus = FOCI[Math.floor(Math.random() * FOCI.length)];
+  const prompt =
+    SWIPE_CARD_PROMPT_HEADER +
+    `For THIS batch, lean toward (but don't limit yourself to) ${focus}.\n\n` +
+    material;
 
   const raw = await generate(
     {

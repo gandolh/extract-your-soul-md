@@ -1,8 +1,10 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { STUDIES, findStudy, studyQuestions } from '../../studies.js';
+import type { Question } from '../../questions.js';
 import {
   answeredQuestionIds,
+  getAnsweredDetailed,
   getAnswersForUser,
   getReports,
   getStudyAnswers,
@@ -11,6 +13,25 @@ import {
   upsertStudyAnswers,
 } from '../../db/repos.js';
 import type { RecordedAnswer } from '../../answers-file.js';
+
+// Shared question → API shape. `savedBody` is the user's current answer; the
+// pole/choice fields are null for question kinds that don't use them.
+function serializeQuestion(q: Question, savedBody: string) {
+  return {
+    id: q.id,
+    slug: q.slug,
+    title: q.title,
+    prompt: q.prompt,
+    hint: q.hint ?? null,
+    optional: Boolean(q.optional),
+    kind: q.kind ?? 'text',
+    choiceMode: q.choiceMode ?? null,
+    left: q.left ?? null,
+    right: q.right ?? null,
+    choices: q.choices?.map((c) => ({ value: c.value, label: c.label })) ?? null,
+    savedBody,
+  };
+}
 import {
   DEFAULT_INCLUDE,
   REPORT_KEYS,
@@ -82,26 +103,35 @@ export async function studyRoutes(app: FastifyInstance): Promise<void> {
         reportKey: study.reportKey ?? null,
         estimateMinutes: estimateMinutes(study.questionIds.length),
       },
-      questions: studyQuestions(study).map((q) => ({
-        id: q.id,
-        slug: q.slug,
-        title: q.title,
-        prompt: q.prompt,
-        hint: q.hint ?? null,
-        optional: Boolean(q.optional),
-        kind: q.kind ?? 'text',
-        choiceMode: q.choiceMode ?? null,
-        // Pole labels for a scale; null for text/single questions.
-        left: q.left ?? null,
-        right: q.right ?? null,
-        choices:
-          q.choices?.map((c) => ({
-            value: c.value,
-            label: c.label,
-          })) ?? null,
-        savedBody: saved.get(q.id)?.body ?? '',
-      })),
+      questions: studyQuestions(study).map((q) => serializeQuestion(q, saved.get(q.id)?.body ?? '')),
     };
+  });
+
+  // Every answer the user has made, grouped by study, with last-edited times —
+  // powers the "all your answers" review/edit page (revisit answers over time).
+  // Only studies with at least one non-empty answer are returned; within each,
+  // only the answered questions (so it's "answers you made", not the full form).
+  app.get('/api/answers', async (request) => {
+    const answered = getAnsweredDetailed(request.userId!);
+    const byQuestion = new Map(answered.map((a) => [a.question_id, a]));
+    const studies = STUDIES.map((study) => {
+      const all = studyQuestions(study);
+      const questions = all
+        .filter((q) => byQuestion.has(q.id))
+        .map((q) => {
+          const row = byQuestion.get(q.id)!;
+          return { ...serializeQuestion(q, row.body), updatedAt: row.updated_at };
+        });
+      return {
+        id: study.id,
+        title: study.title,
+        band: study.band ?? 'voice',
+        answeredCount: questions.length,
+        totalCount: all.length,
+        questions,
+      };
+    }).filter((s) => s.answeredCount > 0);
+    return { studies };
   });
 
   // Save answers for a single study (only its own question ids are accepted).

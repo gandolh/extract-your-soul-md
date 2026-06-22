@@ -151,6 +151,13 @@ const REDUCE_PROVENANCE_RULE = `
 const REDUCE_PROFILE_RULE = `
 - A "Self-Reported Personality Profile" block may appear among the batches: the user's own answers to short, validated trait questionnaires (Big Five, tone/stance, core values, regulatory focus, locus of control, reaction frame, type indicator). Treat it as a FULL collaborator with the observed voice, not a weak afterthought — the profile tells you who this person is and what they care about; the observed voice tells you how they sound. Let the profile drive Values & Worldview and the "Personality Notes" section directly, and let it inform Tone. For concrete surface mechanics (vocabulary, punctuation, sentence rhythm), the observed voice is the primary source — but use the profile to EXPLAIN and corroborate those mechanics, not to override them. When the profile and the observed voice genuinely conflict (e.g. self-reports as reserved but writes with exclamation-heavy warmth), NOTE the tension in one clause and describe both rather than silently dropping the self-report. Translate trait readings into plain how-they-come-across language; do not print raw percentages or a 4-letter type code as fact in the document.`;
 
+// The user actively SWIPED-AWAY these self-descriptions ("not like me"). They
+// are anti-patterns, not content: the reduce step must steer the profile away
+// from them. Gated on hasRejected. Crucially, a rejection is NOT a claim that
+// the opposite is true — so we instruct avoid/drop, never invert-as-fact.
+const REDUCE_REJECTED_RULE = `
+- A "Statements the user rejected as NOT like them" batch may appear: short self-descriptions the user actively reviewed and swiped away. Treat these as ANTI-PATTERNS — do NOT describe the person with these traits, and if an observed bullet only weakly suggests one of them, prefer to drop it. Do NOT, however, assert the OPPOSITE as fact (a rejection means "not this", not "definitely the reverse"). Never mention the rejection or the rejected text in the final document — just don't attribute the trait.`;
+
 // When a profile is present, soul.md gets a "Personality Notes" section that
 // turns the trait readout into DIRECTIONAL guidance for the imitator — what each
 // strong reading means for stance, word choice, framing, and pacing. Under the
@@ -184,9 +191,14 @@ note the tension in a clause. Omit the section only if no reading is decisive.)`
  * questionnaire-vs-chat conflict rule) are included ONLY when the corpus
  * actually contains questionnaire chunks — a machine decision from the
  * manifest's `kind` field, not a prose label the model is asked to honor.
- * `hasProfile` separately gates the self-report-profile weighting rule.
+ * `hasProfile` separately gates the self-report-profile weighting rule, and
+ * `hasRejected` gates the swiped-away-statements avoidance rule.
  */
-export function buildReducePrompt(hasQuestionnaire: boolean, hasProfile = false): string {
+export function buildReducePrompt(
+  hasQuestionnaire: boolean,
+  hasProfile = false,
+  hasRejected = false,
+): string {
   return `You are synthesizing a personality / voice profile from many batches of observations.
 Each batch below was extracted from a different slice of the same person — either
 chat logs (chat-fragment style) or a personality questionnaire (Q&A style).
@@ -244,7 +256,7 @@ highest-signal, most distinctive signature vocabulary/punctuation/cadence alread
 named above, plus the one-line imitation directive. Self-contained and terse.
 
 Rules:
-- Reconcile contradictions across batches by noting context (e.g. "more formal with strangers, blunt with close friends") rather than picking one.${hasQuestionnaire ? REDUCE_QA_CONFLICT_RULE : ''}${hasQuestionnaire ? REDUCE_PROVENANCE_RULE : ''}${hasProfile ? REDUCE_PROFILE_RULE : ''}
+- Reconcile contradictions across batches by noting context (e.g. "more formal with strangers, blunt with close friends") rather than picking one.${hasQuestionnaire ? REDUCE_QA_CONFLICT_RULE : ''}${hasQuestionnaire ? REDUCE_PROVENANCE_RULE : ''}${hasProfile ? REDUCE_PROFILE_RULE : ''}${hasRejected ? REDUCE_REJECTED_RULE : ''}
 - Privacy vs. voice: do NOT reproduce whole private sentences or named facts/entities from the source — but DO keep the short, high-frequency, non-private stylistic tokens (greetings, sign-offs, fillers, catchphrases) verbatim, since they are the imitable core of the voice.
 - Prefer specific over vague. Drop any descriptor that would apply to most people. Keep distinctive/rare/surprising features over common ones. Never pad a section to fit the template — omit it.
 - Output ONLY the markdown document. No preamble.

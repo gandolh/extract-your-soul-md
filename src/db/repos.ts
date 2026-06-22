@@ -93,6 +93,25 @@ export function getAnswersForUser(userId: number): RecordedAnswer[] {
   );
 }
 
+export interface AnsweredRow {
+  question_id: string;
+  study_id: string;
+  body: string;
+  updated_at: string;
+}
+
+/** Every NON-EMPTY answer for a user, with its study and last-edited time —
+ *  powers the "all your answers" review/edit page. */
+export function getAnsweredDetailed(userId: number): AnsweredRow[] {
+  return rows<AnsweredRow>(
+    getDb()
+      .prepare(
+        "SELECT question_id, study_id, body, updated_at FROM study_answers WHERE user_id = ? AND body <> '' ORDER BY study_id",
+      )
+      .all(userId) as Row[],
+  );
+}
+
 /** Answers for a single study (used to pre-fill a form). */
 export function getStudyAnswers(userId: number, studyId: string): Map<string, RecordedAnswer> {
   const list = rows<RecordedAnswer>(
@@ -260,6 +279,17 @@ export function getConfirmedStatements(userId: number): string[] {
   const list = rows<{ statement: string }>(
     getDb()
       .prepare("SELECT statement FROM swipe_cards WHERE user_id = ? AND verdict = 'yes' ORDER BY id")
+      .all(userId) as Row[],
+  );
+  return list.map((r) => r.statement);
+}
+
+/** The statements the user rejected ('no') as NOT like them — passed to the
+ *  reduce step as anti-patterns to steer the profile away from. */
+export function getRejectedStatements(userId: number): string[] {
+  const list = rows<{ statement: string }>(
+    getDb()
+      .prepare("SELECT statement FROM swipe_cards WHERE user_id = ? AND verdict = 'no' ORDER BY id")
       .all(userId) as Row[],
   );
   return list.map((r) => r.statement);
