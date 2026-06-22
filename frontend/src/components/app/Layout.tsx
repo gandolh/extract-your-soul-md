@@ -14,6 +14,7 @@ const NAV_LINK =
 const NAV_ITEMS = [
   { to: '/', label: 'Overview', end: true },
   { to: '/studies', label: 'Studies', end: false },
+  { to: '/answers', label: 'Answers', end: false },
   { to: '/swipe', label: 'Cards', end: false },
   { to: '/results', label: 'Profile', end: false },
 ] as const;

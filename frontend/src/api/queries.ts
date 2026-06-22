@@ -10,6 +10,8 @@ import {
 } from '@tanstack/react-query';
 import {
   api,
+  type AnswersStudy,
+  type AnsweredQuestion,
   type ReportKey,
   type ReportState,
   type ResultsState,
@@ -24,6 +26,7 @@ export const queryKeys = {
   me: ['me'] as const,
   studies: ['studies'] as const,
   study: (id: string) => ['study', id] as const,
+  answers: ['answers'] as const,
   reports: ['reports'] as const,
   swipe: ['swipe'] as const,
   results: ['results'] as const,
@@ -45,6 +48,13 @@ export function useStudy(id: string, options?: Partial<UseQueryOptions<StudyDeta
     enabled: id.length > 0,
     retry: false, // a 404 is a real "unknown study", not a transient failure
     ...options,
+  });
+}
+
+export function useAnswers() {
+  return useQuery({
+    queryKey: queryKeys.answers,
+    queryFn: () => api.answers().then((r) => r.studies),
   });
 }
 
@@ -87,6 +97,7 @@ export function useSaveStudy() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: queryKeys.studies });
       void qc.invalidateQueries({ queryKey: queryKeys.reports });
+      void qc.invalidateQueries({ queryKey: queryKeys.answers });
     },
   });
 }
@@ -150,6 +161,8 @@ export function useExtract() {
 
 // Re-export the row types most consumers want alongside their hook.
 export type {
+  AnswersStudy,
+  AnsweredQuestion,
   ReportState,
   ResultsState,
   StudySummary,

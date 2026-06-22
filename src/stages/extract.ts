@@ -84,6 +84,9 @@ export async function runOllamaPipeline(
   // as a final batch and weighted DOWN by the reduce prompt — see prompts.ts.
   // Empty/undefined → no profile block, prompt unchanged.
   profileText?: string,
+  // Swipe statements the user rejected ("not like me"). Appended as a final
+  // batch and treated as anti-patterns by the reduce prompt. Empty → unchanged.
+  rejectedStatements?: ReadonlyArray<string>,
 ): Promise<string> {
   const chunksDir = path.resolve(cfg.chunksDir);
   const cacheDir = path.resolve('.cache', 'bullets');
@@ -126,13 +129,23 @@ export async function runOllamaPipeline(
     bullets.push(`### Self-Reported Personality Profile (validated trait questionnaires — a collaborator with the observed voice)\n${profile}`);
   }
 
+  // Rejected swipe statements go in as a final batch the reduce prompt treats as
+  // anti-patterns (REDUCE_REJECTED_RULE) — steer away from, never invert.
+  const rejected = (rejectedStatements ?? []).map((s) => s.trim()).filter((s) => s.length > 0);
+  if (rejected.length > 0) {
+    bullets.push(
+      `### Statements the user rejected as NOT like them (anti-patterns — do not attribute these traits)\n` +
+        rejected.map((s) => `- ${s}`).join('\n'),
+    );
+  }
+
   onProgress?.('map', total, total);
   process.stdout.write(`  ${color.magenta('reduce')}... `);
   onProgress?.('reduce', 0, 1);
   const t0 = Date.now();
   const hasQuestionnaire = manifest.chunks.some((c) => c.kind === 'questionnaire');
   const reducePrompt =
-    buildReducePrompt(hasQuestionnaire, Boolean(profile)) + bullets.join('\n\n');
+    buildReducePrompt(hasQuestionnaire, Boolean(profile), rejected.length > 0) + bullets.join('\n\n');
   assertFitsContext('reduce', reducePrompt, cfg.ollamaNumCtx);
   const soul = await generate(
     {

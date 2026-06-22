@@ -87,6 +87,12 @@ export interface StudyDetail {
   study: { id: string; title: string; description: string; band: StudyBand; reportKey: ReportKey | null; estimateMinutes: number };
   questions: StudyQuestion[];
 }
+export interface AnsweredQuestion extends StudyQuestion { updatedAt: string; }
+export interface AnswersStudy {
+  id: string; title: string; band: StudyBand;
+  answeredCount: number; totalCount: number;
+  questions: AnsweredQuestion[];
+}
 export interface ReportAxis { key: string; label: string; percent: number; readout: string; answered: number; }
 export interface ReportPayload {
   key: ReportKey; title: string; axes: ReportAxis[];
@@ -138,6 +144,9 @@ export const api = {
       `/studies/${id}/answers`,
       { answers },
     ),
+
+  // all answers the user has made, grouped by study (editable review page)
+  answers: () => request<{ studies: AnswersStudy[] }>('GET', '/answers'),
 
   // reports
   reports: () => request<{ reports: ReportState[] }>('GET', '/reports'),

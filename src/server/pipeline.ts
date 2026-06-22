@@ -15,6 +15,7 @@ import {
   getAnswersForUser,
   getConfirmedStatements,
   getLatestResult,
+  getRejectedStatements,
   getReports,
   saveResult,
   startJob,
@@ -106,11 +107,13 @@ export async function runUserExtraction(
     processAll(cfg);
     const manifest = chunkAll(cfg);
     const profileText = buildProfileText(userId);
+    const rejectedStatements = getRejectedStatements(userId);
     const outPath = await runOllamaPipeline(
       cfg,
       manifest,
       (stage, done, total) => updateJobProgress(jobId, stage, done, total),
       profileText,
+      rejectedStatements,
     );
     const soulMd = readFileSync(outPath, 'utf8');
 
