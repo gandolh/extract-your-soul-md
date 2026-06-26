@@ -24,14 +24,19 @@ corpus is maintained; [log.md](log.md) for its history.
   framing folded into the budget + UTF-8-byte estimate), and 34 (node:test
   golden tests for the no-LLM data-prep core — flips the "no test runner"
   decision), 35 (GitHub Actions CI — build + typecheck + test), and 36
-  (zero-recognized-lines import guard). **The buildable backlog is now clear** —
-  every P2/P3 candidate captured 2026-06-16 is shipped. Only **deferred** work
-  remains, each gated on a trigger that hasn't fired: hierarchical tree-reduce
-  (a heavy user hitting the chunk ceiling), the multi-platform import-adapter
-  registry (a real second-format request — only its zero-lines guard shipped, as
-  brief 36), full Representative-Samples sentence excerpts (needs an active
-  n-gram filter + eval data), the soul.md re-run **diff** (brief 21 Phase 2), and
-  auth rate-limiting (gated on a real public deploy).
+  (zero-recognized-lines import guard), plus the choice-trait studies/reports
+  build (37), and the **2026-06-26 cluster** 38 (cognitive-functions study —
+  IPIP→function-stack report, OFF by default), 39 (hierarchical tree-reduce —
+  lifts the reduce `num_ctx` ceiling), and 40 (Telegram-JSON adapter for the
+  conversation-stats parser). **The three previously-deferred todos are now all
+  shipped** (38/39/40), built speculatively/by override per explicit user
+  decision on 2026-06-26. Only **deferred** work remains, each gated on a trigger
+  that hasn't fired: the further stats adapters (iMessage/Discord/Signal/CSV —
+  behind brief 40's new seam), full Representative-Samples sentence excerpts
+  (needs an active n-gram filter + eval data), the soul.md re-run **diff**
+  (brief 21 Phase 2), and auth rate-limiting (gated on a real public deploy).
+  The soul-pipeline chat-import path stays removed/locked (brief 40 added
+  multi-format support to the *stats* feature only, not the soul pipeline).
 - [briefs/todo/](briefs/todo/) — numbered work specs ready to build.
 - [briefs/done/](briefs/done/) — completed specs (immutable, with outcome notes).
   01 cache-fingerprint · 02 truncation · 03 determinism · 04 collapse-to-API ·
@@ -48,7 +53,9 @@ corpus is maintained; [log.md](log.md) for its history.
   29 representative-samples-section · 30 map-prompt-responsibility-split ·
   31 q12-narrative-high-point · 32 name-self-vs-observed-divergence ·
   33 honest-token-accounting · 34 node-test-golden-tests ·
-  35 ci-typecheck-build · 36 zero-recognized-lines-guard.
+  35 ci-typecheck-build · 36 zero-recognized-lines-guard ·
+  37 choice-trait-studies-and-reports · 38 cognitive-functions-study ·
+  39 hierarchical-tree-reduce · 40 stats-multi-format-adapters.
 - [briefs/superseded/](briefs/superseded/) — specs later undone/replaced.
 - [log.md](log.md) — chronological record of every meaningful corpus change.
 

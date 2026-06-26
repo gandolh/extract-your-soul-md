@@ -1,6 +1,11 @@
-# Hierarchical tree-reduce for large corpora — DEFERRED
+# Hierarchical tree-reduce for large corpora — SHIPPED
 
-**Priority:** P3 · **Goal:** accuracy · **Impact:** medium · **Effort:** M · **Status:** todo · **Captured:** 2026-06-16
+> **SHIPPED 2026-06-26 as [brief 39](../briefs/done/39-hierarchical-tree-reduce.md).**
+> Built speculatively ahead of the heavy-user trigger, per explicit user
+> decision. `MERGE_BULLETS_HEADER` + `treeReduceBullets` lift the reduce-prompt
+> `num_ctx` ceiling; validated against live cloud Ollama (3 recursion levels).
+
+**Priority:** P3 · **Goal:** accuracy · **Impact:** medium · **Effort:** M · **Status:** done (brief 39) · **Captured:** 2026-06-16
 
 ## Problem
 The reduce step concatenates every chunk's bullets + header into one prompt

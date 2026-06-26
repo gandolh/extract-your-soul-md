@@ -1,6 +1,13 @@
-# Cognitive-functions study (Michael Caloz test review) — DEFERRED
+# Cognitive-functions study (Michael Caloz test review) — SHIPPED
 
-**Priority:** P3 · **Goal:** accuracy · **Impact:** low-medium · **Effort:** M · **Status:** deferred · **Captured:** 2026-06-26 · **Updated:** 2026-06-26
+> **SHIPPED 2026-06-26 as [brief 38](../briefs/done/38-cognitive-functions-study.md).**
+> The "keep deferred" recommendation below was overridden by explicit user
+> decision: built the **full study** as the `cognitive-functions` report
+> (16 IPIP-mapped items Q90–Q105, 8 function strengths, OFF by default with an
+> "exploratory/home-grown" caveat). The analysis below is retained as the
+> research record that informed the build.
+
+**Priority:** P3 · **Goal:** accuracy · **Impact:** low-medium · **Effort:** M · **Status:** done (brief 38) · **Captured:** 2026-06-26 · **Updated:** 2026-06-26
 
 ## Source
 [michaelcaloz.com/personality](https://www.michaelcaloz.com/personality/) — a

@@ -756,3 +756,43 @@ All three plans pass. One finding, fixed in the same run:
   duration human-readably (m/h/d) in `StatsDashboard.tsx`. Verified in-browser:
   15396m → 3m. Brand parity, mobile reflow, and boundary inputs (single
   participant, long names, garbage input) all checked clean.
+
+## [2026-06-26] done | Cleared the deferred todo backlog — briefs 38/39/40
+
+Grilled the user on all three remaining `todos/` (every one was `DEFERRED`,
+two with hard reasons *against* building), then promoted + shipped all three.
+Built by three parallel worktree-isolated sub-agents (38/39 on Opus, 40 on
+Sonnet), octopus-merged to main; the only shared file (`prompts.ts`) was reserved
+to one agent + the integrator to avoid collision. Full gate green across the
+merged tree: 69 node tests, typecheck:web, typecheck:test, biome lint,
+build:server, **+ a live cloud-Ollama E2E**.
+
+- **[brief 38](briefs/done/38-cognitive-functions-study.md)** — cognitive-functions
+  study. User overrode the todo's "keep deferred" call and chose the full research
+  build: 16 IPIP-facet→Jungian-function items (Q90–Q105), `scoreCognitiveFunctions`
+  → 8 function strengths (0–100) + a top-2 `Lead: X → Y (exploratory)` stack
+  summary. `DEFAULT_INCLUDE['cognitive-functions'] = false` — the **first
+  exception** to the "all reports on" premise — with a strong "home-grown mapping,
+  not a validated instrument" caveat. Integrator added a matching hedge to
+  `REDUCE_PROFILE_RULE` (a profile reading carrying its own exploratory caveat is
+  demoted to a directional hint). `studyOrder.ts` doesn't exist — study order is
+  backend-driven.
+- **[brief 39](briefs/done/39-hierarchical-tree-reduce.md)** — hierarchical
+  tree-reduce, built speculatively ahead of the heavy-user trigger. New
+  `MERGE_BULLETS_HEADER` + `treeReduceBullets` partition overflowing bullet sets
+  into `num_ctx`-fitting groups, condense each, and recurse until they fit; profile
+  / rejected batches + section flags stay final-reduce-only. Small corpora pay
+  nothing. Live E2E (forced `num_ctx=2200`): 10 batches → 3 recursion levels
+  (5→3→2 merge groups) → fit. Minimal `GenerateFn` injection seam for unit tests.
+- **[brief 40](briefs/done/40-stats-multi-format-adapters.md)** — REDIRECTED. The
+  original todo was **stale**: the soul-pipeline WhatsApp parser it targeted was
+  removed (process.ts is questionnaire-only). Per user decision, built a
+  `ChatAdapter` registry in the **conversation-statistics feature** instead —
+  existing WhatsApp/iOS logic wrapped unchanged as the `whatsapp` adapter +
+  a new `telegram-json` adapter. 50 pre-existing golden tests pass unchanged.
+  Soul-pipeline chat-import stays removed/locked.
+
+The buildable backlog is clear again. Remaining deferred work: further stats
+adapters (iMessage/Discord/Signal/CSV, behind brief 40's seam), full
+Representative-Samples sentence excerpts, the soul.md re-run diff (brief 21
+Phase 2), auth rate-limiting. Committed to main.

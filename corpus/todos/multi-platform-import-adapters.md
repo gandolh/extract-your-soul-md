@@ -1,6 +1,17 @@
-# Multi-platform import adapter registry — DEFERRED
+# Multi-platform import adapter registry — SHIPPED (redirected)
 
-**Priority:** P3 · **Goal:** engineering · **Impact:** medium · **Effort:** L · **Status:** deferred · **Captured:** 2026-06-16 · **Updated:** 2026-06-16 (zero-lines guard split off + shipped as brief 36)
+> **SHIPPED 2026-06-26 as [brief 40](../briefs/done/40-stats-multi-format-adapters.md) — REDIRECTED.**
+> This todo was **stale**: the soul-pipeline WhatsApp parser it targeted
+> (`parseLine`/BRACKETED/DASHED in `process.ts`) was REMOVED when the
+> conversation-import feature was deleted — `process.ts` is now
+> questionnaire-only. Per explicit user decision the adapter registry was built in
+> the **conversation-statistics feature** (`src/stats/conversation-stats.ts`)
+> instead, where the only live multi-format chat parser actually lives. The
+> soul-pipeline import path stays removed/locked. Telegram-JSON shipped as the
+> second adapter; iMessage/Discord/Signal/CSV remain deferred behind the same
+> seam. The (now-obsolete) problem statement below is kept for history.
+
+**Priority:** P3 · **Goal:** engineering · **Impact:** medium · **Effort:** L · **Status:** done (brief 40, redirected) · **Captured:** 2026-06-16 · **Updated:** 2026-06-26 (shipped, redirected to the stats feature)
 
 ## Status
 The **S half (zero-recognized-lines guard) shipped as
