@@ -19,9 +19,21 @@ not formally revisited.
   ~5% with writing style, and open-ended answers are dual-use (trait signal +
   voice sample; see [concepts/dual-use-signal.md](concepts/dual-use-signal.md)).
   **Revised 2026-06-17** (brief 37): a **profile band** of choice/trait studies
-  (TIPI, HEXACO, tone, PCM, MBTI…) was added with scored reports, kept explicitly
-  **secondary** to observed voice and opt-in per report (MBTI defaults off). The
-  voice band stays free-text-only.
+  (TIPI, HEXACO, tone, PCM, MBTI…) was added with scored reports. The voice band
+  stays free-text-only.
+- **Co-equal premise: every scored report is included in `soul.md` by default,
+  including MBTI.** Decided in commit `130f305` ("improved accuracy on the soul"),
+  superseding brief 37's "MBTI defaults off / self-report subordinate". Self-report
+  now *collaborates with* observed voice rather than being ranked the weakest
+  evidence — so `DEFAULT_INCLUDE` is all-on (`src/scoring.ts`) and the reduce
+  prompt treats the reports as "real directions, corroborated by (not subordinate
+  to)" the voice (`src/prompts.ts`). MBTI still carries the strongest self-report
+  caveat into the UI + prompt (psychometrically weak, types flip on retake), and
+  every report stays individually toggleable. **Tension to revisit if eval data
+  ever lands:** this runs against the locked |ρ|≈.08 "self-report weakly predicts
+  voice" research ([concepts/self-report-vs-observer-gap.md](concepts/self-report-vs-observer-gap.md))
+  — it was an accuracy-motivated product call made without head-to-head measurement
+  (the eval harness having been removed).
 - **Swipe cards are the refinement loop, replacing conversation import.** Decided
   2026-06-22. The WhatsApp/conversation import pillar and the Eval harness were
   removed; an LLM-generated "does this sound like you?" deck (`swipe_cards`) lets

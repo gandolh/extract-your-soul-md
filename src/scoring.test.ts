@@ -76,8 +76,12 @@ test('a report with no answers has no data', () => {
   assert.equal(report.axes.length, 0);
 });
 
-test('MBTI defaults to NOT included in soul.md; others default included', () => {
-  assert.equal(DEFAULT_INCLUDE.mbti, false);
+test('every scored report defaults included under the co-equal premise (incl. MBTI)', () => {
+  // Co-equal premise (src/scoring.ts): self-report collaborates with observed
+  // voice rather than being subordinate, so every report is on by default —
+  // MBTI included, but it carries the strongest self-report caveat into the UI
+  // + prompt. (Flipped from the earlier MBTI-off default in commit 130f305.)
+  assert.equal(DEFAULT_INCLUDE.mbti, true);
   assert.equal(DEFAULT_INCLUDE['big-five'], true);
   assert.equal(DEFAULT_INCLUDE['honesty-tone'], true);
   assert.equal(DEFAULT_INCLUDE.pcm, true);
