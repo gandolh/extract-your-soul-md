@@ -117,7 +117,14 @@ export type { ConversationStats, ParticipantStat };
 export interface SavedStatSummary { id: number; name: string; created_at: string; }
 export interface SavedStatDetail { id: number; name: string; createdAt: string; stats: ConversationStats; }
 
-export interface SoulResult { soulMd: string; prevMd: string | null; extractor: string; createdAt: string | null; }
+export interface RegurgitationSummary { ngram: number; count: number; samples: string[]; }
+export interface SoulResult {
+  soulMd: string;
+  prevMd: string | null;
+  extractor: string;
+  createdAt: string | null;
+  regurgitation: RegurgitationSummary | null;
+}
 export type JobStatus = 'enqueued' | 'running' | 'done' | 'failed';
 export interface JobProgress {
   id: number;

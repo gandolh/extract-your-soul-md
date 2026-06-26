@@ -84,6 +84,7 @@ CREATE TABLE IF NOT EXISTS results (
   soul_md    TEXT NOT NULL,
   prev_md    TEXT,                                    -- backup-on-overwrite
   extractor  TEXT NOT NULL,                           -- 'ollama'
+  regurgitation TEXT,                                 -- JSON {ngram,count,samples[]} or NULL
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_results_user ON results(user_id, created_at);

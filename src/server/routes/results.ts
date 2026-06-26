@@ -32,6 +32,22 @@ function failureMessage(err: unknown): string {
   return 'Extraction failed — please try again.';
 }
 
+interface RegurgitationSummary {
+  ngram: number;
+  count: number;
+  samples: string[];
+}
+
+/** Parse the stored verbatim-overlap summary; tolerate a corrupt/legacy value. */
+function parseRegurgitation(raw: string | null): RegurgitationSummary | null {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as RegurgitationSummary;
+  } catch {
+    return null;
+  }
+}
+
 interface ResultsRouteOpts {
   cfg: Config;
 }
@@ -64,6 +80,7 @@ export async function resultRoutes(app: FastifyInstance, opts: ResultsRouteOpts)
             prevMd: latest.prev_md,
             extractor: latest.extractor,
             createdAt: latest.created_at,
+            regurgitation: parseRegurgitation(latest.regurgitation),
           }
         : null,
     };

@@ -7,7 +7,7 @@ import type { Manifest, ChunkKind } from './chunk.js';
 import { generate } from '../ollama.js';
 import { estimateTokens } from '../tokens.js';
 import { MAP_PROMPT_HEADER, MAP_PROMPT_HEADER_QA, buildReducePrompt } from '../prompts.js';
-import { findVerbatimOverlap, DEFAULT_NGRAM } from '../regurgitation.js';
+import { findVerbatimOverlap, DEFAULT_NGRAM, type OverlapReport } from '../regurgitation.js';
 
 function hash(s: string): string {
   return createHash('sha256').update(s).digest('hex').slice(0, 16);
@@ -87,7 +87,7 @@ export async function runOllamaPipeline(
   // Swipe statements the user rejected ("not like me"). Appended as a final
   // batch and treated as anti-patterns by the reduce prompt. Empty → unchanged.
   rejectedStatements?: ReadonlyArray<string>,
-): Promise<string> {
+): Promise<{ outPath: string; overlap: OverlapReport }> {
   const chunksDir = path.resolve(cfg.chunksDir);
   const cacheDir = path.resolve('.cache', 'bullets');
   mkdirSync(cacheDir, { recursive: true });
@@ -183,7 +183,7 @@ export async function runOllamaPipeline(
       color.yellow(
         `  ⚠ regurgitation: ${overlap.hits.length} verbatim ${overlap.ngram}-gram` +
           `${overlap.hits.length === 1 ? '' : 's'} from your source leaked into the profile. ` +
-          `Review out/my-soul.md before downstream use.\n`,
+          `Review the profile before downstream use.\n`,
       ),
     );
     for (const hit of overlap.hits.slice(0, 10)) {
@@ -202,5 +202,5 @@ export async function runOllamaPipeline(
     copyFileSync(outPath, backupPath);
   }
   writeFileSync(outPath, soul.trim() + '\n', 'utf8');
-  return outPath;
+  return { outPath, overlap };
 }

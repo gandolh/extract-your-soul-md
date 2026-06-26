@@ -13,6 +13,7 @@ import {
   getActiveJob,
   getConfirmedStatements,
   getRejectedStatements,
+  getLatestResult,
   getReports,
   getSavedStat,
   insertSavedStat,
@@ -20,6 +21,7 @@ import {
   listSavedStats,
   listSwipeCards,
   reclaimStaleJobs,
+  saveResult,
   setReportInclude,
   setSwipeVerdict,
   upsertReport,
@@ -103,6 +105,20 @@ test('swipe cards: batch dedup, inserted count, verdict partition', () => {
 
   // Verdicts are user-scoped: a wrong-user update changes nothing.
   assert.equal(setSwipeVerdict(u + 999, cards[2].id, 'yes'), false);
+});
+
+test('results round-trip the regurgitation summary (and default to null)', () => {
+  const u = createUser('extracted', 'scrypt$x$y').id;
+
+  saveResult(u, '# soul one', null, 'ollama'); // no regurgitation arg → null
+  assert.equal(getLatestResult(u)!.regurgitation, null);
+
+  const summary = JSON.stringify({ ngram: 7, count: 2, samples: ['a b c', 'd e f'] });
+  saveResult(u, '# soul two', '# soul one', 'ollama', summary);
+  const latest = getLatestResult(u)!;
+  assert.equal(latest.soul_md, '# soul two');
+  assert.equal(latest.prev_md, '# soul one');
+  assert.equal(latest.regurgitation, summary);
 });
 
 test('upsertReport preserves the user include toggle on rescore (no clobber)', () => {

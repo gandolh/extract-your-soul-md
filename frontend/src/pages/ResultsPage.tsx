@@ -220,6 +220,21 @@ export function ResultsPage() {
             )}
             {showPrev && result.prevMd && <Tag tone="accent">Showing previous version</Tag>}
           </div>
+          {!showPrev && result.regurgitation && result.regurgitation.count > 0 && (
+            <Notice tone="err" className="max-w-[64ch]">
+              <strong>Review before sharing.</strong> {result.regurgitation.count} verbatim{' '}
+              {result.regurgitation.ngram}-word span
+              {result.regurgitation.count === 1 ? '' : 's'} from your own answers appear in this
+              profile — the model may have copied you rather than describing your voice. For
+              example:{' '}
+              {result.regurgitation.samples.slice(0, 3).map((s, i) => (
+                <span key={s}>
+                  {i > 0 ? '; ' : ''}“…{s}…”
+                </span>
+              ))}
+              . Edit these out before any downstream use.
+            </Notice>
+          )}
           <div className={cardClass('soul px-8 py-7')}>
             <Markdown source={showPrev && result.prevMd ? result.prevMd : result.soulMd} />
           </div>

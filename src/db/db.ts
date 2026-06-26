@@ -30,8 +30,13 @@ function readSchema(): string {
 // `ADD COLUMN IF NOT EXISTS` — read PRAGMA table_info first, add what's missing,
 // keep it idempotent; new columns must be nullable or carry a DEFAULT). There
 // are no such migrations right now — every live table is created by schema.sql.
-function migrate(_conn: DatabaseSync): void {
-  // intentionally empty — see note above
+function migrate(conn: DatabaseSync): void {
+  // results.regurgitation (added 2026-06-26): verbatim-overlap summary surfaced
+  // on the Results page. Nullable, so a guarded ALTER is enough for older DBs.
+  const cols = conn.prepare('PRAGMA table_info(results)').all() as Array<{ name: string }>;
+  if (!cols.some((c) => c.name === 'regurgitation')) {
+    conn.exec('ALTER TABLE results ADD COLUMN regurgitation TEXT');
+  }
 }
 
 export function openDb(dbPath: string): DatabaseSync {

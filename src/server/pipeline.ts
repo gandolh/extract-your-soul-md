@@ -108,7 +108,7 @@ export async function runUserExtraction(
     const manifest = chunkAll(cfg);
     const profileText = buildProfileText(userId);
     const rejectedStatements = getRejectedStatements(userId);
-    const outPath = await runOllamaPipeline(
+    const { outPath, overlap } = await runOllamaPipeline(
       cfg,
       manifest,
       (stage, done, total) => updateJobProgress(jobId, stage, done, total),
@@ -117,9 +117,20 @@ export async function runUserExtraction(
     );
     const soulMd = readFileSync(outPath, 'utf8');
 
+    // A compact verbatim-overlap summary (sample shingles + count) so the UI can
+    // warn the user to review before downstream use. null when nothing leaked.
+    const regurgitation =
+      overlap.hits.length > 0
+        ? JSON.stringify({
+            ngram: overlap.ngram,
+            count: overlap.hits.length,
+            samples: overlap.hits.slice(0, 8).map((h) => h.shingle),
+          })
+        : null;
+
     // 3. Persist; carry the prior soul.md into prev_md (backup-on-overwrite).
     const prev = getLatestResult(userId);
-    saveResult(userId, soulMd, prev?.soul_md ?? null, 'ollama');
+    saveResult(userId, soulMd, prev?.soul_md ?? null, 'ollama', regurgitation);
     return soulMd;
   } finally {
     rmSync(work, { recursive: true, force: true });

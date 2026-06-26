@@ -28,6 +28,7 @@ export interface ResultRow {
   soul_md: string;
   prev_md: string | null;
   extractor: string;
+  regurgitation: string | null; // JSON {ngram,count,samples[]} or null
   created_at: string;
 }
 
@@ -358,7 +359,9 @@ export function deleteSavedStat(userId: number, id: number): boolean {
 export function getLatestResult(userId: number): ResultRow | undefined {
   return row<ResultRow>(
     getDb()
-      .prepare('SELECT id, soul_md, prev_md, extractor, created_at FROM results WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT 1')
+      .prepare(
+        'SELECT id, soul_md, prev_md, extractor, regurgitation, created_at FROM results WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT 1',
+      )
       .get(userId) as Row | undefined,
   );
 }
@@ -368,12 +371,13 @@ export function saveResult(
   soulMd: string,
   prevMd: string | null,
   extractor: string,
+  regurgitation: string | null = null,
 ): void {
   getDb()
     .prepare(
-      'INSERT INTO results (user_id, soul_md, prev_md, extractor) VALUES (?, ?, ?, ?)',
+      'INSERT INTO results (user_id, soul_md, prev_md, extractor, regurgitation) VALUES (?, ?, ?, ?, ?)',
     )
-    .run(userId, soulMd, prevMd, extractor);
+    .run(userId, soulMd, prevMd, extractor, regurgitation);
 }
 
 // ---- jobs ----------------------------------------------------------------
