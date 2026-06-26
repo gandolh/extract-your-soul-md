@@ -60,6 +60,11 @@ const StatsSchema = z.object({
   redFlags: z.array(z.string().max(500)).max(50),
 });
 
+// Compile-time drift guard: if StatsSchema and the shared ConversationStats type
+// ever diverge, this assignment stops type-checking. (No runtime cost.)
+const _schemaMatchesType = (s: z.infer<typeof StatsSchema>): ConversationStats => s;
+void _schemaMatchesType;
+
 const SaveBody = z.object({
   name: z.string().trim().max(120).optional(),
   stats: StatsSchema,

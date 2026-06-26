@@ -2,15 +2,7 @@ import { Link } from 'react-router-dom';
 import type { StudySummary } from '../api/client';
 import { useStudies } from '../api/queries';
 import { Meter } from '../components/app/Layout';
-import { STUDY_ORDER } from '../shared/studyOrder';
 import { cardClass, cx, Eyebrow, Headline, Tag } from '../components/ui';
-
-// Global 1-based number for a study, matching StudyPage's "Study NN / total"
-// counter (both read STUDY_ORDER) so the same study reads the same everywhere.
-function studyNumber(id: string): number {
-  const i = STUDY_ORDER.indexOf(id);
-  return i >= 0 ? i + 1 : 0;
-}
 
 function status(s: StudySummary): { label: string; tone: 'neutral' | 'accent' | 'success' } {
   if (s.total > 0 && s.completed >= s.total) return { label: 'Completed', tone: 'success' };
@@ -72,10 +64,13 @@ export function StudiesPage() {
 
   const voice = studies.filter((s) => s.band !== 'profile');
   const profile = studies.filter((s) => s.band === 'profile');
-  const total = STUDY_ORDER.length;
-  // The first study in canonical order gets a "Start here" cue so a first-timer
-  // facing seven equal cards knows where to begin.
-  const firstId = STUDY_ORDER[0];
+  // The API returns studies in canonical order, so it's the single source for
+  // the global "Study NN / total" number (no separate hardcoded order list).
+  const total = studies.length;
+  const numberOf = (id: string) => studies.findIndex((x) => x.id === id) + 1;
+  // The first study gets a "Start here" cue so a first-timer facing several
+  // equal cards knows where to begin.
+  const firstId = studies[0]?.id;
 
   return (
     <div className="flex flex-col gap-section">
@@ -106,7 +101,7 @@ export function StudiesPage() {
                   <StudyCard
                     key={s.id}
                     s={s}
-                    number={studyNumber(s.id)}
+                    number={numberOf(s.id)}
                     total={total}
                     startHere={s.id === firstId}
                   />
@@ -129,7 +124,7 @@ export function StudiesPage() {
                   <StudyCard
                     key={s.id}
                     s={s}
-                    number={studyNumber(s.id)}
+                    number={numberOf(s.id)}
                     total={total}
                     startHere={s.id === firstId}
                   />

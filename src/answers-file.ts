@@ -94,57 +94,13 @@ export function appendConfirmedStatements(
 // The `choice:` line is what the scorer reads; the prose is the dual-use voice
 // sample. An empty body means unanswered (treated as skipped downstream).
 
-const CHOICE_LINE_RE = /^choice:\s*(.*)$/i;
-const NOTE_LINE_RE = /^note:\s*$/i;
-
-export interface ChoiceAnswer {
-  values: string[]; // picked option value(s); [] if unanswered
-  note: string; // optional free-text
-}
-
-/** Encode a choice answer into a section body. Empty selection + empty note
- *  yields '' so it round-trips as skipped. */
-export function encodeChoiceBody(values: string[], note: string): string {
-  const picked = values.filter((v) => v.trim().length > 0);
-  const trimmedNote = note.trim();
-  if (picked.length === 0 && trimmedNote.length === 0) return '';
-  const lines = [`choice: ${picked.join(', ')}`];
-  if (trimmedNote.length > 0) {
-    lines.push('note:');
-    lines.push(trimmedNote);
-  }
-  return lines.join('\n');
-}
-
-/** Parse a section body written by encodeChoiceBody. Tolerant: a body with no
- *  `choice:` line (e.g. a hand-edited free-text answer) yields no values and
- *  treats the whole body as the note. */
-export function decodeChoiceBody(body: string): ChoiceAnswer {
-  const lines = body.split(/\r?\n/);
-  let values: string[] = [];
-  const noteLines: string[] = [];
-  let seenChoice = false;
-  let inNote = false;
-  for (const line of lines) {
-    if (!seenChoice) {
-      const m = line.match(CHOICE_LINE_RE);
-      if (m) {
-        values = m[1]
-          .split(',')
-          .map((v) => v.trim())
-          .filter((v) => v.length > 0);
-        seenChoice = true;
-        continue;
-      }
-    }
-    if (!inNote && NOTE_LINE_RE.test(line)) {
-      inNote = true;
-      continue;
-    }
-    if (inNote || !seenChoice) noteLines.push(line);
-  }
-  return { values, note: noteLines.join('\n').trim() };
-}
+// The choice-body format lives in the shared module so the web form imports the
+// exact same encoder/decoder (no parallel fork to keep in sync).
+export {
+  type ChoiceAnswer,
+  encodeChoiceBody,
+  decodeChoiceBody,
+} from './shared/choice-body.js';
 
 const HEADER_RE = /^##\s+(Q\d+)\s+—\s+(.+)$/;
 

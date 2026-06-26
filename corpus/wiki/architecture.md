@@ -62,6 +62,11 @@ conversation analyzer (parser + aggregation), unrelated to the soul pipeline.
   (scrypt + cookie sessions), `pipeline.ts` (per-user extraction), `swipe.ts`
   (card generation), `ollama-ready.ts` (TTL-cached readiness ping), `routes/`
   (`auth`, `studies`, `swipe`, `stats`, `results`).
+- **`src/shared/`** — code imported by *both* roots via the `@shared` alias (Vite
+  `resolve.alias` + frontend tsconfig `paths`): `choice-body.ts` (the choice-answer
+  format, the single source for server + web form) and `stats-types.ts`
+  (`ConversationStats`/`ParticipantStat`, the FE/BE contract). Replaced the prior
+  hand-synced frontend forks.
 - **`frontend/`** — own Vite root + tsconfig (DOM + react-jsx). Base UI
   (`@base-ui-components/react`), `react-router-dom`, TanStack Query. Pages: Login/
   Register, Intro, Studies + StudyPage, Answers, Cards (`SwipePage`), Analyze

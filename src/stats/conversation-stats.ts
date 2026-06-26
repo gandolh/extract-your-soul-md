@@ -5,35 +5,18 @@
 // (see the saved_stats table). Idea adapted from the Yappinator project, ported
 // to TypeScript with no moment.js and generalized past a fixed two-person model.
 
+// ConversationStats/ParticipantStat are the FE/BE contract — defined once in the
+// shared module and re-exported here so existing server-side importers are
+// unaffected.
+export type { ConversationStats, ParticipantStat } from '../shared/stats-types.js';
+import type { ConversationStats, ParticipantStat } from '../shared/stats-types.js';
+
 /** One parsed line of a chat export. `date` is null when the timestamp could
  *  not be parsed — the message still counts, but is skipped for time stats. */
 export interface ParsedMessage {
   date: Date | null;
   sender: string;
   content: string;
-}
-
-export interface ParticipantStat {
-  name: string;
-  messageCount: number;
-  wordCount: number;
-  charCount: number;
-  /** Mean minutes to reply when this person follows the other speaker. null if
-   *  they never took a turn after someone else (no measurable response). */
-  avgResponseMinutes: number | null;
-  topWords: { word: string; count: number }[];
-}
-
-export interface ConversationStats {
-  totalMessages: number;
-  /** Messages with a parseable timestamp (the denominator for time stats). */
-  datedMessages: number;
-  participantCount: number;
-  dateRange: { start: string; end: string } | null; // ISO 8601
-  /** Per-participant, sorted by message count descending. */
-  participants: ParticipantStat[];
-  messagesPerMonth: { months: string[]; series: { name: string; counts: number[] }[] };
-  redFlags: string[];
 }
 
 // 3+ char tokens, lowercased, common English filler removed. Unicode-aware so a

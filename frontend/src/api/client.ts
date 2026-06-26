@@ -109,24 +109,11 @@ export interface SwipeState {
 }
 // ---- conversation statistics ---------------------------------------------
 // The conversation is transient (computed server-side, never stored); only
-// these derived numbers can be saved.
-export interface ParticipantStat {
-  name: string;
-  messageCount: number;
-  wordCount: number;
-  charCount: number;
-  avgResponseMinutes: number | null;
-  topWords: { word: string; count: number }[];
-}
-export interface ConversationStats {
-  totalMessages: number;
-  datedMessages: number;
-  participantCount: number;
-  dateRange: { start: string; end: string } | null;
-  participants: ParticipantStat[];
-  messagesPerMonth: { months: string[]; series: { name: string; counts: number[] }[] };
-  redFlags: string[];
-}
+// these derived numbers can be saved. ConversationStats/ParticipantStat are the
+// FE/BE contract, defined once in src/shared and re-exported here.
+import type { ConversationStats, ParticipantStat } from '@shared/stats-types';
+
+export type { ConversationStats, ParticipantStat };
 export interface SavedStatSummary { id: number; name: string; created_at: string; }
 export interface SavedStatDetail { id: number; name: string; createdAt: string; stats: ConversationStats; }
 

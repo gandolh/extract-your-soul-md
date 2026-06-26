@@ -1,13 +1,19 @@
-// Frontend mirror of src/answers-file.ts's choice-body encode/decode. The two
-// tsconfigs don't share a module graph, so we keep a tiny parallel copy rather
-// than wiring a cross-root import. Keep this in sync with the server version —
-// the format (a `choice:` line + optional `note:` block) is the contract.
+// The choice-answer body format — a `choice:` line + optional `note:` block —
+// is a load-bearing contract shared by the server (answers-file.ts, process.ts
+// parser) and the web form (QuestionCard). It lives here, in one place, imported
+// by both roots via the `@shared` alias, so the two can never silently drift.
+// Pure: no Node or DOM dependencies.
 
 export interface ChoiceAnswer {
-  values: string[];
-  note: string;
+  values: string[]; // picked option value(s); [] if unanswered
+  note: string; // optional free-text
 }
 
+const CHOICE_LINE_RE = /^choice:\s*(.*)$/i;
+const NOTE_LINE_RE = /^note:\s*$/i;
+
+/** Encode a choice answer into a section body. Empty selection + empty note
+ *  yields '' so it round-trips as skipped. */
 export function encodeChoiceBody(values: string[], note: string): string {
   const picked = values.filter((v) => v.trim().length > 0);
   const trimmedNote = note.trim();
@@ -20,6 +26,9 @@ export function encodeChoiceBody(values: string[], note: string): string {
   return lines.join('\n');
 }
 
+/** Parse a section body written by encodeChoiceBody. Tolerant: a body with no
+ *  `choice:` line (e.g. a hand-edited free-text answer) yields no values and
+ *  treats the whole body as the note. */
 export function decodeChoiceBody(body: string): ChoiceAnswer {
   const lines = body.split(/\r?\n/);
   let values: string[] = [];
@@ -28,7 +37,7 @@ export function decodeChoiceBody(body: string): ChoiceAnswer {
   let inNote = false;
   for (const line of lines) {
     if (!seenChoice) {
-      const m = line.match(/^choice:\s*(.*)$/i);
+      const m = line.match(CHOICE_LINE_RE);
       if (m) {
         values = m[1]
           .split(',')
@@ -38,7 +47,7 @@ export function decodeChoiceBody(body: string): ChoiceAnswer {
         continue;
       }
     }
-    if (!inNote && /^note:\s*$/i.test(line)) {
+    if (!inNote && NOTE_LINE_RE.test(line)) {
       inNote = true;
       continue;
     }

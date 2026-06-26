@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { StudyQuestion } from '../../api/client';
 import { cardClass, cx, FIELD_CLASS } from '../ui';
-import { decodeChoiceBody, encodeChoiceBody } from '../../shared/choiceBody';
+import { decodeChoiceBody, encodeChoiceBody } from '@shared/choice-body';
 
 // One question card, shared by the StudyPage form and the AnswersPage review/edit
 // list. Free-text questions render a textarea; choice questions render a scale or

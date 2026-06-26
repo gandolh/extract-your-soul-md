@@ -46,10 +46,11 @@ But a web survey shows there isn't a clean one:
   functions** — the OEJTS/OJTS family (openpsychometrics, OpenJung). That is
   *exactly what our existing `mbti` report already captures*, not Caloz's
   distinctive function-stack layer. Adopting it duplicates what we have.
-- **OEJTS is CC BY-NC-SA 4.0**, not public domain — the **NC** (non-commercial)
-  and **SA** (share-alike) clauses are a snag for a project that otherwise sticks
-  to commercially-usable items. (Our existing `mbti` report already leans on
-  OEJTS, so that clause may already be in the tree — worth a separate check.)
+- **OEJTS is CC BY-NC-SA 4.0**, not public domain. The **NC** (non-commercial)
+  clause is **moot** — this project is non-commercial by decision (2026-06-26),
+  and our existing `mbti` report already uses OEJTS. Only **SA** (share-alike)
+  remains, a non-issue for an open project. So licensing is *not* the blocker
+  here — the duplication point above is.
 - **The real 8-function tests (Sakinorva, IDRlabs, Keys2Cognition/Nardi) are all
   proprietary.** No clean, openly-licensed *function-stack* inventory exists to
   adapt.

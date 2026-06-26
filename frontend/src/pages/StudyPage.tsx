@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ApiError, type ReportState } from '../api/client';
-import { useReports, useSaveStudy, useStudy } from '../api/queries';
+import { useReports, useSaveStudy, useStudies, useStudy } from '../api/queries';
 import { useToast } from '../components/app/Toaster';
 import { Meter } from '../components/app/Layout';
-import { STUDY_ORDER } from '../shared/studyOrder';
 import { Button, Eyebrow, Headline, buttonClass } from '../components/ui';
 import { ReportSection } from '../components/studies/ReportSection';
 import { QuestionCard } from '../components/studies/QuestionCard';
@@ -59,14 +58,19 @@ export function StudyPage() {
     baseline.current = JSON.stringify(init);
   }, [detail]);
 
-  const { idx, next, prev } = useMemo(() => {
-    const i = STUDY_ORDER.indexOf(studyId);
+  // Canonical order comes from the studies API (the single source), not a
+  // hardcoded mirror — prev/next degrade gracefully while it loads.
+  const { data: allStudies = [] } = useStudies();
+  const { idx, next, prev, orderLen } = useMemo(() => {
+    const order = allStudies.map((s) => s.id);
+    const i = order.indexOf(studyId);
     return {
       idx: i,
-      prev: i > 0 ? STUDY_ORDER[i - 1] : null,
-      next: i >= 0 && i < STUDY_ORDER.length - 1 ? STUDY_ORDER[i + 1] : null,
+      orderLen: order.length,
+      prev: i > 0 ? order[i - 1] : null,
+      next: i >= 0 && i < order.length - 1 ? order[i + 1] : null,
     };
-  }, [studyId]);
+  }, [allStudies, studyId]);
 
   const completed = Object.values(answers).filter((b) => b.trim().length > 0).length;
 
@@ -161,7 +165,7 @@ export function StudyPage() {
     <div className="mx-auto flex w-full max-w-[680px] flex-col gap-section">
       <header className="flex flex-col gap-3">
         <Eyebrow>
-          Study {idx >= 0 ? `${String(idx + 1).padStart(2, '0')} / ${STUDY_ORDER.length}` : ''}
+          Study {idx >= 0 ? `${String(idx + 1).padStart(2, '0')} / ${orderLen}` : ''}
         </Eyebrow>
         <Headline>{detail.study.title}</Headline>
         <p className="text-[14px] leading-[22px] text-text-secondary">{detail.study.description}</p>
