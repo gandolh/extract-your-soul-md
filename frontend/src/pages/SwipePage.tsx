@@ -53,18 +53,34 @@ export function SwipePage() {
       setExiting(verdict);
       setDragX(verdict === 'yes' ? window.innerWidth : -window.innerWidth);
       window.setTimeout(() => {
-        setVerdict.mutate({ id: card.id, verdict });
         // The optimistic cache update drops this card from `queue`; the
-        // top-change effect resets drag state for the next card.
+        // top-change effect resets drag state for the next card. On failure the
+        // mutation rolls the deck back — surface that so the swipe isn't lost.
+        setVerdict.mutate(
+          { id: card.id, verdict },
+          {
+            onError: (err) =>
+              toast(
+                err instanceof ApiError ? err.message : 'Could not save that swipe — try again.',
+                'err',
+              ),
+          },
+        );
       }, FLING_MS);
     },
-    [exiting, setVerdict],
+    [exiting, setVerdict, toast],
   );
 
-  // Keyboard: ← = not me, → = sounds like me.
+  // Keyboard: ← = not me, → = sounds like me. Ignored while focus is in a text
+  // field so arrow keys still move the caret there.
   useEffect(() => {
     if (!top || exiting) return;
     const onKey = (e: KeyboardEvent) => {
+      const el = document.activeElement;
+      const tag = el?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (el as HTMLElement | null)?.isContentEditable) {
+        return;
+      }
       if (e.key === 'ArrowRight') commit(top, 'yes');
       else if (e.key === 'ArrowLeft') commit(top, 'no');
     };
@@ -168,7 +184,15 @@ export function SwipePage() {
 
       {/* The deck. */}
       {!loading && top && (
-        <div className="flex flex-col items-center gap-6">
+        <div
+          className="flex flex-col items-center gap-6"
+          aria-keyshortcuts="ArrowLeft ArrowRight"
+        >
+          {/* Announce the current statement to assistive tech as the deck
+              advances — the draggable card itself isn't in the a11y tree. */}
+          <p className="sr-only" role="status" aria-live="polite">
+            {top.statement}
+          </p>
           <CardStack
             queue={queue}
             dragX={dragX}

@@ -149,23 +149,33 @@ export function useGenerateCards() {
 }
 
 // Record a swipe. We optimistically patch the cached deck so the card advances
-// instantly, then reconcile from the server on settle.
+// instantly; if the request fails we roll the deck back to its pre-swipe state
+// (otherwise a failed verdict would silently vanish the card forever). The
+// caller surfaces the error to the user via the mutate() onError callback.
 export function useSetVerdict() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (vars: { id: number; verdict: SwipeVerdict | null }) =>
       api.setVerdict(vars.id, vars.verdict),
-    onMutate: (vars) => {
-      qc.setQueryData<SwipeState>(queryKeys.swipe, (prev) =>
-        prev
+    onMutate: async (vars) => {
+      // Stop any in-flight refetch from clobbering our optimistic write.
+      await qc.cancelQueries({ queryKey: queryKeys.swipe });
+      const prev = qc.getQueryData<SwipeState>(queryKeys.swipe);
+      qc.setQueryData<SwipeState>(queryKeys.swipe, (cur) =>
+        cur
           ? {
-              ...prev,
-              cards: prev.cards.map((c: SwipeCard) =>
+              ...cur,
+              cards: cur.cards.map((c: SwipeCard) =>
                 c.id === vars.id ? { ...c, verdict: vars.verdict } : c,
               ),
             }
-          : prev,
+          : cur,
       );
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      // Restore the exact pre-swipe deck so the card reappears for another try.
+      if (ctx?.prev) qc.setQueryData(queryKeys.swipe, ctx.prev);
     },
   });
 }
