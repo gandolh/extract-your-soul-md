@@ -77,8 +77,9 @@ function buildMaterial(userId: number): string {
   return parts.join('\n\n---\n\n');
 }
 
-/** Turn the model's raw response into a clean, deduped list of statements. */
-function parseStatements(raw: string): string[] {
+/** Turn the model's raw response into a clean, deduped list of statements.
+ *  Exported for unit testing. */
+export function parseStatements(raw: string): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const line of raw.split(/\r?\n/)) {

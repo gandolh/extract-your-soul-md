@@ -28,6 +28,9 @@ export function verifyPassword(password: string, stored: string): boolean {
   if (parts.length !== 3 || parts[0] !== 'scrypt') return false;
   const [, salt, expectedHex] = parts;
   const expected = Buffer.from(expectedHex, 'hex');
+  // A malformed/empty hash would make scryptSync(..., 0) throw (keylen must be
+  // > 0). Reject it as a non-match rather than 500 on login.
+  if (expected.length === 0) return false;
   const actual = scryptSync(password, salt, expected.length);
   return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
