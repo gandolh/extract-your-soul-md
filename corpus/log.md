@@ -737,3 +737,22 @@ and replaced the `*-desktop.png` / `*-mobile.png` gitignore rules with the
 `playwright/**` artifact ignores. Verified: backend + frontend typecheck clean;
 new tests pass (one pre-existing scoring-test failure is unrelated). Nothing
 committed.
+
+## [2026-06-26] done | UI audit of the conversation-stats feature (Playwright)
+
+Set up a `corpus/test-plans/` suite (TP-01 analyze, TP-02 saved-stats, TP-03
+UI/UX audit) pointing at the `playwright/` hub, then ran a browser-driven audit
+with the Playwright MCP against a throwaway DB. See
+[test-plans/RESULTS.md](test-plans/RESULTS.md) for the dated outcome table +
+evidence.
+
+All three plans pass. One finding, fixed in the same run:
+
+- **F-01 (medium)** — average response time averaged multi-day gaps *between
+  conversation sessions*, producing absurd, unreadable values (a real chat showed
+  "15396m" ≈ 10.7 days for one participant). Fixed by (a) only counting replies
+  within a 6h same-session window toward the mean (`RESPONSE_WINDOW_MINUTES` in
+  `src/stats/conversation-stats.ts`, + golden test) and (b) formatting the
+  duration human-readably (m/h/d) in `StatsDashboard.tsx`. Verified in-browser:
+  15396m → 3m. Brand parity, mobile reflow, and boundary inputs (single
+  participant, long names, garbage input) all checked clean.

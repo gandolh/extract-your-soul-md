@@ -73,6 +73,21 @@ test('average response time is measured across speaker turns', () => {
   assert.equal(bob.avgResponseMinutes, 1);
 });
 
+test('response time excludes multi-day inter-session gaps (no absurd means)', () => {
+  // Alice replies once within seconds, then again 14 days later. Only the
+  // in-session reply should count — the 14-day gap is a new session, not a reply.
+  const text = [
+    '1/1/24, 10:00 - Bob: hello',
+    '1/1/24, 10:02 - Alice: hi there',
+    '15/1/24, 10:00 - Bob: you around?',
+    '29/1/24, 10:00 - Alice: back now',
+  ].join('\n');
+  const stats = analyzeConversation(text);
+  const alice = stats.participants.find((p) => p.name === 'Alice')!;
+  // 2 min reply counted; the 14-day gap excluded → mean stays small, not ~20000.
+  assert.equal(alice.avgResponseMinutes, 2);
+});
+
 test('messagesPerMonth buckets by calendar month per participant', () => {
   const stats = analyzeConversation(ANDROID);
   assert.deepEqual(stats.messagesPerMonth.months, ['January 2024']);

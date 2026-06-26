@@ -72,6 +72,13 @@ The research behind the questionnaire path and voice imitation. Start here:
   research synthesis, questionnaire design, integration plan, references, plus
   the web-UI design brief and design tokens.
 
+## Test plans (browser-driven UI audit)
+
+- [test-plans/](test-plans/) — plain-text UI test plans (what to test) + the
+  latest run's [RESULTS.md](test-plans/RESULTS.md). The "how to run" hub is
+  [playwright/README.md](../playwright/README.md) at the repo root (screenshots
+  gitignored).
+
 ## Where else knowledge lives
 
 - The root [CLAUDE.md](../CLAUDE.md) owns pipeline mechanics and run commands.

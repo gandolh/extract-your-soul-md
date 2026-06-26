@@ -47,6 +47,12 @@ const STOP_WORDS = new Set([
   'just', 'like', 'what', 'your', 'they', 'them', 'from', 'will', 'about',
 ]);
 
+// A reply only counts toward "average response time" if it lands within this
+// window of the prior message. Longer gaps are a new conversation session, not a
+// response — counting them drags the mean into the absurd (a reply two weeks
+// later isn't a "response time"). 6h is a generous same-session bound.
+const RESPONSE_WINDOW_MINUTES = 6 * 60;
+
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
@@ -224,7 +230,7 @@ export function computeStats(messages: ParsedMessage[]): ConversationStats {
       const prev = messages[i - 1];
       if (prev && prev.date && prev.sender !== m.sender) {
         const mins = (m.date.getTime() - prev.date.getTime()) / 60000;
-        if (mins >= 0) responseTimes.get(m.sender)!.push(mins);
+        if (mins >= 0 && mins <= RESPONSE_WINDOW_MINUTES) responseTimes.get(m.sender)!.push(mins);
       }
     }
   }

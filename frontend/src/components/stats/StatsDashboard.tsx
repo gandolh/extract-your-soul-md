@@ -13,6 +13,16 @@ function fmtDate(iso: string): string {
     : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
+// Response time arrives as a (possibly fractional) number of minutes. Show it in
+// the unit that reads cleanly rather than e.g. "148m" or a raw minute count.
+function fmtDuration(minutes: number | null): string {
+  if (minutes === null) return '—';
+  if (minutes < 1) return '<1m';
+  if (minutes < 60) return `${Math.round(minutes)}m`;
+  if (minutes < 1440) return `${(minutes / 60).toFixed(1)}h`;
+  return `${(minutes / 1440).toFixed(1)}d`;
+}
+
 // Top participant gets the strong accent; the second a washed-out one; any
 // further participants share a neutral tone. Keeps the existing palette.
 function barTone(index: number): string {
@@ -63,10 +73,7 @@ export function StatsDashboard({ stats }: { stats: ConversationStats }) {
               <div className="grid grid-cols-3 gap-3">
                 <Stat label="Messages" value={p.messageCount.toLocaleString()} />
                 <Stat label="Words" value={p.wordCount.toLocaleString()} />
-                <Stat
-                  label="Avg reply"
-                  value={p.avgResponseMinutes === null ? '—' : `${p.avgResponseMinutes}m`}
-                />
+                <Stat label="Avg reply" value={fmtDuration(p.avgResponseMinutes)} />
               </div>
               <div className="flex flex-col gap-1.5">
                 <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-faint">Top words</span>
