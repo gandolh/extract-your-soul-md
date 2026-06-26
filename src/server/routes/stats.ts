@@ -16,33 +16,48 @@ import {
 } from '../../db/repos.js';
 import { analyzeConversation, type ConversationStats } from '../../stats/conversation-stats.js';
 
+// Cap well below the 8 MB global bodyLimit: analyzeConversation is synchronous
+// (it blocks the single event loop), so an unbounded transcript lets one user
+// stall every other request. 2M chars is far beyond any real chat export.
+const MAX_CONVERSATION_CHARS = 2_000_000;
+
 const ComputeBody = z.object({
-  conversation: z.string().min(1, 'Paste a conversation to analyze.'),
+  conversation: z
+    .string()
+    .min(1, 'Paste a conversation to analyze.')
+    .max(MAX_CONVERSATION_CHARS, 'That conversation is too large to analyze here.'),
 });
+
+const nonNegInt = z.number().int().nonnegative();
+const finiteNum = z.number().finite();
 
 // Mirrors ConversationStats so a save persists only well-formed JSON. We accept
 // the client's computed payload (the conversation is gone by then) rather than
 // re-uploading the transcript.
 const StatsSchema = z.object({
-  totalMessages: z.number(),
-  datedMessages: z.number(),
-  participantCount: z.number(),
+  totalMessages: nonNegInt,
+  datedMessages: nonNegInt,
+  participantCount: nonNegInt,
   dateRange: z.object({ start: z.string(), end: z.string() }).nullable(),
-  participants: z.array(
-    z.object({
-      name: z.string(),
-      messageCount: z.number(),
-      wordCount: z.number(),
-      charCount: z.number(),
-      avgResponseMinutes: z.number().nullable(),
-      topWords: z.array(z.object({ word: z.string(), count: z.number() })),
-    }),
-  ),
+  participants: z
+    .array(
+      z.object({
+        name: z.string().max(200),
+        messageCount: nonNegInt,
+        wordCount: nonNegInt,
+        charCount: nonNegInt,
+        avgResponseMinutes: finiteNum.nonnegative().nullable(),
+        topWords: z.array(z.object({ word: z.string().max(100), count: nonNegInt })).max(50),
+      }),
+    )
+    .max(1000),
   messagesPerMonth: z.object({
-    months: z.array(z.string()),
-    series: z.array(z.object({ name: z.string(), counts: z.array(z.number()) })),
+    months: z.array(z.string().max(40)).max(1200),
+    series: z
+      .array(z.object({ name: z.string().max(200), counts: z.array(nonNegInt).max(1200) }))
+      .max(1000),
   }),
-  redFlags: z.array(z.string()),
+  redFlags: z.array(z.string().max(500)).max(50),
 });
 
 const SaveBody = z.object({
@@ -104,12 +119,14 @@ export async function statsRoutes(app: FastifyInstance): Promise<void> {
     if (!Number.isInteger(id)) return reply.code(400).send({ error: 'Bad id.' });
     const found = getSavedStat(request.userId!, id);
     if (!found) return reply.code(404).send({ error: 'Saved result not found.' });
-    return reply.send({
-      id: found.id,
-      name: found.name,
-      createdAt: found.created_at,
-      stats: JSON.parse(found.payload) as ConversationStats,
-    });
+    let stats: ConversationStats;
+    try {
+      stats = JSON.parse(found.payload) as ConversationStats;
+    } catch (err) {
+      request.log.error(err, 'corrupt saved_stats payload');
+      return reply.code(500).send({ error: 'This saved result could not be read.' });
+    }
+    return reply.send({ id: found.id, name: found.name, createdAt: found.created_at, stats });
   });
 
   app.delete<{ Params: { id: string } }>('/api/stats/:id', async (request, reply) => {

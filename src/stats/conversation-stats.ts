@@ -59,8 +59,15 @@ const MONTH_NAMES = [
 ];
 
 // Placeholder bodies WhatsApp/Telegram leave when an attachment is stripped on
-// export — they aren't real authored words, so they're dropped from the corpus.
-const MEDIA_MARKERS = ['<Media omitted>', 'image omitted', 'video omitted', 'audio omitted', 'sticker omitted', 'GIF omitted', 'document omitted'];
+// export — they aren't real authored words, so they're dropped. Matched against
+// the WHOLE (normalized) body, never as a substring: a real message that merely
+// mentions one of these phrases must survive. iOS prefixes them with a LTR mark.
+const MEDIA_MARKERS = ['<media omitted>', 'image omitted', 'video omitted', 'audio omitted', 'sticker omitted', 'gif omitted', 'document omitted', 'contact card omitted'];
+
+function isMediaPlaceholder(content: string): boolean {
+  const norm = content.replace(/‎/g, '').trim().toLowerCase();
+  return MEDIA_MARKERS.includes(norm);
+}
 
 // A message-start line is either bracketed (iOS: "[12/01/2024, 10:00:00] X: …")
 // or dash-delimited (Android: "12/01/2024, 10:00 - X: …"). The timestamp is
@@ -126,7 +133,18 @@ function toDate(p: DateParts, dayFirst: boolean): Date | null {
   if (month < 1 || month > 12 || day < 1 || day > 31) return null;
   // UTC so month bucketing is stable regardless of where the server runs.
   const d = new Date(Date.UTC(p.year, month - 1, day, p.hour, p.minute));
-  return Number.isNaN(d.getTime()) ? null : d;
+  if (Number.isNaN(d.getTime())) return null;
+  // Date.UTC *normalizes* overflow (Feb 31 → Mar 2), which would fabricate a
+  // valid-looking timestamp from an impossible one. Round-trip to reject it so
+  // the message still counts but is excluded from date-based stats (date=null).
+  if (
+    d.getUTCFullYear() !== p.year ||
+    d.getUTCMonth() !== month - 1 ||
+    d.getUTCDate() !== day
+  ) {
+    return null;
+  }
+  return d;
 }
 
 /** Parse a WhatsApp/Telegram-style text export into messages. Lines that don't
@@ -170,7 +188,7 @@ export function parseConversation(input: string): ParsedMessage[] {
     const r = raws[i];
     const content = r.content.trim();
     if (content.length === 0) continue;
-    if (MEDIA_MARKERS.some((mk) => content.includes(mk))) continue;
+    if (isMediaPlaceholder(content)) continue;
     const parts = partsByIndex[i];
     messages.push({
       date: parts ? toDate(parts, dayFirst) : null,
@@ -271,23 +289,27 @@ function messagesPerMonth(
   messages: ParsedMessage[],
   senders: string[],
 ): { months: string[]; series: { name: string; counts: number[] }[] } {
-  const buckets = new Map<string, Map<string, number>>(); // monthKey → sender → count
-  const order: string[] = [];
+  // Keyed by a sortable 'YYYY-MM' so the chart is chronological even when the
+  // export isn't already date-sorted (merged/edited files); the display label
+  // is derived from the same key.
+  const buckets = new Map<string, Map<string, number>>(); // 'YYYY-MM' → sender → count
   for (const m of messages) {
     if (!m.date) continue;
-    const key = `${MONTH_NAMES[m.date.getUTCMonth()]} ${m.date.getUTCFullYear()}`;
-    if (!buckets.has(key)) {
-      buckets.set(key, new Map());
-      order.push(key);
-    }
+    const key = `${m.date.getUTCFullYear()}-${String(m.date.getUTCMonth() + 1).padStart(2, '0')}`;
+    if (!buckets.has(key)) buckets.set(key, new Map());
     const bucket = buckets.get(key)!;
     bucket.set(m.sender, (bucket.get(m.sender) ?? 0) + 1);
   }
+  const sortedKeys = [...buckets.keys()].sort();
+  const label = (key: string): string => {
+    const [year, month] = key.split('-');
+    return `${MONTH_NAMES[Number(month) - 1]} ${year}`;
+  };
   return {
-    months: order,
+    months: sortedKeys.map(label),
     series: senders.map((name) => ({
       name,
-      counts: order.map((k) => buckets.get(k)!.get(name) ?? 0),
+      counts: sortedKeys.map((k) => buckets.get(k)!.get(name) ?? 0),
     })),
   };
 }

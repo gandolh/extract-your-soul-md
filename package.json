@@ -1,7 +1,7 @@
 {
   "name": "extract-your-soul-md",
   "version": "0.1.0",
-  "description": "A psychological study platform that reinforces a per-user soul.md from themed studies and imported conversations.",
+  "description": "A psychological study platform that reinforces a per-user soul.md from themed studies and a swipe-card refinement loop, plus a transient no-LLM conversation-statistics tool.",
   "type": "module",
   "main": "dist/index.js",
   "engines": {

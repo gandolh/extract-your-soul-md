@@ -109,6 +109,40 @@ test('red flags: one-sided + ghosting fire on lopsided, gappy chats', () => {
   assert.ok(stats.redFlags.some((f) => /quiet for 24h/.test(f)));
 });
 
+test('messagesPerMonth is chronological even when the export is out of order', () => {
+  // March appears before January in the file; the chart must still be ordered.
+  const text = [
+    '2/3/24, 10:00 - Alice: march message',
+    '5/1/24, 10:00 - Bob: january message',
+  ].join('\n');
+  const stats = analyzeConversation(text);
+  assert.deepEqual(stats.messagesPerMonth.months, ['January 2024', 'March 2024']);
+});
+
+test('calendar-invalid dates are rejected, not rolled over (Feb 31 != Mar 2)', () => {
+  const text = [
+    '31/2/24, 10:00 - Alice: impossible date',
+    '1/3/24, 10:00 - Bob: real date',
+  ].join('\n');
+  const stats = analyzeConversation(text);
+  // Both messages count, but only Bob's parseable date drives the time stats.
+  assert.equal(stats.totalMessages, 2);
+  assert.equal(stats.datedMessages, 1);
+  assert.deepEqual(stats.messagesPerMonth.months, ['March 2024']);
+});
+
+test('media placeholders drop only when they are the whole message', () => {
+  const text = [
+    '1/1/24, 10:00 - Alice: <Media omitted>',
+    '1/1/24, 10:01 - Bob: look at this <Media omitted> reference inline',
+    '1/1/24, 10:02 - Alice: ‎image omitted',
+  ].join('\n');
+  const msgs = parseConversation(text);
+  // Alice's two standalone placeholders drop; Bob's inline mention survives.
+  assert.equal(msgs.length, 1);
+  assert.equal(msgs[0].sender, 'Bob');
+});
+
 test('empty input yields an empty, non-crashing result', () => {
   const stats = computeStats(parseConversation(''));
   assert.equal(stats.totalMessages, 0);

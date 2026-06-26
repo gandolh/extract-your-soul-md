@@ -219,9 +219,12 @@ corpus/                    # LLM-maintained wiki + work tracker — see corpus/i
   produce two different souls. That's inherent, not a bug. (The swipe deck also
   uses a higher temperature + random seed on purpose, so it varies per
   regeneration.)
-- **Questionnaire-only input.** The studies + swipe cards are the only source;
-  there's no conversation/chat import. The chunker uses a ~4 bytes/token
-  estimator that's accurate for English/Latin-script text.
+- **Questionnaire-only input *to `soul.md`*.** The studies + swipe cards are the
+  only source feeding extraction; no conversation/chat import reaches the profile
+  pipeline. (The separate **Analyze** page computes transient, no-LLM statistics
+  from a pasted chat, but that never touches `soul.md` and the transcript is never
+  stored.) The chunker uses a ~4 bytes/token estimator accurate for English/
+  Latin-script text.
 
 ## Future work
 
