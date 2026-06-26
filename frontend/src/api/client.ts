@@ -64,7 +64,8 @@ export type ReportKey =
   | 'need-for-cognition'
   | 'values'
   | 'regulatory-focus'
-  | 'locus-of-control';
+  | 'locus-of-control'
+  | 'cognitive-functions';
 export interface StudySummary {
   id: string; title: string; description: string;
   band: StudyBand; reportKey: ReportKey | null;
