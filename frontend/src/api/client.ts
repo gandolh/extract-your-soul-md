@@ -1,7 +1,7 @@
 // Axios client. Same-origin in dev (Vite proxies /api → Fastify) and in prod
 // (Fastify serves both), so cookies ride along with withCredentials:true.
 
-import axios, { AxiosError } from 'axios';
+import axios, { type AxiosError } from 'axios';
 
 export class ApiError extends Error {
   status: number;

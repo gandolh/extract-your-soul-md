@@ -74,7 +74,7 @@ const MBTI_CAVEAT =
 /** Pull the numeric (1..5) scale value for a question id from the answers. */
 function scaleValue(answers: Map<string, RecordedAnswer>, id: string): number | null {
   const a = answers.get(id);
-  if (!a || !a.body.trim()) return null;
+  if (!a?.body.trim()) return null;
   const { values } = decodeChoiceBody(a.body);
   if (values.length === 0) return null;
   const n = Number(values[0]);
@@ -84,7 +84,7 @@ function scaleValue(answers: Map<string, RecordedAnswer>, id: string): number | 
 /** Single-select value (e.g. PCM frame) for a question id. */
 function singleValue(answers: Map<string, RecordedAnswer>, id: string): string | null {
   const a = answers.get(id);
-  if (!a || !a.body.trim()) return null;
+  if (!a?.body.trim()) return null;
   const { values } = decodeChoiceBody(a.body);
   return values[0] ?? null;
 }

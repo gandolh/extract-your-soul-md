@@ -246,7 +246,7 @@ export function computeStats(messages: ParsedMessage[]): ConversationStats {
       if (!maxDate || m.date > maxDate) maxDate = m.date;
       // Response time: this message follows a turn by a different speaker.
       const prev = messages[i - 1];
-      if (prev && prev.date && prev.sender !== m.sender) {
+      if (prev?.date && prev.sender !== m.sender) {
         const mins = (m.date.getTime() - prev.date.getTime()) / 60000;
         if (mins >= 0 && mins <= RESPONSE_WINDOW_MINUTES) responseTimes.get(m.sender)!.push(mins);
       }

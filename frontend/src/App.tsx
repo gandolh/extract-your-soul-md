@@ -11,7 +11,7 @@ import { SwipePage } from './pages/SwipePage';
 import { StatsPage } from './pages/StatsPage';
 import { SavedStatsPage, SavedStatDetailPage } from './pages/SavedStatsPage';
 import { ResultsPage } from './pages/ResultsPage';
-import { type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();

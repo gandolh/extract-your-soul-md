@@ -1,5 +1,5 @@
 // Card: pure-white, hairline, razor-thin shadow.
-import { type HTMLAttributes } from 'react';
+import type { HTMLAttributes } from 'react';
 import { cx } from './cx';
 
 // The single source of truth for the card recipe. Use cardClass() directly

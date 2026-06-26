@@ -28,6 +28,8 @@ export function Layout() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   // Close the mobile menu on route change so a tap-through never leaves it open.
+  // location.pathname is the intended trigger, not an unnecessary dep.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: route-change trigger
   useEffect(() => setMenuOpen(false), [location.pathname]);
 
   async function onLogout() {

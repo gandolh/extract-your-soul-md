@@ -40,7 +40,9 @@ export function SwipePage() {
     setExiting(null);
   }, []);
 
-  // Reset transient drag state whenever the active card changes.
+  // Reset transient drag state whenever the active card changes. top?.id is the
+  // intended trigger (the active card), even though the body only calls reset().
+  // biome-ignore lint/correctness/useExhaustiveDependencies: active-card trigger
   useEffect(() => {
     reset();
   }, [top?.id, reset]);

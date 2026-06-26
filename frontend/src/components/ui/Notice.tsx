@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { cx } from './cx';
 
 /* --- Notice (inline status) ---------------------------------------- */

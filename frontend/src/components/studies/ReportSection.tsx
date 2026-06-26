@@ -1,7 +1,7 @@
 import { ApiError, type ReportState, type ReportKey } from '../../api/client';
 import { useSetReportInclude } from '../../api/queries';
 import { useToast } from '../app/Toaster';
-import { cardClass, cx } from '../ui';
+import { cardClass } from '../ui';
 
 // Renders any scored trait report (Big Five, Stance & Tone, First Reaction,
 // Type Indicator, Need for Cognition, Core Values, Regulatory Focus, Locus of
@@ -47,7 +47,7 @@ export function ReportSection({
     );
   }
 
-  if (!p || !p.hasData) {
+  if (!p?.hasData) {
     return (
       <div className={cardClass('p-6')}>
         <div className="flex items-center justify-between">

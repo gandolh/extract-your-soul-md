@@ -47,6 +47,7 @@ export function QuestionCard({
       </span>
       {answered && (
         <span
+          role="img"
           aria-label="answered"
           className="grid h-5 w-5 place-items-center rounded-full bg-tertiary text-[11px] text-on-tertiary"
         >
@@ -103,6 +104,9 @@ export function QuestionCard({
   const setNote = (n: string) => onChange(encodeChoiceBody(selected ? [selected] : [], n));
 
   return (
+    // onFocus/onBlur track focus-within to reveal the "say more" field — this is
+    // a passive container, not a click target, so no role/interaction is needed.
+    // biome-ignore lint/a11y/noStaticElementInteractions: focus-within tracking only
     <div className={cardCx} onFocus={onActivate} onBlur={onDeactivate}>
       {header}
       {promptLabel}

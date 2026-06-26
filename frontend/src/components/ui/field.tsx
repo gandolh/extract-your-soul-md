@@ -1,5 +1,5 @@
 // FieldLabel (monospace eyebrow above an input) + shared input/textarea classes.
-import { type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { cx } from './cx';
 
 export function FieldLabel({

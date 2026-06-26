@@ -2,7 +2,7 @@ import { Link, useParams } from 'react-router-dom';
 import { ApiError } from '../api/client';
 import { useDeleteSavedStat, useSavedStat, useSavedStats } from '../api/queries';
 import { useToast } from '../components/app/Toaster';
-import { Button, Eyebrow, Headline, Notice } from '../components/ui';
+import { Eyebrow, Headline, Notice } from '../components/ui';
 import { cardClass } from '../components/ui/Card';
 import { cx } from '../components/ui/cx';
 import { StatsDashboard } from '../components/stats/StatsDashboard';

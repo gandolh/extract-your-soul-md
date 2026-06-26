@@ -2,16 +2,16 @@
 // headings, bullet lists, paragraphs, inline bold/italic/code. Not a general
 // CommonMark engine; the input is our own pipeline output.
 
-import { type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 function inline(text: string): ReactNode[] {
   const nodes: ReactNode[] = [];
   // Order matters: code first so ** inside backticks isn't touched.
   const re = /(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*|_[^_]+_)/g;
   let last = 0;
-  let m: RegExpExecArray | null;
   let key = 0;
-  while ((m = re.exec(text)) !== null) {
+  let m = re.exec(text);
+  for (; m !== null; m = re.exec(text)) {
     if (m.index > last) nodes.push(text.slice(last, m.index));
     const tok = m[0];
     if (tok.startsWith('`')) nodes.push(<code key={key++}>{tok.slice(1, -1)}</code>);
@@ -35,6 +35,8 @@ export function Markdown({ source }: { source: string }) {
       out.push(
         <ul key={key++}>
           {list.map((li, i) => (
+            // Static, never-reordered render of trusted soul.md — index key is safe.
+            // biome-ignore lint/suspicious/noArrayIndexKey: static non-reordered list
             <li key={i}>{inline(li)}</li>
           ))}
         </ul>,

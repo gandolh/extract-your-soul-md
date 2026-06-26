@@ -1,6 +1,6 @@
 // Eyebrow + Headline — the Clinical Voice Instrument's text markers
 // (corpus/wiki/sources-raw/design.md): monospace eyebrows, tight sans headlines.
-import { type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { cx } from './cx';
 
 /* --- Eyebrow: monospace section marker ----------------------------- */

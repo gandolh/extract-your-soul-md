@@ -6,11 +6,6 @@ import { z } from 'zod';
 // with a publicly-known, forgeable key. Generate a real one with `openssl rand -hex 32`.
 export const DEV_SESSION_SECRET = 'dev-insecure-session-secret-change-me';
 
-const boolFromEnv = z
-  .string()
-  .optional()
-  .transform((v) => (v === undefined ? undefined : /^(1|true|yes|on)$/i.test(v)));
-
 const intFromEnv = z
   .string()
   .optional()

@@ -101,14 +101,23 @@ not formally revisited.
   `tsconfig.test.json` (the prod `build:server` excludes `*.test.ts`, so no test
   code ships to `dist/`). Scope is the **deterministic, no-LLM** core — the
   `answers.md` format contract, `estimateTokens`, and `processAll`/`chunkAll` fs
-  behavior. **No linter** and **no Vitest for the frontend** (deliberately
-  skipped — adds a dep for little value; revisit only if the SPA grows complex
-  logic). Ollama-touching code stays manual (LLM I/O isn't unit-testable here).
+  behavior. **No Vitest for the frontend** (deliberately skipped — adds a dep for
+  little value; revisit only if the SPA grows complex logic). Ollama-touching code
+  stays manual (LLM I/O isn't unit-testable here).
+- **Biome is the linter + formatter** (added 2026-06-26). `npm run lint` runs
+  `biome lint src frontend/src`; `npm run format` applies formatting. Config in
+  [biome.json](../../biome.json): recommended rules, with `noNonNullAssertion`,
+  `useTemplate`, and `noAutofocus` disabled (they fight deliberate codebase
+  patterns). A handful of intentional exceptions carry inline `biome-ignore`
+  comments rather than blanket rule-disables, so the rules stay strict for new
+  code. Flipped the prior "no linter" decision. ESLint+Prettier rejected as
+  heavier (two deps + config) than Biome (one).
 - **CI runs on GitHub Actions** ([.github/workflows/ci.yml](../../.github/workflows/ci.yml),
-  brief 35, 2026-06-16) on push-to-main + every PR: Node 24, `npm ci`, then
-  `npm run build` (server tsc + web Vite build), `typecheck:web`,
-  `typecheck:test`, and `npm test`. No Ollama in CI — only the deterministic,
-  no-LLM gates run. Was previously "no CI".
+  added 2026-06-26) on push-to-main + every PR: Node 24, `npm ci`, then `npm run
+  lint`, `typecheck:web`, `typecheck:test`, `npm run build` (server tsc + web Vite
+  build), and `npm test`. No Ollama in CI — only the deterministic, no-LLM gates
+  run. (The earlier corpus claim that brief 35 had shipped CI was stale — no
+  workflow file existed until this commit.)
 
 ## Corpus
 

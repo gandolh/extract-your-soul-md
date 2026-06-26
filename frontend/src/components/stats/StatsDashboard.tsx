@@ -2,7 +2,7 @@
 // page and the saved-result detail view, so the two read identically. Charts
 // are plain CSS bars — no charting dependency, no LLM, just the numbers.
 
-import { type ConversationStats } from '../../api/client';
+import type { ConversationStats } from '../../api/client';
 import { Card, Eyebrow } from '../ui';
 import { cx } from '../ui/cx';
 
@@ -141,8 +141,8 @@ export function StatsDashboard({ stats }: { stats: ConversationStats }) {
         <Eyebrow as="h2">Patterns &amp; red flags</Eyebrow>
         <Card>
           <ul className="flex flex-col gap-2">
-            {stats.redFlags.map((flag, i) => (
-              <li key={i} className="flex gap-2 text-[14px] leading-[22px] text-text-secondary">
+            {stats.redFlags.map((flag) => (
+              <li key={flag} className="flex gap-2 text-[14px] leading-[22px] text-text-secondary">
                 <span aria-hidden className="text-primary">›</span>
                 {flag}
               </li>
