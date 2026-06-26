@@ -151,10 +151,15 @@ out/
 data/
 .work/
 
-# Playwright MCP scratch (browser snapshots/console logs from UI review)
+# Playwright UI-audit artifacts (screenshots/traces are build artifacts — kept
+# on disk for the current run, never committed). The playwright/ structure +
+# README are tracked; only the captured media is ignored. Keep the .gitkeep so
+# the screenshots/ dir survives in git.
 .playwright-mcp/
-
-# Screenshots captured during UI review / critique (kept local, not committed)
-*-desktop.png
-*-mobile.png
+playwright/screenshots/*
+!playwright/screenshots/.gitkeep
+playwright/**/*.png
+playwright/**/*.jpeg
+playwright/**/*.webm
+playwright/**/*.zip
 .impeccable/

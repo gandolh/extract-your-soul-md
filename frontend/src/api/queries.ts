@@ -12,9 +12,12 @@ import {
   api,
   type AnswersStudy,
   type AnsweredQuestion,
+  type ConversationStats,
   type ReportKey,
   type ReportState,
   type ResultsState,
+  type SavedStatDetail,
+  type SavedStatSummary,
   type StudyDetail,
   type StudySummary,
   type SwipeCard,
@@ -29,6 +32,8 @@ export const queryKeys = {
   answers: ['answers'] as const,
   reports: ['reports'] as const,
   swipe: ['swipe'] as const,
+  savedStats: ['saved-stats'] as const,
+  savedStat: (id: number) => ['saved-stat', id] as const,
   results: ['results'] as const,
 };
 
@@ -70,6 +75,22 @@ export function useSwipe() {
   return useQuery({
     queryKey: queryKeys.swipe,
     queryFn: () => api.swipe(),
+  });
+}
+
+export function useSavedStats() {
+  return useQuery({
+    queryKey: queryKeys.savedStats,
+    queryFn: () => api.savedStats().then((r) => r.saved),
+  });
+}
+
+export function useSavedStat(id: number) {
+  return useQuery({
+    queryKey: queryKeys.savedStat(id),
+    queryFn: () => api.savedStat(id),
+    enabled: Number.isInteger(id) && id > 0,
+    retry: false, // a 404 is a real "no such saved result"
   });
 }
 
@@ -149,6 +170,35 @@ export function useSetVerdict() {
   });
 }
 
+// Analyze a conversation on the spot. Transient: nothing is cached or stored —
+// the page holds the returned stats in local state until the user saves.
+export function useComputeStats() {
+  return useMutation({
+    mutationFn: (conversation: string) => api.computeStats(conversation).then((r) => r.stats),
+  });
+}
+
+export function useSaveStats() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { stats: ConversationStats; name?: string }) =>
+      api.saveStats(vars.stats, vars.name),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.savedStats });
+    },
+  });
+}
+
+export function useDeleteSavedStat() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.deleteSavedStat(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.savedStats });
+    },
+  });
+}
+
 export function useExtract() {
   const qc = useQueryClient();
   return useMutation({
@@ -163,8 +213,11 @@ export function useExtract() {
 export type {
   AnswersStudy,
   AnsweredQuestion,
+  ConversationStats,
   ReportState,
   ResultsState,
+  SavedStatDetail,
+  SavedStatSummary,
   StudySummary,
   SwipeCard,
   SwipeState,

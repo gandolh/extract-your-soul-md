@@ -14,6 +14,7 @@ import { sweepExpiredSessions } from '../db/maintenance.js';
 import { authRoutes } from './routes/auth.js';
 import { studyRoutes } from './routes/studies.js';
 import { swipeRoutes } from './routes/swipe.js';
+import { statsRoutes } from './routes/stats.js';
 import { resultRoutes } from './routes/results.js';
 
 export interface BuildOptions {
@@ -99,6 +100,7 @@ export async function buildServer(cfg: Config, opts: BuildOptions): Promise<Fast
   await app.register(authRoutes, { isProd: opts.isProd });
   await app.register(studyRoutes);
   await app.register(swipeRoutes, { cfg });
+  await app.register(statsRoutes);
   await app.register(resultRoutes, { cfg });
 
   app.get('/api/health', async () => ({ ok: true }));

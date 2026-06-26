@@ -295,6 +295,64 @@ export function getRejectedStatements(userId: number): string[] {
   return list.map((r) => r.statement);
 }
 
+// ---- saved conversation stats --------------------------------------------
+
+export interface SavedStatRow {
+  id: number;
+  name: string;
+  payload: string; // JSON-encoded ConversationStats
+  created_at: string;
+}
+
+/** How many results this user has already saved — used to default a name. */
+export function countSavedStats(userId: number): number {
+  const found = row<{ n: number }>(
+    getDb()
+      .prepare('SELECT COUNT(*) AS n FROM saved_stats WHERE user_id = ?')
+      .get(userId) as Row | undefined,
+  );
+  return found?.n ?? 0;
+}
+
+/** Persist a computed stats payload under a name. Returns the new row id, or
+ *  null if the name is already taken for this user (UNIQUE conflict). */
+export function insertSavedStat(userId: number, name: string, payload: string): number | null {
+  try {
+    const info = getDb()
+      .prepare('INSERT INTO saved_stats (user_id, name, payload) VALUES (?, ?, ?)')
+      .run(userId, name, payload);
+    return Number(info.lastInsertRowid);
+  } catch (err) {
+    if (err instanceof Error && /UNIQUE/i.test(err.message)) return null;
+    throw err;
+  }
+}
+
+/** Saved results for a user, newest first. Payload omitted — list view only. */
+export function listSavedStats(userId: number): Array<Omit<SavedStatRow, 'payload'>> {
+  return rows<Omit<SavedStatRow, 'payload'>>(
+    getDb()
+      .prepare('SELECT id, name, created_at FROM saved_stats WHERE user_id = ? ORDER BY created_at DESC, id DESC')
+      .all(userId) as Row[],
+  );
+}
+
+export function getSavedStat(userId: number, id: number): SavedStatRow | undefined {
+  return row<SavedStatRow>(
+    getDb()
+      .prepare('SELECT id, name, payload, created_at FROM saved_stats WHERE user_id = ? AND id = ?')
+      .get(userId, id) as Row | undefined,
+  );
+}
+
+/** Delete a saved result. Returns false if no such row for this user. */
+export function deleteSavedStat(userId: number, id: number): boolean {
+  const info = getDb()
+    .prepare('DELETE FROM saved_stats WHERE user_id = ? AND id = ?')
+    .run(userId, id);
+  return info.changes > 0;
+}
+
 // ---- results -------------------------------------------------------------
 
 export function getLatestResult(userId: number): ResultRow | undefined {
