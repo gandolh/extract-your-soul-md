@@ -64,6 +64,20 @@ CREATE TABLE IF NOT EXISTS swipe_cards (
 );
 CREATE INDEX IF NOT EXISTS idx_swipe_user ON swipe_cards(user_id, id);
 
+-- Saved conversation statistics. The conversation itself is NEVER stored — it
+-- is parsed + reduced to aggregate numbers transiently on the server, and only
+-- this derived JSON is persisted when the user chooses to keep a result. `name`
+-- is user-chosen (default '<index>-<YYYY-MM-DD>'), unique per user.
+CREATE TABLE IF NOT EXISTS saved_stats (
+  id         INTEGER PRIMARY KEY,
+  user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name       TEXT NOT NULL,
+  payload    TEXT NOT NULL,                            -- JSON ConversationStats
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (user_id, name)
+);
+CREATE INDEX IF NOT EXISTS idx_saved_stats_user ON saved_stats(user_id, created_at);
+
 CREATE TABLE IF NOT EXISTS results (
   id         INTEGER PRIMARY KEY,
   user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

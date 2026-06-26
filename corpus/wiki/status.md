@@ -1,43 +1,56 @@
 # Status — where the project stands
 
-_Snapshot as of 2026-06-17. Re-stamp this date on update. The living dashboard:
+_Snapshot as of 2026-06-26. Re-stamp this date on update. The living dashboard:
 deliberately thin — detail lives in the brief files and [log.md](../log.md)._
 
 ## Where things stand
 
 The project is **API + frontend only**: a React SPA + Fastify + SQLite where users
-register, answer themed studies, import WhatsApp conversations, and generate a
-per-user `soul.md`. There is **no CLI and no Claude `/extract-soul` skill** — both
-were removed (brief 04, 2026-06-16). The shared data-prep + extraction pipeline
-(`src/stages/`, `src/ollama.ts`) still exists but is reachable only from the
-server, via `src/server/pipeline.ts`, against a per-user throwaway work dir built
-from SQLite rows at extraction time.
+register, answer themed **studies**, refine a generated **swipe-card deck**
+("does this sound like you?"), and generate a per-user `soul.md`. There is **no
+CLI and no Claude `/extract-soul` skill** — both were removed (brief 04,
+2026-06-16). The shared data-prep + extraction pipeline (`src/stages/`,
+`src/ollama.ts`) still exists but is reachable only from the server, via
+`src/server/pipeline.ts`, against a per-user throwaway work dir built from SQLite
+rows at extraction time.
 
-The questionnaire path the research designed
-([sources-raw/03-integration-plan.md](sources-raw/03-integration-plan.md)) has
-**shipped** as the web studies forms — `src/questions.ts` (canonical Q1..Q12),
-`src/studies.ts` (themed grouping), the Q&A parser in `process.ts`, and the
-`MAP_PROMPT_HEADER_QA` prompt. Capture lives in the SPA (Studies index +
-StudyPage); answers are materialized to `questionnaire/answers.md` at extract time
-via the shared `src/answers-file.ts` writer.
+**The conversation/WhatsApp import path was removed** (2026-06-22) and replaced by
+the swipe-card refinement loop; the **Eval harness was removed** in the same pass.
+The only LLM-driven extraction input is now the questionnaire (+ confirmed swipe
+statements folded in as a reserved `## Q900` section).
 
 ## By area
 
 - **Data-prep pipeline** (`src/stages/process.ts`, `chunk.ts`) — done and stable;
-  invoked only from the server pipeline, not a CLI.
+  invoked only from the server pipeline, not a CLI. `process.ts` is now
+  **questionnaire-only** (the WhatsApp parser + "your messages only" voice filter
+  were removed with the conversations feature).
 - **Questionnaire path** — shipped as the web studies forms (no REPL); shared
-  `answers.md` format via `src/answers-file.ts`.
+  `answers.md` format via `src/answers-file.ts`. Studies now span a **voice band**
+  (free-text) and a **profile band** (choice/trait studies with scored reports —
+  brief 37).
+- **Swipe cards** (`src/server/swipe.ts`, `routes/swipe.ts`, `SwipePage`) — the
+  Stage 0.5 refinement loop. An LLM generates first-person statements from the
+  user's own answers/profile/prior `soul.md`; the user swipes yes/no; confirmed
+  statements ride into `answers.md` as `## Q900`. This is the **only** place
+  capture touches an LLM.
+- **Conversation statistics** (`src/stats/conversation-stats.ts`,
+  `routes/stats.ts`, `StatsPage`/`SavedStatsPage`) — a **transient, no-LLM**
+  feature (2026-06-26). A pasted chat export is parsed + reduced to aggregate
+  numbers on the server and the transcript is discarded — **never stored**. Only
+  the derived statistics can be saved (`saved_stats` table), named, and reviewed
+  on a separate page. Independent of the `soul.md` pipeline.
 - **Extraction (Ollama)** — the single extraction path. Async **background job**
   model (brief 14): `POST /api/extract` → 202 + jobId, runs via `setImmediate`,
   DB-backed per-user lock (partial unique index), reclaimed on restart; the
   client polls `GET /api/results` for stage/chunk progress.
-- **Web platform (auth, studies, import, results, eval)** — built and running.
-- **Eval harness** (brief 05) — A/B/C conditions + 5 voice metrics, exposed at
-  `/api/eval` and the EvalPage; framework ready, head-to-head measurement still
-  blocked on real user data + live Ollama.
+- **Web platform (auth, studies, swipe, stats, results)** — built and running.
 - **Tests** — `node --test` golden tests for the deterministic stages
-  (answers-file, process, chunk, tokens); `npm test`. CI typechecks + builds
-  (brief 35). No frontend test runner or linter (deliberate).
+  (answers-file, process, chunk, tokens, scoring, conversation-stats); `npm test`.
+  CI typechecks + builds (brief 35). No frontend test runner or linter
+  (deliberate).
+- **UI audits** — Playwright/browser walkthroughs use the `playwright/` hub at the
+  repo root; screenshots land in `playwright/screenshots/` (gitignored).
 
 ## Open threads
 

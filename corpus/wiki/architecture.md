@@ -28,47 +28,72 @@ the Claude `/extract-soul` skill) is gone.
 
 ## Pipeline stages (`src/stages/`)
 
-- **`process.ts`** — parses WhatsApp exports, filters to the user's own messages
-  (the load-bearing voice filter), drops noise, dedups → `inputs/processed/`.
-  Also parses `inputs/questionnaire/answers.md` into `__questionnaire__.txt`.
-- **`chunk.ts`** — file-bounded first-fit packing into ~30k-token chunks +
-  `manifest.json` (records ordering, sources, `kind: freeform | questionnaire`).
-  The questionnaire is always isolated into its own chunk.
+- **`process.ts`** — **questionnaire-only**. Parses `questionnaire/answers.md`
+  (`## Qn — Title` sections, incl. the reserved `## Q900` confirmed-swipe block),
+  drops skipped answers → `processed/__questionnaire__.txt`. The old WhatsApp
+  parser + "your messages only" voice filter were removed with the conversations
+  feature (2026-06-22).
+- **`chunk.ts`** — file-bounded first-fit packing into token-budgeted chunks +
+  `manifest.json` (records ordering, sources, `kind: questionnaire | freeform`).
+  The budget is derived from `OLLAMA_NUM_CTX` so chunks fit the map call. Only the
+  questionnaire file is produced today, so chunks are `questionnaire`-kind
+  (`freeform` is dormant packing infrastructure).
 - **`extract.ts`** + **`ollama.ts`** — the Ollama map/reduce path, with per-chunk
   caching under `.cache/bullets/` (keyed on kind + model + ctx + temp + prompt +
-  content). Deterministic: temperature 0 + fixed seed. Questionnaire capture is
-  the studies forms in the SPA — there is no longer a REPL.
+  content). Deterministic: temperature 0 + fixed seed.
 
 Shared helpers: `config.ts` (zod-validated env), `questions.ts` (the question
 data), `prompts.ts` (map/reduce prompt headers, incl. the Q&A variant),
 `answers-file.ts` (the single source of truth for the `answers.md` format),
-`tokens.ts` (cheap ~4 chars/token estimator), `studies.ts` (presentation layer
-grouping questions into themed web studies), `color.ts`.
+`tokens.ts` (UTF-8-byte / 4 estimator), `studies.ts` (presentation layer grouping
+questions into themed web studies), `scoring.ts` (choice→trait report scoring),
+`color.ts`. Plus **`stats/conversation-stats.ts`** — a standalone, no-LLM
+conversation analyzer (parser + aggregation), unrelated to the soul pipeline.
 
 ## Web platform
 
 - **`src/db/`** — `schema.sql` (idempotent, WAL), `db.ts` (`node:sqlite`
   singleton), `repos.ts` (synchronous prepared-statement DAL). Tables: `users`,
-  `sessions`, `study_answers`, `conversations`, `user_names`, `results`.
+  `sessions`, `study_answers`, `reports` (scored trait profiles), `swipe_cards`,
+  `saved_stats` (saved conversation statistics — the transcript is never stored),
+  `results`, `jobs` (the extraction job lock). The old `conversations` /
+  `user_names` tables are gone.
 - **`src/server/`** — `app.ts` (Fastify wiring), `serve.ts` (listen), `auth.ts`
-  (scrypt + cookie sessions), `pipeline.ts` (per-user extraction), `routes/`
-  (`auth`, `studies`, `conversations`, `results`).
+  (scrypt + cookie sessions), `pipeline.ts` (per-user extraction), `swipe.ts`
+  (card generation), `ollama-ready.ts` (TTL-cached readiness ping), `routes/`
+  (`auth`, `studies`, `swipe`, `stats`, `results`).
 - **`frontend/`** — own Vite root + tsconfig (DOM + react-jsx). Base UI
-  (`@base-ui-components/react`), `react-router-dom`. Proxies `/api`→4317 in dev.
+  (`@base-ui-components/react`), `react-router-dom`, TanStack Query. Pages: Login/
+  Register, Intro, Studies + StudyPage, Answers, Cards (`SwipePage`), Analyze
+  (`StatsPage`), Saved (`SavedStatsPage`), Profile (`ResultsPage`). Proxies
+  `/api`→4317 in dev.
 
 ### Per-user extraction (`src/server/pipeline.ts`)
-`POST /api/extract` clones `Config` into a throwaway work dir, writes the user's
-conversations + answers there via the unchanged `writeAnswersFile`, runs the
-`processAll → chunkAll → runOllamaPipeline`, reads the result into the `results`
-table, deletes the work dir. Extraction is **always Ollama**, run synchronously
-(an in-memory per-user lock guards against concurrent runs). This is the only
-extraction path.
+`POST /api/extract` is an **async persisted job**: it inserts a `jobs` row
+(partial-unique-index per-user lock that survives restarts), returns 202 + jobId,
+and runs via `setImmediate`. The job clones `Config` into a throwaway work dir,
+writes the user's answers via `writeAnswersFile` + appends confirmed swipe
+statements via `appendConfirmedStatements`, runs `processAll → chunkAll →
+runOllamaPipeline`, reads the result into the `results` table (carrying prior
+`soul_md` into `prev_md`), and deletes the work dir. The client polls
+`GET /api/results` (or `/api/extract/:jobId`) for stage/chunk progress. Extraction
+is **always Ollama** — the only extraction path.
+
+### Conversation statistics (`src/stats/`, `src/server/routes/stats.ts`)
+A separate, **no-LLM, transient** flow. `POST /api/stats/compute` takes a pasted
+chat export, parses + reduces it to aggregate numbers
+(`analyzeConversation` → `ConversationStats`), and returns them — **the transcript
+is never persisted**. `POST /api/stats/save` stores only the derived JSON in the
+`saved_stats` table under a user-given name (default `<index>-<YYYY-MM-DD>`);
+`GET /api/stats` + `/api/stats/:id` list and read saved results. Does not touch
+the pipeline, Ollama, or `soul.md`.
 
 ## The output contract
 
-`out/my-soul.md` is the only artifact downstream tools depend on. Keep it stable;
-swap extraction strategies freely. The previous version is backed up to
-`out/my-soul.prev.md` before each overwrite.
+The generated `soul.md`, stored in the `results` table and surfaced via
+`/api/results`, is the only artifact downstream tools depend on. Keep it stable;
+swap extraction strategies freely. The prior version is carried into `prev_md` on
+each overwrite. (The old `out/my-soul.md` file path belonged to the removed CLI.)
 
 ## Code references
 

@@ -16,6 +16,8 @@ const NAV_ITEMS = [
   { to: '/studies', label: 'Studies', end: false },
   { to: '/answers', label: 'Answers', end: false },
   { to: '/swipe', label: 'Cards', end: false },
+  { to: '/stats', label: 'Analyze', end: false },
+  { to: '/saved-stats', label: 'Saved', end: false },
   { to: '/results', label: 'Profile', end: false },
 ] as const;
 

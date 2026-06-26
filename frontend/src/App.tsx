@@ -8,6 +8,8 @@ import { StudiesPage } from './pages/StudiesPage';
 import { StudyPage } from './pages/StudyPage';
 import { AnswersPage } from './pages/AnswersPage';
 import { SwipePage } from './pages/SwipePage';
+import { StatsPage } from './pages/StatsPage';
+import { SavedStatsPage, SavedStatDetailPage } from './pages/SavedStatsPage';
 import { ResultsPage } from './pages/ResultsPage';
 import { type ReactNode } from 'react';
 
@@ -42,6 +44,9 @@ export default function App() {
         <Route path="/studies/:studyId" element={<StudyPage />} />
         <Route path="/answers" element={<AnswersPage />} />
         <Route path="/swipe" element={<SwipePage />} />
+        <Route path="/stats" element={<StatsPage />} />
+        <Route path="/saved-stats" element={<SavedStatsPage />} />
+        <Route path="/saved-stats/:id" element={<SavedStatDetailPage />} />
         {/* Old routes — redirect away after the conversations/eval removal. */}
         <Route path="/conversations" element={<Navigate to="/swipe" replace />} />
         <Route path="/conversations/:id" element={<Navigate to="/swipe" replace />} />

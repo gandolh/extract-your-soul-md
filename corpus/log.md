@@ -689,3 +689,70 @@ retest-flip caveat.
 
 Verified: build (server+web) clean, 22 node:test pass (9 new in scoring.test.ts).
 Nothing committed.
+
+## [2026-06-26] decision | Swipe cards replaced conversation import; Eval removed (wiki sync)
+
+Caught the wiki up to code that had already shipped on `main` (commits
+`0858acc`, `edf4084`): the **conversation/WhatsApp import pillar and the Eval
+harness were removed (2026-06-22)** and replaced by the **swipe-card refinement
+loop** (`swipe_cards` table, `src/server/swipe.ts`, `routes/swipe.ts`,
+`SwipePage`). The `conversations` / `user_names` tables, `routes/conversations.ts`,
+`routes/eval.ts`, the EvalPage, and the `process.ts` "your messages only" voice
+filter are all gone — `process.ts` is now questionnaire-only.
+
+Updated [wiki/status.md](wiki/status.md) (re-stamped 2026-06-26),
+[wiki/architecture.md](wiki/architecture.md) (tables, routes, stages, async job
+extraction), and [wiki/decisions.md](wiki/decisions.md) (swipe-cards-replace-
+conversations, async-job extraction superseding the in-memory lock, the profile
+band of choice studies revising the original "no Likert anywhere", and the
+`results`-table output contract). Source-of-truth ordering applied: **code wins**;
+the wiki had drifted.
+
+## [2026-06-26] done | Transient, no-LLM conversation statistics
+
+Added a conversation-statistics feature (idea adapted from the Yappinator
+project). A pasted chat export is parsed + reduced to aggregate numbers on the
+server and the **transcript is discarded — never stored**. Only the derived stats
+can be saved.
+
+- **Engine** `src/stats/conversation-stats.ts` — pure, LLM-free: WhatsApp/Telegram
+  parser (Android dash + iOS bracket formats, file-wide day/month-order
+  resolution, multi-line folding, media-placeholder drop) → per-participant
+  message/word counts, avg response time, top words (stop-worded), messages/month,
+  and behavioural red flags. Golden tests in `conversation-stats.test.ts` (9, all
+  pass).
+- **DB** new `saved_stats` table (`UNIQUE(user_id, name)`); the conversation text
+  has no column anywhere.
+- **API** `routes/stats.ts`: `POST /api/stats/compute` (transient), `POST
+  /api/stats/save` (default name `<index>-<YYYY-MM-DD>`), `GET /api/stats`,
+  `GET /api/stats/:id`, `DELETE /api/stats/:id`.
+- **Frontend** `StatsPage` (paste/upload → analyze → save), `SavedStatsPage` +
+  `SavedStatDetailPage` (list + detail), shared `StatsDashboard`; nav gains
+  Analyze + Saved.
+
+Also set up the `playwright/` UI-audit hub at the repo root per the
+`ui-test-plans` guideline: moved all root `*.png` into `playwright/screenshots/`
+(gitignored, `.gitkeep` tracked), untracked the previously-committed `login.png`,
+and replaced the `*-desktop.png` / `*-mobile.png` gitignore rules with the
+`playwright/**` artifact ignores. Verified: backend + frontend typecheck clean;
+new tests pass (one pre-existing scoring-test failure is unrelated). Nothing
+committed.
+
+## [2026-06-26] done | UI audit of the conversation-stats feature (Playwright)
+
+Set up a `corpus/test-plans/` suite (TP-01 analyze, TP-02 saved-stats, TP-03
+UI/UX audit) pointing at the `playwright/` hub, then ran a browser-driven audit
+with the Playwright MCP against a throwaway DB. See
+[test-plans/RESULTS.md](test-plans/RESULTS.md) for the dated outcome table +
+evidence.
+
+All three plans pass. One finding, fixed in the same run:
+
+- **F-01 (medium)** — average response time averaged multi-day gaps *between
+  conversation sessions*, producing absurd, unreadable values (a real chat showed
+  "15396m" ≈ 10.7 days for one participant). Fixed by (a) only counting replies
+  within a 6h same-session window toward the mean (`RESPONSE_WINDOW_MINUTES` in
+  `src/stats/conversation-stats.ts`, + golden test) and (b) formatting the
+  duration human-readably (m/h/d) in `StatsDashboard.tsx`. Verified in-browser:
+  15396m → 3m. Brand parity, mobile reflow, and boundary inputs (single
+  participant, long names, garbage input) all checked clean.

@@ -107,6 +107,29 @@ export interface SwipeState {
   ollamaReady: boolean;
   ollamaReason: string | null;
 }
+// ---- conversation statistics ---------------------------------------------
+// The conversation is transient (computed server-side, never stored); only
+// these derived numbers can be saved.
+export interface ParticipantStat {
+  name: string;
+  messageCount: number;
+  wordCount: number;
+  charCount: number;
+  avgResponseMinutes: number | null;
+  topWords: { word: string; count: number }[];
+}
+export interface ConversationStats {
+  totalMessages: number;
+  datedMessages: number;
+  participantCount: number;
+  dateRange: { start: string; end: string } | null;
+  participants: ParticipantStat[];
+  messagesPerMonth: { months: string[]; series: { name: string; counts: number[] }[] };
+  redFlags: string[];
+}
+export interface SavedStatSummary { id: number; name: string; created_at: string; }
+export interface SavedStatDetail { id: number; name: string; createdAt: string; stats: ConversationStats; }
+
 export interface SoulResult { soulMd: string; prevMd: string | null; extractor: string; createdAt: string | null; }
 export type JobStatus = 'enqueued' | 'running' | 'done' | 'failed';
 export interface JobProgress {
@@ -160,6 +183,15 @@ export const api = {
     request<{ cards: SwipeCard[] }>('POST', '/swipe/generate', {}, 0),
   setVerdict: (id: number, verdict: SwipeVerdict | null) =>
     request<{ ok: boolean }>('POST', `/swipe/${id}/verdict`, { verdict }),
+
+  // conversation statistics (transient compute → optional save)
+  computeStats: (conversation: string) =>
+    request<{ stats: ConversationStats }>('POST', '/stats/compute', { conversation }),
+  saveStats: (stats: ConversationStats, name?: string) =>
+    request<{ id: number; name: string }>('POST', '/stats/save', { stats, name }),
+  savedStats: () => request<{ saved: SavedStatSummary[] }>('GET', '/stats'),
+  savedStat: (id: number) => request<SavedStatDetail>('GET', `/stats/${id}`),
+  deleteSavedStat: (id: number) => request<{ ok: boolean }>('DELETE', `/stats/${id}`),
 
   // results
   results: () => request<ResultsState>('GET', '/results'),
