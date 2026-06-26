@@ -26,6 +26,38 @@ Rules:
 Messages:
 `;
 
+// Intermediate tree-reduce level (brief 39). When a corpus is large enough that
+// all per-chunk map bullets + the full reduce header would overflow `num_ctx`,
+// the bullet batches are partitioned into num_ctx-fitting groups and each group
+// is condensed with THIS prompt before the final reduce. It is deliberately
+// lightweight: it ONLY dedups/condenses bullets — it does NOT emit soul.md
+// sections, synthesize a profile, or see the self-reported profile / rejected
+// statements (those apply at the FINAL reduce only). Keep it short so a full
+// num_ctx group of bullets still fits alongside it.
+export const MERGE_BULLETS_HEADER = `You are merging extracted voice/content observation bullets about ONE person.
+The bullets below were each extracted from a different slice of that person's
+material (chat logs and/or a personality questionnaire). Several slices overlap,
+so the combined list is repetitive.
+
+Your task: merge them into a SINGLE deduplicated, condensed bullet list that
+PRESERVES EVERY DISTINCT OBSERVATION. Collapse near-duplicates into one bullet;
+keep distinct, rare, or surprising observations as their own bullets. When two
+bullets describe the same feature with different specifics, merge them and keep
+the specifics.
+
+Rules:
+- Do NOT drop any distinct observation — when unsure whether two bullets are the
+  same, keep both.
+- Preserve the person's actual short verbatim tokens (greetings, sign-offs,
+  fillers, interjections, catchphrases) exactly — these are the voice; do NOT
+  generalize them into descriptions.
+- Preserve any \`in-prose:\` / \`self-described:\` provenance prefix on a bullet.
+- Do NOT write prose, section headings, or a profile. Do NOT add a preamble or
+  closing remark. Output ONLY the merged bullet list, one observation per line.
+
+Observation bullets:
+`;
+
 // Generates the deck of "does this sound like you?" cards. Fed the user's own
 // study answers (+ scored trait profile + any prior soul.md), it proposes
 // short, first-person, falsifiable statements the user then swipes yes/no. The

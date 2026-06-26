@@ -1,11 +1,11 @@
-import { useRef, useState, type ChangeEvent } from 'react';
+import { type ChangeEvent, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ApiError, type ConversationStats } from '../api/client';
 import { useComputeStats, useSaveStats } from '../api/queries';
 import { useToast } from '../components/app/Toaster';
-import { Button, Eyebrow, Headline, Notice } from '../components/ui';
-import { FieldLabel, FIELD_CLASS } from '../components/ui/field';
 import { StatsDashboard } from '../components/stats/StatsDashboard';
+import { Button, Eyebrow, Headline, Notice } from '../components/ui';
+import { FIELD_CLASS, FieldLabel } from '../components/ui/field';
 
 export function StatsPage() {
   const toast = useToast();
@@ -39,8 +39,7 @@ export function StatsPage() {
         setText('');
         if (fileRef.current) fileRef.current.value = '';
       },
-      onError: (err) =>
-        toast(err instanceof ApiError ? err.message : 'Could not analyze.', 'err'),
+      onError: (err) => toast(err instanceof ApiError ? err.message : 'Could not analyze.', 'err'),
     });
   }
 
@@ -50,11 +49,10 @@ export function StatsPage() {
       { stats, name: name.trim() || undefined },
       {
         onSuccess: (r) => {
-          toast(`Saved as “${r.name}”.`, 'ok');
+          toast(`Saved as "${r.name}".`, 'ok');
           setName('');
         },
-        onError: (err) =>
-          toast(err instanceof ApiError ? err.message : 'Could not save.', 'err'),
+        onError: (err) => toast(err instanceof ApiError ? err.message : 'Could not save.', 'err'),
       },
     );
   }
@@ -65,14 +63,16 @@ export function StatsPage() {
         <Eyebrow>Conversation stats</Eyebrow>
         <Headline>Analyze a conversation</Headline>
         <p className="text-[14px] leading-[22px] text-text-secondary">
-          Paste a chat export (WhatsApp-style lines like{' '}
+          Paste a chat export &mdash; WhatsApp-style lines like{' '}
           <code className="rounded-sm bg-primary-wash px-1 py-0.5 font-mono text-[12px] text-primary">
             1/1/24, 10:00 - Name: message
-          </code>
-          ) and get the numbers instantly — message counts, response times, top words, monthly
-          activity, and a few behavioural flags. No model is involved, and{' '}
-          <strong className="text-text-primary">the conversation itself is never stored</strong> — it’s
-          analyzed on the spot and discarded. Save only the statistics if you want to keep them.
+          </code>{' '}
+          or a <strong className="text-text-primary">Telegram Desktop JSON</strong> export (Export
+          chat history &rarr; JSON) &mdash; and get the numbers instantly: message counts, response
+          times, top words, monthly activity, and a few behavioural flags. No model is involved, and{' '}
+          <strong className="text-text-primary">the conversation itself is never stored</strong>{' '}
+          &mdash; it&apos;s analyzed on the spot and discarded. Save only the statistics if you want
+          to keep them.
         </p>
       </header>
 
@@ -93,19 +93,19 @@ export function StatsPage() {
           <input
             ref={fileRef}
             type="file"
-            accept=".txt,text/plain"
+            accept=".txt,.json,text/plain,application/json"
             onChange={onFile}
             className="hidden"
             id="conversation-file"
           />
           <Button type="button" variant="ghost" onClick={() => fileRef.current?.click()}>
-            Upload .txt
+            Upload .txt / .json
           </Button>
           <Link
             to="/saved-stats"
             className="font-mono text-[12px] uppercase tracking-[0.05em] text-text-secondary hover:text-text-primary"
           >
-            View saved →
+            View saved &rarr;
           </Link>
         </div>
       </section>
@@ -124,12 +124,18 @@ export function StatsPage() {
                   className={`${FIELD_CLASS} mt-2`}
                 />
               </div>
-              <Button type="button" onClick={persist} disabled={save.isPending} className="shrink-0">
+              <Button
+                type="button"
+                onClick={persist}
+                disabled={save.isPending}
+                className="shrink-0"
+              >
                 {save.isPending ? 'Saving…' : 'Save statistics'}
               </Button>
             </div>
             <Notice tone="ok">
-              These are aggregate numbers only — the conversation text has already been discarded.
+              These are aggregate numbers only &mdash; the conversation text has already been
+              discarded.
             </Notice>
           </section>
 

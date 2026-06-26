@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { encodeChoiceBody, decodeChoiceBody, type RecordedAnswer } from './answers-file.js';
 import { scoreReport, DEFAULT_INCLUDE } from './scoring.js';
+import { QUESTIONS } from './questions.js';
 
 // Pin the choice-body round-trip and the scorer's percentage math, including
 // the reverse-keying that the trait direction depends on. These are the
@@ -85,4 +86,40 @@ test('every scored report defaults included under the co-equal premise (incl. MB
   assert.equal(DEFAULT_INCLUDE['big-five'], true);
   assert.equal(DEFAULT_INCLUDE['honesty-tone'], true);
   assert.equal(DEFAULT_INCLUDE.pcm, true);
+});
+
+// --- Cognitive functions (home-grown IPIP→Jung mapping, EXPLORATORY) -------
+// Brief 38: 8 function axes (0..100) + a derived top-2 "stack" summary; OFF by
+// default (deliberate exception to the "all reports on" premise).
+
+test('Cognitive functions: all-high-Ne answers put Ne at the top of the stack', () => {
+  // Answer "5" to both Ne items (Q90, Q91) and "1" to every other function's
+  // items → Ne is the strongest, so it must lead the stack summary.
+  const all = QUESTIONS.filter((q) => q.reportKey === 'cognitive-functions');
+  const answers = new Map(
+    all.map((q) => {
+      const v = q.functionKey === 'Ne' ? '5' : '1';
+      return answer(q.id, v);
+    }).map((a) => [a.id, a]),
+  );
+  const report = scoreReport('cognitive-functions', answers);
+  assert.equal(report.hasData, true);
+  // 8 function axes present.
+  assert.equal(report.axes.length, 8);
+  const ne = report.axes.find((a) => a.key === 'Ne')!;
+  assert.equal(ne.percent, 100);
+  // Stack headline leads with Ne.
+  assert.match(report.summary, /^Lead: Ne /);
+  assert.match(report.summary, /exploratory/);
+});
+
+test('Cognitive functions: no answers → no data, empty axes', () => {
+  const report = scoreReport('cognitive-functions', new Map());
+  assert.equal(report.hasData, false);
+  assert.equal(report.axes.length, 0);
+  assert.equal(report.summary, '');
+});
+
+test('Cognitive functions: off by default (opt-in exception to all-reports-on)', () => {
+  assert.equal(DEFAULT_INCLUDE['cognitive-functions'], false);
 });

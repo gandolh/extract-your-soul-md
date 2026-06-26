@@ -28,11 +28,17 @@ export const REPORT_KEYS: ReportKeyAll[] = [
   'values',
   'regulatory-focus',
   'locus-of-control',
+  'cognitive-functions',
 ];
 
 // Whether a report is included in soul.md by default. Under the co-equal
 // premise (self-report collaborates with observed voice rather than being the
 // weakest evidence), every scored report is on by default — including MBTI.
+// EXCEPTION: 'cognitive-functions' is OFF by default. It is a deliberate
+// departure from the "all reports on" premise (brief 38): the 8-function read
+// rests on a home-grown IPIP→Jung mapping, NOT a validated instrument, so it is
+// opt-in rather than co-equal with the researched scales. The user turns it on
+// consciously; the report carries the strongest "directional hint only" caveat.
 export const DEFAULT_INCLUDE: Record<ReportKeyAll, boolean> = {
   'big-five': true,
   'honesty-tone': true,
@@ -42,6 +48,7 @@ export const DEFAULT_INCLUDE: Record<ReportKeyAll, boolean> = {
   values: true,
   'regulatory-focus': true,
   'locus-of-control': true,
+  'cognitive-functions': false,
 };
 
 export interface AxisResult {
@@ -70,6 +77,8 @@ const SELF_REPORT_CAVEAT =
   'Self-reported — a rough self-image, not a measurement. Your actual writing is the stronger signal.';
 const MBTI_CAVEAT =
   'Self-reported and psychometrically weak — types often flip on retake, especially near 50%. Treat as a loose hint, not a verdict.';
+const COGNITIVE_FUNCTIONS_CAVEAT =
+  'Home-grown IPIP→function mapping, not a validated instrument — there is no canonical public-domain 8-function scale, so each item is a public-domain IPIP wording mapped to a Jungian function by our own heuristic. Directional hint only; off by default.';
 
 /** Pull the numeric (1..5) scale value for a question id from the answers. */
 function scaleValue(answers: Map<string, RecordedAnswer>, id: string): number | null {
@@ -352,6 +361,56 @@ function scoreLocusOfControl(answers: Map<string, RecordedAnswer>): ReportPayloa
   };
 }
 
+// --- Cognitive functions (home-grown IPIP→Jung mapping, EXPLORATORY) -------
+// 8 functions, 2 items each. Each function gets a 0..100 strength (mean of its
+// items, value 5 = "the function"). The summary is the derived top-2 "stack":
+// `Lead: X → Y (exploratory)`. NOT a validated instrument — see the caveat.
+const COGNITIVE_FUNCTIONS: Array<{ key: NonNullable<Question['functionKey']>; label: string }> = [
+  { key: 'Ti', label: 'Ti — introverted thinking (own internal framework)' },
+  { key: 'Te', label: 'Te — extraverted thinking (organize the world to a goal)' },
+  { key: 'Fi', label: 'Fi — introverted feeling (own values first)' },
+  { key: 'Fe', label: 'Fe — extraverted feeling (group harmony)' },
+  { key: 'Si', label: 'Si — introverted sensing (what reliably worked before)' },
+  { key: 'Se', label: 'Se — extraverted sensing (the vivid present, act now)' },
+  { key: 'Ni', label: 'Ni — introverted intuition (one converging vision)' },
+  { key: 'Ne', label: 'Ne — extraverted intuition (possibilities everywhere)' },
+];
+
+function scoreCognitiveFunctions(answers: Map<string, RecordedAnswer>): ReportPayload {
+  const axes: AxisResult[] = [];
+  for (const f of COGNITIVE_FUNCTIONS) {
+    const items = QUESTIONS.filter(
+      (q) => q.reportKey === 'cognitive-functions' && q.functionKey === f.key,
+    );
+    const r = traitPercent(answers, items);
+    if (!r) continue;
+    axes.push({
+      key: f.key,
+      label: f.label,
+      percent: r.percent,
+      readout: `${level(r.percent)} (${r.percent}%)`,
+      answered: r.answered,
+    });
+  }
+  // Top-2 by strength → the "stack" headline. Tie-break is stable: the
+  // COGNITIVE_FUNCTIONS declaration order (a sort() on equal percents keeps it).
+  const ranked = [...axes].sort((a, b) => b.percent - a.percent);
+  const summary =
+    ranked.length >= 2
+      ? `Lead: ${ranked[0]!.key} → ${ranked[1]!.key} (exploratory)`
+      : ranked.length === 1
+        ? `Lead: ${ranked[0]!.key} (exploratory)`
+        : '';
+  return {
+    key: 'cognitive-functions',
+    title: 'Cognitive Functions',
+    axes,
+    summary,
+    hasData: axes.length > 0,
+    caveat: COGNITIVE_FUNCTIONS_CAVEAT,
+  };
+}
+
 /** Score a single report from a user's answers map. */
 export function scoreReport(
   key: ReportKeyAll,
@@ -374,6 +433,8 @@ export function scoreReport(
       return scoreRegulatoryFocus(answers);
     case 'locus-of-control':
       return scoreLocusOfControl(answers);
+    case 'cognitive-functions':
+      return scoreCognitiveFunctions(answers);
   }
 }
 

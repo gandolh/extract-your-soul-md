@@ -22,7 +22,8 @@ export type ReportKey =
   | 'need-for-cognition'
   | 'values'
   | 'regulatory-focus'
-  | 'locus-of-control';
+  | 'locus-of-control'
+  | 'cognitive-functions';
 
 export interface Question {
   id: string;
@@ -63,6 +64,11 @@ export interface Question {
   focusKey?: 'promotion' | 'prevention';
   // For locus-of-control (IE-4): internal (own effort) vs external (others/fate).
   locusKey?: 'internal' | 'external';
+  // For cognitive-functions (home-grown IPIP→Jung mapping, exploratory): which
+  // of the 8 Jungian functions this item loads on. The scorer averages every
+  // item sharing a `functionKey` (value "1"=left pole .. "5"=right) into a
+  // 0..100 strength. NOT a validated instrument — directional hint only.
+  functionKey?: 'Ti' | 'Te' | 'Fi' | 'Fe' | 'Si' | 'Se' | 'Ni' | 'Ne';
   // Reverse-key a scale item before averaging (TIPI items 2,4,6,8,10; some
   // OEJTS pairs whose poles are flipped relative to the axis direction).
   reverse?: boolean;
@@ -928,5 +934,141 @@ export const QUESTIONS: ReadonlyArray<Question> = [
     kind: 'choice', choiceMode: 'scale',
     left: "Doesn't apply", right: 'Applies fully',
     reportKey: 'locus-of-control', locusKey: 'external',
+  },
+
+  // ==========================================================================
+  // COGNITIVE FUNCTIONS — home-grown IPIP→Jung mapping (EXPLORATORY, OFF by
+  // default). There is no canonical public-domain 8-function scale, so each
+  // item is worded from a public-domain IPIP facet (ipip.ori.org, public
+  // domain) and mapped to a Jungian function by the well-documented
+  // Big-Five↔function correspondence. The *mapping* is our own heuristic —
+  // NOT a validated instrument; the report carries a strong caveat. 2 items
+  // per function (16 items) is the psychometric floor (mirrors 4/trait for
+  // Big Five but acknowledged thinner here). Scale 1 = LEFT pole (unlike the
+  // function) .. 5 = RIGHT pole (the function); no reverse — both poles are
+  // worded so 5 always means "more of this function".
+  //
+  // Mapping rationale (Big-Five facet → function), with e/i framing of the
+  // pair by object-oriented (extraverted) vs subject-oriented (introverted):
+  //   Ne ← Openness: Ideas/Adventurousness, object-oriented ("possibilities out there")
+  //   Ni ← Openness, subject-oriented (one inner vision/foresight, not breadth)
+  //   Si ← Conscientiousness: Orderliness/Cautiousness, subject-oriented (past that worked)
+  //   Se ← Extraversion(sensation-seeking)/low-Cautiousness, object-oriented (present, act now)
+  //   Te ← Conscientiousness: Achievement/Self-discipline, object-oriented (organize the world)
+  //   Ti ← Intellect/Openness, subject-oriented (own internal framework/consistency)
+  //   Fe ← Agreeableness: Sympathy/Cooperation, object-oriented (group harmony)
+  //   Fi ← Agreeableness(low-conformity)/values, subject-oriented (own values first)
+  // ==========================================================================
+  {
+    id: 'Q90', slug: 'cf-ne-1', title: 'Possibilities everywhere',
+    prompt: 'When I look at a situation, I immediately see lots of different possibilities and "what could be".',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Not like me', right: 'Very like me',
+    reportKey: 'cognitive-functions', functionKey: 'Ne',
+  },
+  {
+    id: 'Q91', slug: 'cf-ne-2', title: 'Chasing new ideas',
+    prompt: 'I love jumping between new ideas and tangents, even before finishing the last one.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Not like me', right: 'Very like me',
+    reportKey: 'cognitive-functions', functionKey: 'Ne',
+  },
+  {
+    id: 'Q92', slug: 'cf-ni-1', title: 'One converging vision',
+    prompt: 'I often get a single strong sense of how things will unfold, and trust that inner picture.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Not like me', right: 'Very like me',
+    reportKey: 'cognitive-functions', functionKey: 'Ni',
+  },
+  {
+    id: 'Q93', slug: 'cf-ni-2', title: 'Underlying meaning',
+    prompt: 'I instinctively look past the surface for the one deeper pattern or meaning behind events.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Not like me', right: 'Very like me',
+    reportKey: 'cognitive-functions', functionKey: 'Ni',
+  },
+  {
+    id: 'Q94', slug: 'cf-si-1', title: 'What has worked before',
+    prompt: 'I rely on what has reliably worked before and prefer proven, familiar routines.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Not like me', right: 'Very like me',
+    reportKey: 'cognitive-functions', functionKey: 'Si',
+  },
+  {
+    id: 'Q95', slug: 'cf-si-2', title: 'Order and detail',
+    prompt: 'I like things kept in order and I notice when a familiar detail is out of place.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Not like me', right: 'Very like me',
+    reportKey: 'cognitive-functions', functionKey: 'Si',
+  },
+  {
+    id: 'Q96', slug: 'cf-se-1', title: 'Acting in the moment',
+    prompt: 'I am quick to act on what is right in front of me and enjoy hands-on, in-the-moment action.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Not like me', right: 'Very like me',
+    reportKey: 'cognitive-functions', functionKey: 'Se',
+  },
+  {
+    id: 'Q97', slug: 'cf-se-2', title: 'Vivid sensory present',
+    prompt: 'I am keenly tuned to sights, sounds and physical sensations happening around me right now.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Not like me', right: 'Very like me',
+    reportKey: 'cognitive-functions', functionKey: 'Se',
+  },
+  {
+    id: 'Q98', slug: 'cf-te-1', title: 'Organizing to hit a goal',
+    prompt: 'I organize people and resources efficiently to get a concrete goal done.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Not like me', right: 'Very like me',
+    reportKey: 'cognitive-functions', functionKey: 'Te',
+  },
+  {
+    id: 'Q99', slug: 'cf-te-2', title: 'Measurable results',
+    prompt: 'I judge decisions by measurable results and external logic rather than how they feel.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Not like me', right: 'Very like me',
+    reportKey: 'cognitive-functions', functionKey: 'Te',
+  },
+  {
+    id: 'Q100', slug: 'cf-ti-1', title: 'My own framework',
+    prompt: 'I trust a logical framework I worked out myself over an established or official method.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Not like me', right: 'Very like me',
+    reportKey: 'cognitive-functions', functionKey: 'Ti',
+  },
+  {
+    id: 'Q101', slug: 'cf-ti-2', title: 'Internal consistency',
+    prompt: 'I pull ideas apart to check they are internally consistent and precisely defined.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Not like me', right: 'Very like me',
+    reportKey: 'cognitive-functions', functionKey: 'Ti',
+  },
+  {
+    id: 'Q102', slug: 'cf-fe-1', title: 'Reading the room',
+    prompt: "I tune in to the group's mood and work to keep everyone in harmony.",
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Not like me', right: 'Very like me',
+    reportKey: 'cognitive-functions', functionKey: 'Fe',
+  },
+  {
+    id: 'Q103', slug: 'cf-fe-2', title: 'Others’ feelings first',
+    prompt: 'I naturally take on the feelings of people around me and adjust to meet their needs.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Not like me', right: 'Very like me',
+    reportKey: 'cognitive-functions', functionKey: 'Fe',
+  },
+  {
+    id: 'Q104', slug: 'cf-fi-1', title: 'My own values first',
+    prompt: 'I act from my own inner values even when they clash with what the group wants.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Not like me', right: 'Very like me',
+    reportKey: 'cognitive-functions', functionKey: 'Fi',
+  },
+  {
+    id: 'Q105', slug: 'cf-fi-2', title: 'Authentic to myself',
+    prompt: 'It matters deeply to me to stay true to who I am, regardless of approval.',
+    kind: 'choice', choiceMode: 'scale',
+    left: 'Not like me', right: 'Very like me',
+    reportKey: 'cognitive-functions', functionKey: 'Fi',
   },
 ];

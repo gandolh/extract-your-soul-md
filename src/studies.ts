@@ -133,6 +133,18 @@ export const STUDIES: ReadonlyArray<Study> = [
     band: 'profile',
     reportKey: 'locus-of-control',
   },
+  {
+    id: 'cognitive-functions',
+    title: 'Cognitive Functions',
+    description:
+      "Sixteen ratings (two per Jungian function: Ti/Te/Fi/Fe/Si/Se/Ni/Ne) that sketch a function “stack”. A home-grown mapping of public-domain IPIP items onto Jung's functions — exploratory, not a validated test, so it stays off by default and is a directional hint only.",
+    questionIds: [
+      'Q90', 'Q91', 'Q92', 'Q93', 'Q94', 'Q95', 'Q96', 'Q97',
+      'Q98', 'Q99', 'Q100', 'Q101', 'Q102', 'Q103', 'Q104', 'Q105',
+    ],
+    band: 'profile',
+    reportKey: 'cognitive-functions',
+  },
 ];
 
 const QUESTION_BY_ID = new Map(QUESTIONS.map((q) => [q.id, q]));
