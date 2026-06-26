@@ -9,6 +9,7 @@
 // shared module and re-exported here so existing server-side importers are
 // unaffected.
 export type { ConversationStats, ParticipantStat } from '../shared/stats-types.js';
+
 import type { ConversationStats, ParticipantStat } from '../shared/stats-types.js';
 
 /** One parsed line of a chat export. `date` is null when the timestamp could
@@ -23,11 +24,55 @@ export interface ParsedMessage {
 // stray accented character in someone's chat doesn't truncate a word.
 const WORD_RE = /[\p{L}\p{N}'\-_]{3,}/gu;
 const STOP_WORDS = new Set([
-  'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'her',
-  'was', 'one', 'our', 'out', 'day', 'get', 'has', 'him', 'his', 'how',
-  'its', 'may', 'new', 'now', 'old', 'see', 'two', 'way', 'who', 'boy',
-  'did', 'man', 'any', 'too', 'yes', 'yet', 'this', 'that', 'with', 'have',
-  'just', 'like', 'what', 'your', 'they', 'them', 'from', 'will', 'about',
+  'the',
+  'and',
+  'for',
+  'are',
+  'but',
+  'not',
+  'you',
+  'all',
+  'can',
+  'her',
+  'was',
+  'one',
+  'our',
+  'out',
+  'day',
+  'get',
+  'has',
+  'him',
+  'his',
+  'how',
+  'its',
+  'may',
+  'new',
+  'now',
+  'old',
+  'see',
+  'two',
+  'way',
+  'who',
+  'boy',
+  'did',
+  'man',
+  'any',
+  'too',
+  'yes',
+  'yet',
+  'this',
+  'that',
+  'with',
+  'have',
+  'just',
+  'like',
+  'what',
+  'your',
+  'they',
+  'them',
+  'from',
+  'will',
+  'about',
 ]);
 
 // A reply only counts toward "average response time" if it lands within this
@@ -37,15 +82,34 @@ const STOP_WORDS = new Set([
 const RESPONSE_WINDOW_MINUTES = 6 * 60;
 
 const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
 ];
 
 // Placeholder bodies WhatsApp/Telegram leave when an attachment is stripped on
 // export — they aren't real authored words, so they're dropped. Matched against
 // the WHOLE (normalized) body, never as a substring: a real message that merely
 // mentions one of these phrases must survive. iOS prefixes them with a LTR mark.
-const MEDIA_MARKERS = ['<media omitted>', 'image omitted', 'video omitted', 'audio omitted', 'sticker omitted', 'gif omitted', 'document omitted', 'contact card omitted'];
+const MEDIA_MARKERS = [
+  '<media omitted>',
+  'image omitted',
+  'video omitted',
+  'audio omitted',
+  'sticker omitted',
+  'gif omitted',
+  'document omitted',
+  'contact card omitted',
+];
 
 function isMediaPlaceholder(content: string): boolean {
   const norm = content.replace(/‎/g, '').trim().toLowerCase();
@@ -56,7 +120,8 @@ function isMediaPlaceholder(content: string): boolean {
 // or dash-delimited (Android: "12/01/2024, 10:00 - X: …"). The timestamp is
 // captured loosely; parseTimestamp does the real work.
 const BRACKET_RE = /^\[([^\]]+)\]\s+(.*)$/;
-const DASH_RE = /^(\d{1,4}[./-]\d{1,2}[./-]\d{1,4},?\s+\d{1,2}:\d{2}(?::\d{2})?(?:\s*[APap]\.?\s?[Mm]\.?)?)\s+-\s+(.*)$/;
+const DASH_RE =
+  /^(\d{1,4}[./-]\d{1,2}[./-]\d{1,4},?\s+\d{1,2}:\d{2}(?::\d{2})?(?:\s*[APap]\.?\s?[Mm]\.?)?)\s+-\s+(.*)$/;
 
 interface DateParts {
   a: number; // first date component
@@ -70,12 +135,12 @@ interface DateParts {
 // day-first vs month-first yet — that ambiguity is resolved across the whole
 // file (see resolveOrder).
 function splitTimestamp(ts: string): DateParts | null {
-  const m = ts
-    .trim()
-    .match(/^(\d{1,4})[./-](\d{1,2})[./-](\d{1,4}),?\s+(\d{1,2}):(\d{2})(?::\d{2})?\s*([APap])\.?\s?[Mm]?\.?/) ||
+  const m =
     ts
       .trim()
-      .match(/^(\d{1,4})[./-](\d{1,2})[./-](\d{1,4}),?\s+(\d{1,2}):(\d{2})/);
+      .match(
+        /^(\d{1,4})[./-](\d{1,2})[./-](\d{1,4}),?\s+(\d{1,2}):(\d{2})(?::\d{2})?\s*([APap])\.?\s?[Mm]?\.?/,
+      ) || ts.trim().match(/^(\d{1,4})[./-](\d{1,2})[./-](\d{1,4}),?\s+(\d{1,2}):(\d{2})/);
   if (!m) return null;
   let a = Number(m[1]);
   const b = Number(m[2]);
@@ -120,24 +185,39 @@ function toDate(p: DateParts, dayFirst: boolean): Date | null {
   // Date.UTC *normalizes* overflow (Feb 31 → Mar 2), which would fabricate a
   // valid-looking timestamp from an impossible one. Round-trip to reject it so
   // the message still counts but is excluded from date-based stats (date=null).
-  if (
-    d.getUTCFullYear() !== p.year ||
-    d.getUTCMonth() !== month - 1 ||
-    d.getUTCDate() !== day
-  ) {
+  if (d.getUTCFullYear() !== p.year || d.getUTCMonth() !== month - 1 || d.getUTCDate() !== day) {
     return null;
   }
   return d;
 }
 
-/** Parse a WhatsApp/Telegram-style text export into messages. Lines that don't
- *  start a new message are folded into the previous message (multi-line). Lines
- *  with a timestamp but no "Sender: " (system notices) are dropped. */
-export function parseConversation(input: string): ParsedMessage[] {
+// ---------------------------------------------------------------------------
+// Adapter registry
+// ---------------------------------------------------------------------------
+
+/** A pluggable parser for one chat export format. */
+export interface ChatAdapter {
+  /** Short identifier for this adapter (e.g. "whatsapp", "telegram-json"). */
+  name: string;
+  /** Returns true when the input looks like this format. Should be cheap. */
+  detect(input: string): boolean;
+  /** Parse the input into a flat list of messages. */
+  parse(input: string): ParsedMessage[];
+}
+
+// ---------------------------------------------------------------------------
+// WhatsApp adapter (wraps the original parseConversation logic unchanged)
+// ---------------------------------------------------------------------------
+
+function whatsappParse(input: string): ParsedMessage[] {
   const lines = input.split(/\r?\n/);
 
   // First pass: split each line into (timestamp, rest) without parsing dates.
-  interface Raw { ts: string; sender: string; content: string }
+  interface Raw {
+    ts: string;
+    sender: string;
+    content: string;
+  }
   const raws: Raw[] = [];
   let current: Raw | null = null;
 
@@ -180,6 +260,122 @@ export function parseConversation(input: string): ParsedMessage[] {
     });
   }
   return messages;
+}
+
+const whatsappAdapter: ChatAdapter = {
+  name: 'whatsapp',
+  detect(input: string): boolean {
+    // At least one line must match either the bracket or dash format AND contain
+    // a "Sender: " separator in the rest portion.
+    for (const line of input.split(/\r?\n/)) {
+      const bm = BRACKET_RE.exec(line);
+      const dm = bm ? null : DASH_RE.exec(line);
+      const match = bm ?? dm;
+      if (match?.[2].includes(': ')) return true;
+    }
+    return false;
+  },
+  parse: whatsappParse,
+};
+
+// ---------------------------------------------------------------------------
+// Telegram Desktop JSON adapter
+// Telegram Desktop exports "Export chat history → JSON":
+//   { name, type, messages: [{ id, type, date, from, from_id, text, ... }] }
+// ---------------------------------------------------------------------------
+
+interface TelegramRawMessage {
+  type: string;
+  date?: string;
+  from?: string;
+  from_id?: string;
+  text?: string | (string | { type: string; text: string })[];
+}
+
+interface TelegramExport {
+  messages: TelegramRawMessage[];
+}
+
+/** Flatten a Telegram `text` field: it can be a plain string or an array of
+ *  string/entity-object pairs. Concatenate all parts. */
+function flattenTelegramText(text: string | (string | { type: string; text: string })[]): string {
+  if (typeof text === 'string') return text;
+  return text.map((part) => (typeof part === 'string' ? part : (part.text ?? ''))).join('');
+}
+
+function isTelegramExport(parsed: unknown): parsed is TelegramExport {
+  if (typeof parsed !== 'object' || parsed === null) return false;
+  const obj = parsed as Record<string, unknown>;
+  if (!Array.isArray(obj.messages)) return false;
+  // Check that at least one entry has date + (from or from_id) — the minimal
+  // Telegram message shape.
+  const msgs = obj.messages as unknown[];
+  for (const m of msgs) {
+    if (typeof m !== 'object' || m === null) continue;
+    const entry = m as Record<string, unknown>;
+    if (entry.date && (entry.from !== undefined || entry.from_id !== undefined)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+const telegramJsonAdapter: ChatAdapter = {
+  name: 'telegram-json',
+  detect(input: string): boolean {
+    const trimmed = input.trimStart();
+    if (trimmed[0] !== '{') return false;
+    try {
+      return isTelegramExport(JSON.parse(input));
+    } catch {
+      return false;
+    }
+  },
+  parse(input: string): ParsedMessage[] {
+    let parsed: TelegramExport;
+    try {
+      parsed = JSON.parse(input) as TelegramExport;
+    } catch {
+      return [];
+    }
+    if (!isTelegramExport(parsed)) return [];
+
+    const messages: ParsedMessage[] = [];
+    for (const entry of parsed.messages) {
+      // Skip system entries (joins, pins, call records, etc.).
+      if (entry.type !== 'message') continue;
+
+      const sender = entry.from ?? entry.from_id ?? 'Unknown';
+      const rawText = entry.text ?? '';
+      const content = flattenTelegramText(rawText).trim();
+      if (content.length === 0) continue;
+      if (isMediaPlaceholder(content)) continue;
+
+      let date: Date | null = null;
+      if (entry.date) {
+        const ts = new Date(entry.date);
+        date = Number.isNaN(ts.getTime()) ? null : ts;
+      }
+
+      messages.push({ date, sender, content });
+    }
+    return messages;
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Adapter registry — order matters: whatsapp first to preserve precedence.
+// ---------------------------------------------------------------------------
+
+const ADAPTERS: ChatAdapter[] = [whatsappAdapter, telegramJsonAdapter];
+
+/** Parse a chat export into messages. Tries each registered adapter in order;
+ *  uses the first one whose detect() returns true. Returns [] if none match. */
+export function parseConversation(input: string): ParsedMessage[] {
+  for (const adapter of ADAPTERS) {
+    if (adapter.detect(input)) return adapter.parse(input);
+  }
+  return [];
 }
 
 function tokenize(text: string): string[] {
@@ -259,11 +455,12 @@ export function computeStats(messages: ParsedMessage[]): ConversationStats {
     datedMessages,
     participantCount: senders.length,
     dateRange:
-      minDate && maxDate
-        ? { start: minDate.toISOString(), end: maxDate.toISOString() }
-        : null,
+      minDate && maxDate ? { start: minDate.toISOString(), end: maxDate.toISOString() } : null,
     participants,
-    messagesPerMonth: messagesPerMonth(messages, participants.map((p) => p.name)),
+    messagesPerMonth: messagesPerMonth(
+      messages,
+      participants.map((p) => p.name),
+    ),
     redFlags: detectRedFlags(messages, participants),
   };
 }
